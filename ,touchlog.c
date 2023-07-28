@@ -32,6 +32,7 @@
 */
 int write_logfile(char day[3], char month[3], char year[5])
 {
+    // [ ] TODO: update function signature to include optional path
     char *fname = malloc(sizeof(char) * FNAME_SIZE);
     int fname_ret = sprintf(fname, "%s.%s.%s.log", month, day, year);
 
@@ -158,12 +159,19 @@ int main(int argc, char *argv[])
 {
     int opt;
 
-    while ((opt = getopt(argc, argv, "hd:v")) != -1)
+    while ((opt = getopt(argc, argv, "hvd:f:")) != -1)
     {
         switch (opt)
         {
         case 'h':
             printf("%s\n", HELP);
+
+            return 0;
+        case 'v':
+            printf("%s\n", "touchlog");
+            printf("Version: %s\n", VERSION);
+            printf("Author : %s\n", AUTHOR);
+            printf("Release date: %s\n", RELEASE_DATE);
 
             return 0;
         case 'd':
@@ -174,13 +182,12 @@ int main(int argc, char *argv[])
             }
 
             return ret;
-        case 'v':
-            printf("%s\n", "touchlog");
-            printf("Version: %s\n", VERSION);
-            printf("Author : %s\n", AUTHOR);
-            printf("Release date: %s\n", RELEASE_DATE);
+        case 'f':
+            printf("Will write log file to %s\n", optarg);
 
-            return 0;
+            // [ ] TODO: develop this
+
+            return -1;
         case '?':
             printf("%s\n", "Missing argument");
 

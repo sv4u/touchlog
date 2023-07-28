@@ -36,6 +36,7 @@
  *  @param year The year (yyyy) component of the mmddyyyy format
  *  @return Status code
 */
+// [ ] TODO: update function signature to include optional path
 int write_logfile(char day[3], char month[3], char year[5]);
 
 /** @brief Handles the custom date input
