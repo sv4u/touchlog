@@ -11,7 +11,9 @@
 #include ",touchlog.h"
 
 #include <getopt.h>
+#include <malloc.h>
 #include <regex.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +46,8 @@ int write_logfile(char day[3], char month[3], char year[5])
     FILE *nf = fopen(fname, "w+");
     if (nf == NULL)
     {
+        free(fname);
+
         // 134 = SIGABRT
         return 134;
     }
@@ -53,10 +57,15 @@ int write_logfile(char day[3], char month[3], char year[5])
     int logwrite_ret = fprintf(nf, LOG_FMT, month, day, year);
     if (!logwrite_ret)
     {
+        free(logdata);
+
         return logwrite_ret;
     }
 
     printf("Wrote new logfile for today's date to %s\n", fname);
+
+    free(fname);
+    free(logdata);
 
     return 0;
 }
@@ -158,6 +167,10 @@ int handle_today()
 int main(int argc, char *argv[])
 {
     int opt;
+    char *temp_buf;
+
+    bool is_custom = false;
+    bool is_path_specified = false;
 
     while ((opt = getopt(argc, argv, "hvd:f:")) != -1)
     {
@@ -175,13 +188,13 @@ int main(int argc, char *argv[])
 
             return 0;
         case 'd':
-            int ret = handle_custom(optarg);
+            int length = strlen(optarg);
+            temp_buf = (char *) malloc(sizeof(char) * (length + 1));
 
-            if (ret != 0) {
-                exit(ret);
-            }
+            memcpy(temp_buf, optarg, length + 1);
 
-            return ret;
+            is_custom = true;
+            break;
         case 'f':
             printf("Will write log file to %s\n", optarg);
 
@@ -195,11 +208,20 @@ int main(int argc, char *argv[])
         }
     }
 
-    int ret = handle_today();
+    int ret = 0;
+
+    if (is_custom) {
+        ret = handle_custom(temp_buf);
+    } else {
+        ret = handle_today();
+    }
 
     if (ret != 0) {
+        free(temp_buf);
         exit(0);
     }
+
+    free(temp_buf);
 
     return ret;
 }
