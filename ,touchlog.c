@@ -5,12 +5,13 @@
  *
  *  @author Sasank 'squatch$' Vishnubhatla (sasank@vishnubhatlas.net)
  *  @bug No known bugs.
-*/
+ */
 
 /* -- Includes -- */
 #include ",touchlog.h"
 
 #include <getopt.h>
+#include <linux/limits.h>
 #include <malloc.h>
 #include <regex.h>
 #include <stdbool.h>
@@ -20,18 +21,18 @@
 #include <time.h>
 
 /** @brief Writes a logfile with file name based on the inputs
- * 
+ *
  *  Whenever handling if touchlog needs to write a file, the file name is
  *  based on a specific mmddyyyy format. Therefore, it is easy to abstract
  *  away the file writing from the input handling aspect of touchlog. So,
  *  this function handles writing a new log file with the file name based on
  *  the function parameters.
- * 
+ *
  *  @param day The day (dd) component of the mmddyyyy format
  *  @param month The month (mm) component of the mmddyyyy format
  *  @param year The year (yyyy) component of the mmddyyyy format
  *  @return Status code
-*/
+ */
 int write_logfile(char day[3], char month[3], char year[5])
 {
     // [ ] TODO: update function signature to include optional path
@@ -80,7 +81,7 @@ int write_logfile(char day[3], char month[3], char year[5])
  *
  *  @param raw The raw input from the console
  *  @return Status code
-*/
+ */
 int handle_custom(char *raw)
 {
     regex_t regex;
@@ -132,7 +133,7 @@ int handle_custom(char *raw)
  *
  *  @param raw The raw input from the console
  *  @return Status code
-*/
+ */
 int handle_today()
 {
     time_t t = time(NULL);
@@ -163,11 +164,13 @@ int handle_today()
  *  @param argc The count of arguments
  *  @param argv The console inputted parameters stored as strings
  *  @return Status code
-*/
+ */
 int main(int argc, char *argv[])
 {
     int opt;
+
     char *temp_buf;
+    char temp_path[PATH_MAX];
 
     bool is_custom = false;
     bool is_path_specified = false;
@@ -189,7 +192,7 @@ int main(int argc, char *argv[])
             return 0;
         case 'd':
             int length = strlen(optarg);
-            temp_buf = (char *) malloc(sizeof(char) * (length + 1));
+            temp_buf = (char *)malloc(sizeof(char) * (length + 1));
 
             memcpy(temp_buf, optarg, length + 1);
 
@@ -197,10 +200,10 @@ int main(int argc, char *argv[])
             break;
         case 'f':
             printf("Will write log file to %s\n", optarg);
+            char *temp_res = realpath(optarg, temp_path);
 
-            // [ ] TODO: develop this
-
-            return -1;
+            is_path_specified = temp_res != NULL;
+            break;
         case '?':
             printf("%s\n", "Missing argument");
 
@@ -210,13 +213,33 @@ int main(int argc, char *argv[])
 
     int ret = 0;
 
-    if (is_custom) {
-        ret = handle_custom(temp_buf);
-    } else {
-        ret = handle_today();
+    if (is_custom)
+    {
+        if (is_path_specified)
+        {
+            // [ ] TODO: implement
+            printf("TODO - implement writing custom filename %s to path %s\n", temp_buf, temp_path);
+        }
+        else
+        {
+            ret = handle_custom(temp_buf);
+        }
+    }
+    else
+    {
+        if (is_path_specified)
+        {
+            // [ ] TODO: implement
+            printf("TODO - implement writing standard filename to path %s\n", temp_path);
+        }
+        else
+        {
+            ret = handle_today();
+        }
     }
 
-    if (ret != 0) {
+    if (ret != 0)
+    {
         free(temp_buf);
         exit(0);
     }

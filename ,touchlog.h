@@ -13,7 +13,7 @@
 #define FNAME_SIZE 15
 #define DATE_MONTH_YEAR_SIZE 8
 
-#define VERSION "0.0.2-alpha"
+#define VERSION "0.0.3-alpha"
 #define AUTHOR "Sasank 'squatch$' Vishnubhatla"
 #define RELEASE_DATE "Tuesday, July 18, 2023"
 #define HELP "touchlog\nA tool to make a logfile for a date\n\nOptions:\n\t-h\t\tDisplay this help message\n\t-d [mmddyyyy]\tMake a logfile for a specific date\n\t-v\t\tDisplay version information\n\t[noop]\t\tMake a logfile for the current date\n\nPlease report any bugs to Sasank Vishnubhatla at sasank@vishnubhatlas.net"
