@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 {
     int opt;
 
-    char *temp_buf;
+    char *temp_buf = NULL;
     char temp_path[PATH_MAX];
 
     bool is_custom = false;
@@ -203,6 +203,11 @@ int main(int argc, char *argv[])
             char *temp_res = realpath(optarg, temp_path);
 
             is_path_specified = temp_res != NULL;
+            if (!is_path_specified) {
+                printf("error: %s is not a valid existing path\n", optarg);
+
+                return 1;
+            }
             break;
         case '?':
             printf("%s\n", "Missing argument");
@@ -238,13 +243,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (ret != 0)
-    {
+    if (temp_buf != NULL) {
         free(temp_buf);
-        exit(0);
     }
 
-    free(temp_buf);
+    if (ret != 0)
+    {
+        exit(0);
+    }
 
     return ret;
 }
