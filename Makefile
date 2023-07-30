@@ -2,10 +2,12 @@
 
 touchlog:
 	gcc ,touchlog.c -o ,touchlog
+	./,touchlog -v
 	echo "OK"
 
 optimized:
 	gcc -O3 ,touchlog.c -o ,touchlog
+	./,touchlog -v
 	echo "OK"
 
 documentation:
