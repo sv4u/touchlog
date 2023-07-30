@@ -8,6 +8,7 @@ The `,touchlog` executable has the following options:
 
 - 'noop': a logfile is create with the current date
 - '-d mmmddyyyy': a logfile is create with the supplied date
+- '-f [dir]': write the logfile to the existing directory given
 - '-v': the version information is displayed
 - '-h': the help message is displayed
 

@@ -23,9 +23,9 @@
 <h1 id="name">NAME</h1>
 <p>,touchlog - a tool to create log files for a date</p>
 <h1 id="synopsis">SYNOPSIS</h1>
-<p><strong>,touchlog</strong> [<em>-h|-v|-d mmddyyyy</em>]</p>
+<p><strong>,touchlog</strong> [<em>-h|-v|-d mmddyyyy|-f [dir]</em>]</p>
 <h1 id="description">DESCRIPTION</h1>
-<p><strong>,touchlog</strong> is a tool to create simple log files for a date. It can be supplied a date in the format of <em>mmddyyyy</em> using the <em>-d</em> option or use the current date when no input is given.</p>
+<p><strong>,touchlog</strong> is a tool to create simple log files for a date. It can be supplied a date in the format of <em>mmddyyyy</em> using the <em>-d</em> option or use the current date when no input is given. To write to a custom directory, ensure the directory first exists. Then, use the <em>-f [dir]</em> option.</p>
 <h1 id="options">OPTIONS</h1>
 <dl>
 <dt><strong>-h</strong></dt>
@@ -36,6 +36,9 @@
 </dd>
 <dt><strong>-d mmddyyyy</strong></dt>
 <dd>use a supplied date
+</dd>
+<dt><strong>-f [dir]</strong></dt>
+<dd>write to existing inputted directory
 </dd>
 </dl>
 <h1 id="example">EXAMPLE</h1>
@@ -51,6 +54,12 @@
 </dd>
 <dt><strong>,touchlog -d 04301998</strong></dt>
 <dd>a log file is create for date April 30, 1998
+</dd>
+<dt><strong>,touchlog -f logs</strong></dt>
+<dd>a log file is created for today’s date in the “logs” folder
+</dd>
+<dt><strong>,touchlog -d 04301998 -f logs</strong></dt>
+<dd>a log file is create for date April 30, 1998 in the “logs” folder
 </dd>
 </dl>
 <h1 id="authors">AUTHORS</h1>
