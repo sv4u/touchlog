@@ -31,11 +31,11 @@
  *  @param day The day (dd) component of the mmddyyyy format
  *  @param month The month (mm) component of the mmddyyyy format
  *  @param year The year (yyyy) component of the mmddyyyy format
+ *  @param path The path to write the logfile to, NULL if current directory
  *  @return Status code
  */
-int write_logfile(char day[3], char month[3], char year[5])
+int write_logfile(char day[3], char month[3], char year[5], char path[PATH_MAX])
 {
-    // [ ] TODO: update function signature to include optional path
     char *fname = malloc(sizeof(char) * FNAME_SIZE);
     int fname_ret = sprintf(fname, "%s.%s.%s.log", month, day, year);
 
@@ -44,9 +44,12 @@ int write_logfile(char day[3], char month[3], char year[5])
         return fname_ret;
     }
 
+    // [ ] TODO: refactor to include checking path
+
     FILE *nf = fopen(fname, "w+");
     if (nf == NULL)
     {
+        perror(errno);
         free(fname);
 
         // 134 = SIGABRT
@@ -58,6 +61,7 @@ int write_logfile(char day[3], char month[3], char year[5])
     int logwrite_ret = fprintf(nf, LOG_FMT, month, day, year);
     if (!logwrite_ret)
     {
+        perror(errno);
         free(logdata);
 
         return logwrite_ret;
@@ -80,9 +84,10 @@ int write_logfile(char day[3], char month[3], char year[5])
  *  in mmddyyyy format. This checking is done via a regular expression pattern.
  *
  *  @param raw The raw input from the console
+ *  @param path The path to write to, NULL if current directory
  *  @return Status code
  */
-int handle_custom(char *raw)
+int handle_custom(char *raw, char *path)
 {
     regex_t regex;
     regmatch_t groups[CUSTOM_REGEX_FMT_GROUPS];
@@ -120,7 +125,13 @@ int handle_custom(char *raw)
 
     regfree(&regex);
 
-    int write_ret = write_logfile(day, month, year);
+    int write_ret;
+
+    if (path != NULL) {
+        write_ret = write_logfile(day, month, year, path);
+    } else {
+        write_ret = write_logfile(day, month, year, NULL);
+    }
 
     return write_ret;
 }
@@ -131,10 +142,10 @@ int handle_custom(char *raw)
  *  input any additional options. Therefore, the normal case of using the
  *  current system date for the file name is used.
  *
- *  @param raw The raw input from the console
+ *  @param path The path to write to, NULL if current directory
  *  @return Status code
  */
-int handle_today()
+int handle_today(char *path)
 {
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
@@ -152,7 +163,13 @@ int handle_today()
         return 1;
     }
 
-    int write_ret = write_logfile(day, month, year);
+    int write_ret;
+
+    if (path != NULL) {
+        write_ret = write_logfile(day, month, year, path);
+    } else {
+        write_ret = write_logfile(day, month, year, NULL);
+    }
 
     return write_ret;
 }
@@ -170,7 +187,7 @@ int main(int argc, char *argv[])
     int opt;
 
     char *temp_buf = NULL;
-    char temp_path[PATH_MAX];
+    char path[PATH_MAX];
 
     bool is_custom = false;
     bool is_path_specified = false;
@@ -200,7 +217,7 @@ int main(int argc, char *argv[])
             break;
         case 'f':
             printf("Will write log file to %s\n", optarg);
-            char *temp_res = realpath(optarg, temp_path);
+            char *temp_res = realpath(optarg, path);
 
             is_path_specified = temp_res != NULL;
             if (!is_path_specified) {
@@ -222,24 +239,22 @@ int main(int argc, char *argv[])
     {
         if (is_path_specified)
         {
-            // [ ] TODO: implement
-            printf("TODO - implement writing custom filename %s to path %s\n", temp_buf, temp_path);
+            ret = handle_custom(temp_buf, path);
         }
         else
         {
-            ret = handle_custom(temp_buf);
+            ret = handle_custom(temp_buf, NULL);
         }
     }
     else
     {
         if (is_path_specified)
         {
-            // [ ] TODO: implement
-            printf("TODO - implement writing standard filename to path %s\n", temp_path);
+            ret = handle_today(path);
         }
         else
         {
-            ret = handle_today();
+            ret = handle_today(NULL);
         }
     }
 
@@ -249,7 +264,8 @@ int main(int argc, char *argv[])
 
     if (ret != 0)
     {
-        exit(0);
+        perror(errno);
+        exit(errno);
     }
 
     return ret;
