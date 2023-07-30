@@ -37,6 +37,7 @@
 int write_logfile(char day[3], char month[3], char year[5], char path[PATH_MAX])
 {
     char *fname = malloc(sizeof(char) * FNAME_SIZE);
+    char *_path = malloc(sizeof(char) * PATH_MAX);
     int fname_ret = sprintf(fname, "%s.%s.%s.log", month, day, year);
 
     if (!fname_ret)
@@ -44,13 +45,21 @@ int write_logfile(char day[3], char month[3], char year[5], char path[PATH_MAX])
         return fname_ret;
     }
 
-    // [ ] TODO: refactor to include checking path
+    if (path != NULL) {
+        strcpy(_path, path);
+        strcat(_path, "/");
+        strcat(_path, fname);
+    } else {
+        strcpy(_path, fname);
+    }
 
-    FILE *nf = fopen(fname, "w+");
+    FILE *nf = fopen(_path, "w+");
     if (nf == NULL)
     {
-        perror(errno);
+        strerror(errno);
+
         free(fname);
+        free(_path);
 
         // 134 = SIGABRT
         return 134;
@@ -61,15 +70,17 @@ int write_logfile(char day[3], char month[3], char year[5], char path[PATH_MAX])
     int logwrite_ret = fprintf(nf, LOG_FMT, month, day, year);
     if (!logwrite_ret)
     {
-        perror(errno);
+        strerror(errno);
+
         free(logdata);
 
         return logwrite_ret;
     }
 
-    printf("Wrote new logfile for today's date to %s\n", fname);
+    printf("Wrote new logfile for today's date to %s\n", _path);
 
     free(fname);
+    free(_path);
     free(logdata);
 
     return 0;
@@ -264,7 +275,7 @@ int main(int argc, char *argv[])
 
     if (ret != 0)
     {
-        perror(errno);
+        strerror(errno);
         exit(errno);
     }
 
