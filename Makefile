@@ -16,7 +16,10 @@ documentation:
 	pandoc README.md -s -t html -o README.html
 
 clean:
-	rm -rf ,touchlog
+	-rm ,touchlog
+	-rm ,touchlog.1
+	-rm ,touchlog.1.html
+	-rm README.html
 
 publish: optimized documentation
 
