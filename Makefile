@@ -1,25 +1,21 @@
 .PHONY: default
 
 touchlog:
-	gcc ,touchlog.c -o ,touchlog
-	./,touchlog -v
+	gcc src/touchlog.c -o dist/,touchlog
+	./dist/,touchlog -v
 	echo "OK"
 
 optimized:
-	gcc -O3 ,touchlog.c -o ,touchlog
-	./,touchlog -v
+	gcc -O3 src/,touchlog.c -o dist/,touchlog
+	./dist/,touchlog -v
 	echo "OK"
 
 documentation:
-	pandoc ,touchlog.1.md -s -t man -o ,touchlog.1
-	pandoc ,touchlog.1.md -s -t html -o ,touchlog.1.html
-	pandoc README.md -s -t html -o README.html
+	pandoc docs/touchlog.1.md -s -t man -o dist/,touchlog.1
+	pandoc docs/touchlog.1.md -s -t html -o dist/,touchlog.1.html
 
 clean:
-	-rm ,touchlog
-	-rm ,touchlog.1
-	-rm ,touchlog.1.html
-	-rm README.html
+	-rm -rf dist
 
 publish: optimized documentation
 
