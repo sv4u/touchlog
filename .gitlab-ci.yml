@@ -10,11 +10,16 @@ build-job:
     - apt-get install -y make gcc pandoc
   script:
     - make publish
+  artifacts:
+    untracked: true
 
 publish-job:
   image: gcc:bookworm
   stage: publish
-  needs: ['build-job']
+  dependencies:
+    - build-job
+  only:
+    - master
   before_script:
     - apt-get update
     - apt-get install -y ncftp
