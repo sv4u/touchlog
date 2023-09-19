@@ -18,10 +18,13 @@ documentation:
 	echo "OK"
 
 clean:
-	-rm -rf dist
+	-rm -rf dist && echo "Clean"
 
 publish: optimized documentation
 	cp -r src dist
+	cp README.md dist
+	cp LICENSE dist
+	echo "OK"
 
 default: touchlog
 
