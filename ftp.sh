@@ -1,13 +1,13 @@
 #!/bin/bash
 HOST=cpanel.freehosting.com
 USER=sasankvi
-PASSWORD=`echo ${WEBSITE_ENC_KEY} | base64 --decude`
+PASSWORD=`echo ${WEBSITE_ENC_KEY} | base64 --decode`
 
 echo "Running 'make publish'"
 make publish
 
 echo "Moving into dist"
-cd sit
+cd dist
 
 echo "Transferring data"
 ncftp -u $USER -p $PASSWORD $HOST <<EOF
