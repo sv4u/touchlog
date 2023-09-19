@@ -14,6 +14,7 @@ build-job:
 publish-job:
   image: gcc:bookworm
   stage: publish
+  needs: ['build-job']
   before_script:
     - apt-get update
     - apt-get install -y ncftp
