@@ -11,6 +11,8 @@ ncftp -u $USER -p $PASSWORD $HOST <<EOF
 cd public_html
 mkdir log-suite
 cd log-suite
+mkdir touchlog
+cd touchlog
 rm -rf *
 put -R .
 bye
