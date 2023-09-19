@@ -3,9 +3,6 @@ HOST=cpanel.freehosting.com
 USER=sasankvi
 PASSWORD=`echo ${WEBSITE_ENC_KEY} | base64 --decode`
 
-echo "Running 'make publish'"
-make publish
-
 echo "Moving into dist"
 cd dist
 

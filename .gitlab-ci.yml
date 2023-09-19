@@ -1,0 +1,22 @@
+stages:
+  - build
+  - publish
+
+build-job:
+  image: gcc:bookworm
+  stage: build
+  before_script:
+    - apt-get update
+    - apt-get install -y make gcc pandoc
+  script:
+    - make publish
+
+publish-job:
+  image: gcc:bookworm
+  stage: publish
+  before_script:
+    - apt-get update
+    - apt-get install -y ncftp
+  script:
+    - ./ftp.sh
+
