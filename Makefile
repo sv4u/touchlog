@@ -15,12 +15,13 @@ optimized:
 documentation:
 	[ -d dist ] || mkdir -p dist
 	pandoc docs/touchlog.1.md -s -t man -o dist/,touchlog.1
-	pandoc docs/touchlog.1.md -s -t html -o dist/,touchlog.1.html
+	echo "OK"
 
 clean:
 	-rm -rf dist
 
 publish: optimized documentation
+	cp -r src dist
 
 default: touchlog
 

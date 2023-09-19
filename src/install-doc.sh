@@ -3,7 +3,7 @@
 # pull ,touchlog from personsal site and store in temp file
 temp_exec=$(mktemp)
 touchlog=/usr/local/touchlog/bin/,touchlog
-curl https://sasankvishnubhatla.net/mood/touchlog/,touchlog > $temp_exec
+curl https://sasankvishnubhatla.net/log-suite/touchlog/,touchlog > $temp_exec
 chmod a+x $temp_exec
 
 # copy temp file into /usr/local/bin/,touchlog
@@ -19,7 +19,7 @@ rm $temp_exec
 # pull LICENSE from personsal site and store in temp file
 temp_license=$(mktemp)
 license=/usr/local/touchlog/LICENSE
-curl https://sasankvishnubhatla.net/mood/touchlog/LICENSE > $temp_license
+curl https://sasankvishnubhatla.net/log-suite/touchlog/LICENSE > $temp_license
 
 # copy temp file into /usr/local/,touchlog/
 sudo cp $temp_license $license
@@ -30,7 +30,7 @@ rm $temp_license
 # pull README from personsal site and store in temp file
 temp_readme=$(mktemp)
 readme=/usr/local/touchlog/README.md
-curl https://sasankvishnubhatla.net/mood/touchlog/README.md > $temp_readme
+curl https://sasankvishnubhatla.net/log-suite/touchlog/README.md > $temp_readme
 
 # copy temp file into /usr/local/touchlog/
 sudo cp $temp_readme $readme
@@ -41,7 +41,7 @@ rm $temp_readme
 # pull ,touchlog.1 from personal site and store in temp file
 temp_man=$(mktemp)
 touchlog_man=,touchlog.1.gz
-curl https://sasankvishnubhatla.net/mood/touchlog/,touchlog.1 > $temp_man
+curl https://sasankvishnubhatla.net/log-suite/touchlog/,touchlog.1 > $temp_man
 
 # gzip -cvf temp file > ,touchlog.1.gz
 gzip -cvf $temp_man > $touchlog_man
