@@ -1,4 +1,4 @@
-/** @file ,touchlog.c
+/** @file touchlog.c
  *  @brief Implementation of touchlog
  *
  *  This file contains touchlog's main() function.
@@ -8,7 +8,7 @@
  */
 
 /* -- Includes -- */
-#include ",touchlog.h"
+#include "touchlog.h"
 
 #include <getopt.h>
 #include <linux/limits.h>

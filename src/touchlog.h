@@ -1,11 +1,11 @@
 /** @file touchlog.h
  *  @brief Function prototypes for the touchlog tool.
- * 
+ *
  *  This contains function prototypes for the touchlog tool and all macros
  *  and constants needed.
- * 
+ *
  *  This file contains touchlog's main() function.
- * 
+ *
  *  @author Sasank 'squatch$' Vishnubhatla (sasank@vishnubhatlas.net)
  *  @bug No known bugs.
 */
@@ -36,13 +36,13 @@
 #define CUSTOM_REGEX_FMT_GROUPS (size_t)3
 
 /** @brief Writes a logfile to a path with file name based on the inputs
- * 
+ *
  *  Whenever handling if touchlog needs to write a file, the file name is
  *  based on a specific mmddyyyy format. Therefore, it is easy to abstract
  *  away the file writing from the input handling aspect of touchlog. So,
  *  this function handles writing a new log file with the file name based on
  *  the function parameters.
- * 
+ *
  *  @param day The day (dd) component of the mmddyyyy format
  *  @param month The month (mm) component of the mmddyyyy format
  *  @param year The year (yyyy) component of the mmddyyyy format
