@@ -15,7 +15,7 @@ build-job:
     untracked: true
 
 publish-job:
-  image: ubuntu:latest
+  image: gcc:bookworm
   stage: publish
   only:
     - master
