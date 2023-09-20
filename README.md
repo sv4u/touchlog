@@ -18,7 +18,7 @@ Place the `,touchlog` executable into a directory in your `PATH`. Or, you can ch
 
 ## Man Page
 
-The man page for `,touchlog` can be found here: [,touchlog.1](,touchlog.1). Please either manually install it to your system or use the [`install-doc.sh`](./src/install-doc.sh) script to install both `,touchlog` and the man page.
+The man page for `,touchlog` can be found here: [,touchlog.1](,touchlog.1.html). Please either manually install it to your system or use the [`install-doc.sh`](./src/install-doc.sh) script to install both `,touchlog` and the man page.
 
 ## Source
 
