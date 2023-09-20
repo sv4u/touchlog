@@ -9,7 +9,7 @@ build-job:
     - apt-get update
     - apt-get install -y make gcc pandoc
   script:
-    - make publish
+    - make touchlog
   artifacts:
     untracked: true
 
@@ -24,5 +24,6 @@ publish-job:
     - apt-get update
     - apt-get install -y ncftp
   script:
+    - make publish
     - ./ftp.sh
 
