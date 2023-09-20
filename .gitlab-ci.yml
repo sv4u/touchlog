@@ -5,24 +5,26 @@ stages:
 build-job:
   image: gcc:bookworm
   stage: build
+  needs: []
   before_script:
     - apt-get update
-    - apt-get install -y make gcc pandoc
+    - apt-get install -y make
   script:
     - make touchlog
   artifacts:
     untracked: true
 
 publish-job:
-  image: gcc:bookworm
+  image: ubuntu:latest
   stage: publish
-  dependencies:
-    - build-job
   only:
     - master
+  dependencies:
+    - build-job
+  needs: ["build-job"]
   before_script:
     - apt-get update
-    - apt-get install -y ncftp
+    - apt-get install -y make ncftp pandoc
   script:
     - make publish
     - ./ftp.sh
