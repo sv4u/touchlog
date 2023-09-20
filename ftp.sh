@@ -8,7 +8,7 @@ cd dist
 
 echo "Transferring data"
 ncftp -u $USER -p $PASSWORD $HOST <<EOF
-cd domains/sasankvishnubhatla.net/public_html/log-suite/touchlog
+cd domains/development.sasankvishnubhatla.net/public_html/log-suite/touchlog
 rm -rf *
 put -R .
 bye
