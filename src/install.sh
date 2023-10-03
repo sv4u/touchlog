@@ -3,7 +3,7 @@
 # pull ,touchlog from personsal site and store in temp file
 temp_exec=$(mktemp)
 touchlog=/usr/local/touchlog/bin/,touchlog
-curl https://sasankvishnubhatla.net/log-suite/touchlog/,touchlog > $temp_exec
+curl https://development.sasankvishnubhatla.net/log-suite/touchlog/,touchlog > $temp_exec
 chmod a+x $temp_exec
 
 # copy temp file into /usr/local/bin/,touchlog
@@ -19,7 +19,7 @@ rm $temp_exec
 # pull LICENSE from personsal site and store in temp file
 temp_license=$(mktemp)
 license=/usr/local/touchlog/LICENSE
-curl https://sasankvishnubhatla.net/log-suite/touchlog/LICENSE > $temp_license
+curl https://development.sasankvishnubhatla.net/log-suite/touchlog/LICENSE > $temp_license
 
 # copy temp file into /usr/local/touchlog/
 sudo cp $temp_license $license
