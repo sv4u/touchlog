@@ -1,7 +1,11 @@
 .PHONY: default
+BUILD_TIME := $(shell date +"%Y-%m-%d.%H:%M:%S")
+FLAG := "-X main.buildTime=${BUILD_TIME}"
 
 build:
-	./build.sh
+	echo $(BUILD_TIME)
+	echo $(FLAG)
+	go build -v -ldflags=${FLAG}
 	echo "OK"
 
 documentation:
