@@ -1,15 +1,7 @@
 .PHONY: default
 
-touchlog:
-	[ -d dist ] || mkdir -p dist
-	gcc src/touchlog.c -o dist/,touchlog
-	./dist/,touchlog -v
-	echo "OK"
-
-optimized:
-	[ -d dist ] || mkdir -p dist
-	gcc -O3 src/touchlog.c -o dist/,touchlog
-	./dist/,touchlog -v
+build:
+	./build.sh
 	echo "OK"
 
 documentation:
@@ -22,11 +14,11 @@ documentation:
 clean:
 	-rm -rf dist && echo "Clean"
 
-publish: optimized documentation
+publish: build documentation
 	cp -r src dist
 	cp README.md dist
 	cp LICENSE dist
 	echo "OK"
 
-default: touchlog
+default: build
 
