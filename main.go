@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import "touchlog/src"
+
+var buildTime string
 
 func main() {
-	fmt.Println("touchlog")
+	src.Read_Args(buildTime)
 }

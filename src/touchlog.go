@@ -2,11 +2,20 @@ package src
 
 import (
 	"flag"
+	"fmt"
+	"os"
 )
 
-// TODO write touchlog static string
+const author string = "Sasank 'squatch$' Vishnubhatla"
+const version string = "1.0-dev"
 
-func read_args() {
+const log_format string = "> month: %s\n> day: %s\n> year: %s\n\n|> events\n\n|> emotions\n\n|> things to remember\n"
+
+func Read_Args(buildTime string) bool {
+	return read_args(buildTime)
+}
+
+func read_args(buildTime string) bool {
 	datePtr := flag.String("date", "mmddyyyy", "a logfile is created with the supplied date")
 	outDirPtr := flag.String("outdir", "dir", "write the logfile to inputted directory")
 	versionPtr := flag.Bool("version", false, "display the version information")
@@ -14,8 +23,13 @@ func read_args() {
 	flag.Parse()
 
 	if *versionPtr {
-		// TODO print version information
-		// exit afterwards
+		// print version information
+		fmt.Println("touchlog")
+		fmt.Println("Author: ", author)
+		fmt.Println("Version: ", version)
+		fmt.Println("Build: ", buildTime)
+
+		os.Exit(0)
 	}
 
 	if *outDirPtr == "" {
@@ -26,6 +40,7 @@ func read_args() {
 	handle_date(datePtr)
 	normalize_outdir(outDirPtr)
 
+	return true
 }
 
 func handle_date(datePtr *string) {}
