@@ -6,7 +6,7 @@ build:
 	[ -d dist ] || mkdir -p dist
 	go build -v -ldflags=${FLAG}
 	cp touchlog dist
-	./touchlog --version
+	./touchlog --version --verbose
 
 docs:
 	[ -d dist ] || mkdir -p dist
