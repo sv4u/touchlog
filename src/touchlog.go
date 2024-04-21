@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strconv"
+	"time"
 )
 
 const author string = "Sasank 'squatch$' Vishnubhatla"
@@ -92,6 +94,18 @@ func read_args(buildTime string) bool {
 	return true
 }
 
+func pad(val int, length int) string {
+	vprintf("pad(%v, %v)\n", val, length)
+
+	str := strconv.Itoa(val)
+
+	for len(str) < length {
+		str = "0" + str
+	}
+
+	return str
+}
+
 func handle_date(datePtr *string) {
 	tmp := *datePtr
 
@@ -99,10 +113,21 @@ func handle_date(datePtr *string) {
 	vprintf("handle_date(%s)\n", tmp)
 
 	if *datePtr == "" {
-		// TODO handle using today's date
+		// using today's date
+		date := time.Now()
+		year := pad(date.Year(), 4)
+		month := pad(int(date.Month()), 2)
+		day := pad(date.Day(), 2)
+
+		tmp = month + "-" + day + "-" + year
 	} else {
 		// TODO parsing date from string
 	}
+
+	*datePtr = tmp
+
+	vprintf("handle_date -> %p\n", datePtr)
+	vprintf("handle_date -> %s\n", tmp)
 }
 
 func normalize_outdir(outDirPtr *string) {
