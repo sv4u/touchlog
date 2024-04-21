@@ -23,7 +23,7 @@ var print = log.New(&buf, "", 0)
 
 func vprintf(format string, v ...any) {
 	if verbosity {
-		debug.Printf(format, v)
+		debug.Printf(format, v...)
 	}
 }
 
@@ -33,25 +33,24 @@ func vprintln(a ...any) {
 	}
 }
 
+func eprintf(format string, v ...any) {
+	errlog.Fatalf(format, v...)
+}
+
 func eprintln(a ...any) {
-	errlog.Println(a...)
+	errlog.Fatalln(a...)
 }
 
 func println(a ...any) {
 	print.Println(a...)
 }
 
-func clearbuf() {
-	fmt.Print(&buf)
-}
-
 func Touchlog(buildTime string) bool {
+	defer fmt.Print(&buf)
 	return read_args(buildTime)
 }
 
 func read_args(buildTime string) bool {
-	defer clearbuf()
-
 	datePtr := flag.String("date", "", "a logfile is created with the supplied date")
 	outDirPtr := flag.String("outdir", "", "write the logfile to inputted directory")
 	versionPtr := flag.Bool("version", false, "display the version information")
@@ -84,12 +83,21 @@ func read_args(buildTime string) bool {
 
 	handle_date(datePtr)
 	normalize_outdir(outDirPtr)
+
+	vprintf("date to write: %s", *datePtr)
+	vprintf("normalized outdir: %s", *outDirPtr)
+
 	write_log(datePtr, outDirPtr)
 
 	return true
 }
 
 func handle_date(datePtr *string) {
+	tmp := *datePtr
+
+	vprintf("handle_date(%p)\n", datePtr)
+	vprintf("handle_date(%s)\n", tmp)
+
 	if *datePtr == "" {
 		// TODO handle using today's date
 	} else {
@@ -100,8 +108,17 @@ func handle_date(datePtr *string) {
 func normalize_outdir(outDirPtr *string) {
 	tmp := *outDirPtr
 
+	vprintf("normalize_outdir(%p)\n", outDirPtr)
+	vprintf("normalize_outdir(%s)\n", tmp)
+
 	// join on nothing to clean up path
 	tmpPath := filepath.Join(tmp)
+	tmpPath, err := filepath.Abs(tmpPath)
+	if err != nil {
+		eprintf("could not get absolute path of outdir %s", tmpPath)
+	}
+
+	vprintf("tmpPath := %s", tmpPath)
 
 	// store back in outDirPtr to reuse pointer
 	*outDirPtr = tmpPath
