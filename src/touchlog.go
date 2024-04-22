@@ -19,37 +19,10 @@ const debug_flags int = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfi
 
 var verbosity bool
 var buf bytes.Buffer
-var debug = log.New(&buf, "touchlog-verbose > ", debug_flags)
+var nilbuf bytes.Buffer
+var debug = log.New(&nilbuf, "touchlog-verbose > ", debug_flags)
 var errlog = log.New(&buf, "touchlog-error > ", debug_flags)
 var print = log.New(&buf, "", 0)
-
-func vprintf(format string, v ...any) {
-	if verbosity {
-		debug.Printf(format, v...)
-	}
-}
-
-func vprintln(a ...any) {
-	if verbosity {
-		debug.Println(a...)
-	}
-}
-
-func eprint(v ...any) {
-	errlog.Fatal(v...)
-}
-
-func eprintf(format string, v ...any) {
-	errlog.Fatalf(format, v...)
-}
-
-func eprintln(a ...any) {
-	errlog.Fatalln(a...)
-}
-
-func println(a ...any) {
-	print.Println(a...)
-}
 
 func Touchlog(buildTime string) bool {
 	defer fmt.Print(&buf)
@@ -66,34 +39,44 @@ func read_args(buildTime string) bool {
 
 	// store the verbosity setting
 	verbosity = *verbosePtr
+	if verbosity {
+		debug = log.New(&buf, "touchlog-verbose > ", debug_flags)
+	}
 
 	if *versionPtr {
-		vprintln("printing version information")
+		debug.Println("printing version information")
 
 		// print version information
-		println("touchlog")
-		println("Author:  ", author)
-		println("Version: ", version)
-		println("Build:   ", buildTime)
+		print.Println("touchlog")
+		print.Println("Author:  ", author)
+		print.Println("Version: ", version)
+		print.Println("Build:   ", buildTime)
 
 		return true
 	}
 
-	vprintln("checking output directory")
+	debug.Println("checking output directory")
 	if *outDirPtr == "" {
-		vprintf("%p points to empty string\n", outDirPtr)
-		eprintln("output directory is empty")
+		debug.Printf("%p points to empty string\n", outDirPtr)
+		errlog.Println("output directory is empty")
 
 		return false
 	}
 
-	handle_date(datePtr)
-	normalize_outdir(outDirPtr)
+	result := handle_date(datePtr)
+	if !result {
+		return false
+	}
+
+	result = normalize_outdir(outDirPtr)
+	if !result {
+		return false
+	}
 
 	filename := *datePtr + ".log"
 
-	vprintf("filename to use: %s", filename)
-	vprintf("normalized outdir: %s", *outDirPtr)
+	debug.Printf("filename to use: %s", filename)
+	debug.Printf("normalized outdir: %s", *outDirPtr)
 
 	write_log(filename, outDirPtr)
 
@@ -101,7 +84,7 @@ func read_args(buildTime string) bool {
 }
 
 func pad(val int, length int) string {
-	vprintf("pad(%v, %v)\n", val, length)
+	debug.Printf("pad(%v, %v)\n", val, length)
 
 	str := strconv.Itoa(val)
 
@@ -109,18 +92,23 @@ func pad(val int, length int) string {
 		str = "0" + str
 	}
 
+	debug.Printf("padded %v to %v length -> %s", val, length, str)
+
 	return str
 }
 
 func handle_date(datePtr *string) bool {
 	tmp := *datePtr
 
-	vprintf("handle_date(%p)\n", datePtr)
-	vprintf("handle_date(%s)\n", tmp)
+	debug.Printf("handle_date(%p)\n", datePtr)
+	debug.Printf("handle_date(%s)\n", tmp)
 
 	if *datePtr == "" {
 		// using today's date
 		date := time.Now()
+
+		debug.Printf("Using today's date: %v\n", date)
+
 		year := pad(date.Year(), 4)
 		month := pad(int(date.Month()), 2)
 		day := pad(date.Day(), 2)
@@ -131,9 +119,9 @@ func handle_date(datePtr *string) bool {
 		// expected format: mmddyyyy
 		// expected length: 8
 		if len(tmp) != 8 {
-			eprintf("invalid input date: %s\n", tmp)
-			eprintln("expected format: mmddyyyy")
-			eprintln("expected length: 8")
+			errlog.Printf("invalid input date: %s\n", tmp)
+			errlog.Println("expected format: mmddyyyy")
+			errlog.Println("expected length: 8")
 
 			return false
 		}
@@ -144,25 +132,31 @@ func handle_date(datePtr *string) bool {
 		_day := tmp[2:4]
 		_year := tmp[4:8]
 
-		vprintf("parsing month: %s", _month)
-		vprintf("parsing day: %s", _day)
-		vprintf("parsing year: %s", _year)
+		debug.Printf("parsing month: %s\n", _month)
+		debug.Printf("parsing day: %s\n", _day)
+		debug.Printf("parsing year: %s\n", _year)
 
-		vprintln("making sure month, day, and year are numbers")
+		debug.Println("making sure month, day, and year are numbers")
 
 		__month, err := strconv.Atoi(_month)
 		if err != nil {
-			eprint(err)
+			errlog.Print(err)
+
+			return false
 		}
 
 		__day, err := strconv.Atoi(_day)
 		if err != nil {
-			eprint(err)
+			errlog.Print(err)
+
+			return false
 		}
 
 		__year, err := strconv.Atoi(_year)
 		if err != nil {
-			eprint(err)
+			errlog.Print(err)
+
+			return false
 		}
 
 		month := pad(__month, 2)
@@ -174,31 +168,37 @@ func handle_date(datePtr *string) bool {
 
 	*datePtr = tmp
 
-	vprintf("handle_date -> %p\n", datePtr)
-	vprintf("handle_date -> %s\n", tmp)
+	debug.Printf("handle_date -> %p\n", datePtr)
+	debug.Printf("handle_date -> %s\n", tmp)
 
 	return true
 }
 
-func normalize_outdir(outDirPtr *string) {
+func normalize_outdir(outDirPtr *string) bool {
 	tmp := *outDirPtr
 
-	vprintf("normalize_outdir(%p)\n", outDirPtr)
-	vprintf("normalize_outdir(%s)\n", tmp)
+	debug.Printf("normalize_outdir(%p)\n", outDirPtr)
+	debug.Printf("normalize_outdir(%s)\n", tmp)
 
 	// join on nothing to clean up path
 	tmpPath := filepath.Join(tmp)
 	tmpPath, err := filepath.Abs(tmpPath)
 	if err != nil {
-		eprintf("could not get absolute path of outdir %s", tmpPath)
+		errlog.Print(err)
+
+		return false
 	}
 
-	vprintf("tmpPath := %s", tmpPath)
+	debug.Printf("tmpPath := %s", tmpPath)
 
 	// store back in outDirPtr to reuse pointer
 	*outDirPtr = tmpPath
+
+	return true
 }
 
 func write_log(filename string, outDirPtr *string) bool {
+	debug.Printf("write_log(%v, %v)\n", filename, outDirPtr)
+
 	return true
 }
