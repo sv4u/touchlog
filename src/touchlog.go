@@ -35,6 +35,10 @@ func vprintln(a ...any) {
 	}
 }
 
+func eprint(v ...any) {
+	errlog.Fatal(v...)
+}
+
 func eprintf(format string, v ...any) {
 	errlog.Fatalf(format, v...)
 }
@@ -86,10 +90,12 @@ func read_args(buildTime string) bool {
 	handle_date(datePtr)
 	normalize_outdir(outDirPtr)
 
-	vprintf("date to write: %s", *datePtr)
+	filename := *datePtr + ".log"
+
+	vprintf("filename to use: %s", filename)
 	vprintf("normalized outdir: %s", *outDirPtr)
 
-	write_log(datePtr, outDirPtr)
+	write_log(filename, outDirPtr)
 
 	return true
 }
@@ -106,7 +112,7 @@ func pad(val int, length int) string {
 	return str
 }
 
-func handle_date(datePtr *string) {
+func handle_date(datePtr *string) bool {
 	tmp := *datePtr
 
 	vprintf("handle_date(%p)\n", datePtr)
@@ -121,13 +127,57 @@ func handle_date(datePtr *string) {
 
 		tmp = month + "-" + day + "-" + year
 	} else {
-		// TODO parsing date from string
+		// parsing date from string
+		// expected format: mmddyyyy
+		// expected length: 8
+		if len(tmp) != 8 {
+			eprintf("invalid input date: %s\n", tmp)
+			eprintln("expected format: mmddyyyy")
+			eprintln("expected length: 8")
+
+			return false
+		}
+
+		// assumption: length of tmp is 8
+		// start slicing
+		_month := tmp[0:2]
+		_day := tmp[2:4]
+		_year := tmp[4:8]
+
+		vprintf("parsing month: %s", _month)
+		vprintf("parsing day: %s", _day)
+		vprintf("parsing year: %s", _year)
+
+		vprintln("making sure month, day, and year are numbers")
+
+		__month, err := strconv.Atoi(_month)
+		if err != nil {
+			eprint(err)
+		}
+
+		__day, err := strconv.Atoi(_day)
+		if err != nil {
+			eprint(err)
+		}
+
+		__year, err := strconv.Atoi(_year)
+		if err != nil {
+			eprint(err)
+		}
+
+		month := pad(__month, 2)
+		day := pad(__day, 2)
+		year := pad(__year, 4)
+
+		tmp = month + "-" + day + "-" + year
 	}
 
 	*datePtr = tmp
 
 	vprintf("handle_date -> %p\n", datePtr)
 	vprintf("handle_date -> %s\n", tmp)
+
+	return true
 }
 
 func normalize_outdir(outDirPtr *string) {
@@ -149,6 +199,6 @@ func normalize_outdir(outDirPtr *string) {
 	*outDirPtr = tmpPath
 }
 
-func write_log(datePtr *string, outDirPtr *string) bool {
+func write_log(filename string, outDirPtr *string) bool {
 	return true
 }
