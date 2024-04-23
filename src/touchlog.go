@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -13,7 +14,7 @@ import (
 const author string = "Sasank 'squatch$' Vishnubhatla"
 const version string = "1.0-dev"
 
-const log_format string = "> month: %s\n> day: %s\n> year: %s\n\n|> events\n\n|> emotions\n\n|> things to remember\n"
+const log_format string = "> month: %v\n> day: %v\n> year: %v\n\n|> events\n\n|> emotions\n\n|> things to remember\n"
 
 const debug_flags int = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.Lmsgprefix
 
@@ -63,10 +64,12 @@ func read_args(buildTime string) bool {
 		return false
 	}
 
-	result := handle_date(datePtr)
+	month, day, year, result := handle_date(datePtr)
 	if !result {
 		return false
 	}
+
+	debug.Printf("mmddyyyy -> %v%v%v\n", month, day, year)
 
 	result = normalize_outdir(outDirPtr)
 	if !result {
@@ -78,7 +81,7 @@ func read_args(buildTime string) bool {
 	debug.Printf("filename to use: %s", filename)
 	debug.Printf("normalized outdir: %s", *outDirPtr)
 
-	write_log(filename, outDirPtr)
+	write_log(filename, outDirPtr, month, day, year)
 
 	return true
 }
@@ -97,7 +100,7 @@ func pad(val int, length int) string {
 	return str
 }
 
-func handle_date(datePtr *string) bool {
+func handle_date(datePtr *string) (month string, day string, year string, success bool) {
 	tmp := *datePtr
 
 	debug.Printf("handle_date(%p)\n", datePtr)
@@ -109,9 +112,9 @@ func handle_date(datePtr *string) bool {
 
 		debug.Printf("Using today's date: %v\n", date)
 
-		year := pad(date.Year(), 4)
-		month := pad(int(date.Month()), 2)
-		day := pad(date.Day(), 2)
+		year = pad(date.Year(), 4)
+		month = pad(int(date.Month()), 2)
+		day = pad(date.Day(), 2)
 
 		tmp = month + "-" + day + "-" + year
 	} else {
@@ -123,7 +126,9 @@ func handle_date(datePtr *string) bool {
 			errlog.Println("expected format: mmddyyyy")
 			errlog.Println("expected length: 8")
 
-			return false
+			success = false
+
+			return
 		}
 
 		// assumption: length of tmp is 8
@@ -142,26 +147,32 @@ func handle_date(datePtr *string) bool {
 		if err != nil {
 			errlog.Print(err)
 
-			return false
+			success = false
+
+			return
 		}
 
 		__day, err := strconv.Atoi(_day)
 		if err != nil {
 			errlog.Print(err)
 
-			return false
+			success = false
+
+			return
 		}
 
 		__year, err := strconv.Atoi(_year)
 		if err != nil {
 			errlog.Print(err)
 
-			return false
+			success = false
+
+			return
 		}
 
-		month := pad(__month, 2)
-		day := pad(__day, 2)
-		year := pad(__year, 4)
+		month = pad(__month, 2)
+		day = pad(__day, 2)
+		year = pad(__year, 4)
 
 		tmp = month + "-" + day + "-" + year
 	}
@@ -171,7 +182,9 @@ func handle_date(datePtr *string) bool {
 	debug.Printf("handle_date -> %p\n", datePtr)
 	debug.Printf("handle_date -> %s\n", tmp)
 
-	return true
+	success = true
+
+	return
 }
 
 func normalize_outdir(outDirPtr *string) bool {
@@ -197,8 +210,39 @@ func normalize_outdir(outDirPtr *string) bool {
 	return true
 }
 
-func write_log(filename string, outDirPtr *string) bool {
+func write_log(filename string, outDirPtr *string, month string, day string, year string) bool {
 	debug.Printf("write_log(%v, %v)\n", filename, outDirPtr)
+
+	logfile := filepath.Join(*outDirPtr, filename)
+	f, err := os.Create(logfile)
+	if err != nil {
+		errlog.Print(err)
+
+		return false
+	}
+
+	debug.Printf("os.Create(%v) -> %v", logfile, f)
+
+	defer f.Close()
+	debug.Printf("defer %v.Close()", f)
+
+	log_data := fmt.Sprintf(log_format, month, day, year)
+
+	n, err := f.WriteString(log_data)
+	if err != nil {
+		errlog.Print(err)
+
+		return false
+	}
+
+	debug.Printf("wrote %d bytes\n", n)
+
+	err = f.Sync()
+	if err != nil {
+		errlog.Print(err)
+
+		return false
+	}
 
 	return true
 }
