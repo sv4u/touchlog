@@ -12,7 +12,7 @@ import (
 )
 
 const author string = "Sasank 'squatch$' Vishnubhatla"
-const version string = "1.0-dev"
+const version string = "1.1"
 
 const log_format string = "> month: %v\n> day: %v\n> year: %v\n\n|> events\n\n|> emotions\n\n|> things to remember\n"
 

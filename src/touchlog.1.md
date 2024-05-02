@@ -2,8 +2,8 @@
 title: "TOUCHLOG"
 section: 1
 header: User Manual
-footer: "touchlog 1.0-dev"
-date: April 20, 2024
+footer: "touchlog 1.1"
+date: May 1, 2024
 ---
 
 # NAME
@@ -12,7 +12,7 @@ touchlog - a tool to create log files for a date
 
 # SYNOPSIS
 
-**touchlog** [*-h|-v|-d mmddyyyy|-f [dir]*]
+**touchlog** [*-version|-verbose|-outdir [dir]|-date [mmddyyyy]|-help*]
 
 # DESCRIPTION
 
@@ -20,36 +20,39 @@ touchlog - a tool to create log files for a date
 
 # OPTIONS
 
-**-h**
+**-help**
 : display help message
 
-**-v**
+**-version**
 : display version message
 
-**-d mmddyyyy**
+**-date [mmddyyyy]**
 : use a supplied date
 
-**-f [dir]**
+**-outdir [dir]**
 : write to existing inputted directory
+
+**-verbose**
+: enable verbose mode
 
 # EXAMPLE
 
 **touchlog**
 : a log file is create for today's date
 
-**touchlog -v**
+**touchlog -version**
 : display version message
 
-**touchlog -h**
+**touchlog -help**
 : display help message
 
-**touchlog -d 04301998**
+**touchlog -date 04301998**
 : a log file is create for date April 30, 1998
 
-**touchlog -f logs**
+**touchlog -outdir logs**
 : a log file is created for today's date in the "logs" folder
 
-**touchlog -d 04301998 -f logs**
+**touchlog -date 04301998 -outdir logs**
 : a log file is create for date April 30, 1998 in the "logs" folder
 
 # AUTHORS
