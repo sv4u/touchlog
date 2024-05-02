@@ -3,19 +3,19 @@ stages:
   - publish
 
 build-job:
-  image: gcc:bookworm
+  image: golang:latest
   stage: build
   needs: []
   before_script:
     - apt-get update
     - apt-get install -y make
   script:
-    - make touchlog
+    - make build
   artifacts:
     untracked: true
 
 publish-job:
-  image: gcc:bookworm
+  image: golang:latest
   stage: publish
   only:
     - master
