@@ -28,4 +28,4 @@ publish-job:
   script:
     - make publish
     - ./ftp.sh
-
+    - ./publish.sh
