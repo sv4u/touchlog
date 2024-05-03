@@ -27,4 +27,3 @@ To install the source, please use the [`install-source.sh`](./src/install-source
 ## License
 
 See the [License](LICENSE).
-

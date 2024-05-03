@@ -1,6 +1,6 @@
 package main
 
-import "touchlog/src"
+import "github.com/sv4u/touchlog/src"
 
 var buildTime string
 

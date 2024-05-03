@@ -8,6 +8,10 @@ build:
 	cp touchlog dist
 	./touchlog --version --verbose
 
+install: build
+	go install -v -ldflags=${FLAG}
+	touchlog --version --verbose
+
 docs:
 	[ -d dist ] || mkdir -p dist
 	pandoc src/touchlog.1.md -s -t man -o dist/touchlog.1
