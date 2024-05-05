@@ -3,7 +3,6 @@ BUILD_TIME := $(shell date +"%Y-%m-%d.%H:%M:%S")
 GIT_VERSION := $(shell git describe --tags --abbrev=0)
 BUILD_FLAG := "-X main.buildTime=${BUILD_TIME} -X main.version=${GIT_VERSION}"
 GH_PUBLISH_PATH := "github.com/sv4u/touchlog@${GIT_VERSION}"
-GL_PUBLISH_PATH := "gitlab.com/sv4u/touchlog@${GIT_VERSION}"
 
 touchlog: main.go
 	go build -v -ldflags=${BUILD_FLAG}
@@ -29,9 +28,7 @@ package: touchlog docs
 	cd dist && tar cvf touchlog-${GIT_VERSION}.tar .
 
 publish: package
-	GOPROXY=proxy.golang.org go list -m ${GL_PUBLISH_PATH}
 	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
-	./ftp.sh
 
 default: build
 

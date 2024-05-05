@@ -27,3 +27,4 @@ publish-job:
     - apt-get install -y make ncftp pandoc git
   script:
     - make publish
+    - ./ftp.sh
