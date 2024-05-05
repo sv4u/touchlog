@@ -24,7 +24,6 @@ publish-job:
   needs: ["build-job"]
   before_script:
     - apt-get update
-    - apt-get install -y make ncftp pandoc
+    - apt-get install -y make ncftp pandoc git
   script:
     - make publish
-    - ./ftp.sh

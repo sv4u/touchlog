@@ -1,15 +1,14 @@
 .PHONY: default
 BUILD_TIME := $(shell date +"%Y-%m-%d.%H:%M:%S")
-FLAG := "-X main.buildTime=${BUILD_TIME}"
+BUILD_FLAG := "-X main.buildTime=${BUILD_TIME}"
+GIT_VERSION := $(shell git describe --tags --abbrev=0)
+PUBLISH_PATH = := "github.com/sv4u/touchlog@${GIT_VERSION}"
 
-build:
-	[ -d dist ] || mkdir -p dist
-	go build -v -ldflags=${FLAG}
-	cp touchlog dist
-	./touchlog --version --verbose
+touchlog: main.go
+	go build -v -ldflags=${BUILD_FLAG}
 
-install: build
-	go install -v -ldflags=${FLAG}
+install:
+	go install -v -ldflags=${BUILD_FLAG}
 	touchlog --version --verbose
 
 docs:
@@ -20,11 +19,18 @@ docs:
 
 clean:
 	-rm -rf dist
+	-rm -rf touchlog
 
-publish: build docs
-	cp -r src dist
+package: touchlog docs
 	cp README.md dist
 	cp LICENSE dist
+	cp touchlog dist
+	cp -r src dist
+	cd dist && tar cvf touchlog-${GIT_VERSION}.tar .
+
+publish: package
+	GOPROXY=proxy.golang.org go list -m ${PUBLISH_PATH}
+	./ftp.sh
 
 default: build
 
