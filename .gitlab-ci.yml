@@ -10,7 +10,7 @@ build-job:
     - apt-get update
     - apt-get install -y make
   script:
-    - make build
+    - make touchlog
   artifacts:
     untracked: true
 
