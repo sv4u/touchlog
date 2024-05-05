@@ -2,7 +2,7 @@
 title: "TOUCHLOG"
 section: 1
 header: User Manual
-footer: "touchlog 1.2.1"
+footer: "touchlog 1.2.2"
 date: May 1, 2024
 ---
 
