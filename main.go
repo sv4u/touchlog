@@ -21,7 +21,7 @@ var buildTime string
 var version string
 
 func main() {
-	Touchlog(buildTime)
+	Touchlog()
 }
 
 var verbosity bool
@@ -31,12 +31,10 @@ var debug = log.New(&nilbuf, "touchlog-verbose > ", debug_flags)
 var errlog = log.New(&buf, "touchlog-error > ", debug_flags)
 var print = log.New(&buf, "", 0)
 
-func Touchlog(buildTime string) bool {
+// Touchlog parses the user input from the command line and then creates a logfile for the desired
+// date.
+func Touchlog() bool {
 	defer fmt.Print(&buf)
-	return read_args(buildTime)
-}
-
-func read_args(buildTime string) bool {
 	datePtr := flag.String("date", "", "a logfile is created with the supplied date")
 	outDirPtr := flag.String("outdir", "", "write the logfile to inputted directory")
 	versionPtr := flag.Bool("version", false, "display the version information")
@@ -70,14 +68,14 @@ func read_args(buildTime string) bool {
 		return false
 	}
 
-	month, day, year, result := handle_date(datePtr)
+	month, day, year, result := Handle_date(datePtr)
 	if !result {
 		return false
 	}
 
 	debug.Printf("mmddyyyy -> %v%v%v\n", month, day, year)
 
-	result = normalize_outdir(outDirPtr)
+	result = Normalize_outdir(outDirPtr)
 	if !result {
 		return false
 	}
@@ -87,7 +85,7 @@ func read_args(buildTime string) bool {
 	debug.Printf("filename to use: %s", filename)
 	debug.Printf("normalized outdir: %s", *outDirPtr)
 
-	write_log(filename, outDirPtr, month, day, year)
+	Write_log(filename, outDirPtr, month, day, year)
 
 	return true
 }
@@ -106,7 +104,12 @@ func pad(val int, length int) string {
 	return str
 }
 
-func handle_date(datePtr *string) (month string, day string, year string, success bool) {
+// Handle_date takes a potential date input in the form of mmddyyyy and parses it into the proper
+// month day and year strings.
+//
+// Once processing is complete, Handle_date returns month, day, year, true.
+// If an error occurs during processing, Handle_date logs the errors and returns "", "", "", false.
+func Handle_date(datePtr *string) (month string, day string, year string, success bool) {
 	tmp := *datePtr
 
 	debug.Printf("handle_date(%p)\n", datePtr)
@@ -193,7 +196,12 @@ func handle_date(datePtr *string) (month string, day string, year string, succes
 	return
 }
 
-func normalize_outdir(outDirPtr *string) bool {
+// Normlaize_outdir takes a pointer to a string representing a directory and noramlizes it so that
+// writing to the outputted directory can be seamless.
+//
+// If the inputted directory is successfully normalized, Normlaize_outdir returns true.
+// Otherwise, the error is logged and Normalize_outdir returns false.
+func Normalize_outdir(outDirPtr *string) bool {
 	tmp := *outDirPtr
 
 	debug.Printf("normalize_outdir(%p)\n", outDirPtr)
@@ -216,7 +224,12 @@ func normalize_outdir(outDirPtr *string) bool {
 	return true
 }
 
-func write_log(filename string, outDirPtr *string, month string, day string, year string) bool {
+// Write_log takes a filename, a pointer to a string representing a directory, the month, the day,
+// the year, writes a logfile to the requested directory.
+//
+// If the logfile is successfully written, Write_log returns true.
+// Otherwise, the error is logged and Write_log returns false.
+func Write_log(filename string, outDirPtr *string, month string, day string, year string) bool {
 	debug.Printf("write_log(%v, %v)\n", filename, outDirPtr)
 
 	logfile := filepath.Join(*outDirPtr, filename)
