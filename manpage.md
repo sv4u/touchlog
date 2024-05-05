@@ -2,9 +2,11 @@
 title: "TOUCHLOG"
 section: 1
 header: User Manual
-footer: "touchlog 1.1"
+footer: "touchlog 1.1.2"
 date: May 1, 2024
 ---
+
+<!-- markdownlint-disable-file MD025 -->
 
 # NAME
 
