@@ -30,5 +30,5 @@ package: touchlog docs
 publish: package
 	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
 
-default: build
+default: touchlog
 
