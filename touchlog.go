@@ -63,19 +63,19 @@ func Touchlog() bool {
 	debug.Println("checking output directory")
 	if *outDirPtr == "" {
 		debug.Printf("%p points to empty string\n", outDirPtr)
-		errlog.Println("output directory is empty")
+		debug.Println("setting output directory to current working directory")
 
-		return false
+		Set_CWD(outDirPtr)
 	}
 
-	month, day, year, result := Handle_date(datePtr)
+	month, day, year, result := Handle_Date(datePtr)
 	if !result {
 		return false
 	}
 
 	debug.Printf("mmddyyyy -> %v%v%v\n", month, day, year)
 
-	result = Normalize_outdir(outDirPtr)
+	result = Normalize(outDirPtr)
 	if !result {
 		return false
 	}
@@ -85,7 +85,7 @@ func Touchlog() bool {
 	debug.Printf("filename to use: %s", filename)
 	debug.Printf("normalized outdir: %s", *outDirPtr)
 
-	Write_log(filename, outDirPtr, month, day, year)
+	Write(filename, outDirPtr, month, day, year)
 
 	return true
 }
@@ -104,16 +104,16 @@ func pad(val int, length int) string {
 	return str
 }
 
-// Handle_date takes a potential date input in the form of mmddyyyy and parses it into the proper
+// Handle_Date takes a potential date input in the form of mmddyyyy and parses it into the proper
 // month day and year strings.
 //
 // Once processing is complete, Handle_date returns month, day, year, true.
 // If an error occurs during processing, Handle_date logs the errors and returns "", "", "", false.
-func Handle_date(datePtr *string) (month string, day string, year string, success bool) {
+func Handle_Date(datePtr *string) (month string, day string, year string, success bool) {
 	tmp := *datePtr
 
-	debug.Printf("handle_date(%p)\n", datePtr)
-	debug.Printf("handle_date(%s)\n", tmp)
+	debug.Printf("Handle_Date(%p)\n", datePtr)
+	debug.Printf("Handle_Date(%s)\n", tmp)
 
 	if *datePtr == "" {
 		// using today's date
@@ -188,24 +188,47 @@ func Handle_date(datePtr *string) (month string, day string, year string, succes
 
 	*datePtr = tmp
 
-	debug.Printf("handle_date -> %p\n", datePtr)
-	debug.Printf("handle_date -> %s\n", tmp)
+	debug.Printf("Handle_Date -> %p\n", datePtr)
+	debug.Printf("Handle_Date -> %s\n", tmp)
 
 	success = true
 
 	return
 }
 
-// Normlaize_outdir takes a pointer to a string representing a directory and noramlizes it so that
+// Set_CWD takes a pointer to a string representation of a directory and sets it to the current
+// working directory where touchlog is called
+func Set_CWD(outDirPtr *string) bool {
+	tmp := *outDirPtr
+
+	debug.Printf("Set_CWD(%p)\n", outDirPtr)
+	debug.Printf("Set_CWD(%s)\n", tmp)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		errlog.Print(err)
+
+		return false
+	}
+
+	debug.Printf("cwd := %s\n", cwd)
+
+	tmp = cwd
+	*outDirPtr = tmp
+
+	return true
+}
+
+// Normlaize takes a pointer to a string representing a directory and noramlizes it so that
 // writing to the outputted directory can be seamless.
 //
 // If the inputted directory is successfully normalized, Normlaize_outdir returns true.
-// Otherwise, the error is logged and Normalize_outdir returns false.
-func Normalize_outdir(outDirPtr *string) bool {
+// Otherwise, the error is logged and Normalize returns false.
+func Normalize(outDirPtr *string) bool {
 	tmp := *outDirPtr
 
-	debug.Printf("normalize_outdir(%p)\n", outDirPtr)
-	debug.Printf("normalize_outdir(%s)\n", tmp)
+	debug.Printf("Normalize(%p)\n", outDirPtr)
+	debug.Printf("Normalize(%s)\n", tmp)
 
 	// join on nothing to clean up path
 	tmpPath := filepath.Join(tmp)
@@ -224,13 +247,13 @@ func Normalize_outdir(outDirPtr *string) bool {
 	return true
 }
 
-// Write_log takes a filename, a pointer to a string representing a directory, the month, the day,
+// Write takes a filename, a pointer to a string representing a directory, the month, the day,
 // the year, writes a logfile to the requested directory.
 //
-// If the logfile is successfully written, Write_log returns true.
-// Otherwise, the error is logged and Write_log returns false.
-func Write_log(filename string, outDirPtr *string, month string, day string, year string) bool {
-	debug.Printf("write_log(%v, %v)\n", filename, outDirPtr)
+// If the logfile is successfully written, Write returns true.
+// Otherwise, the error is logged and Write returns false.
+func Write(filename string, outDirPtr *string, month string, day string, year string) bool {
+	debug.Printf("Write(%v, %v)\n", filename, outDirPtr)
 
 	logfile := filepath.Join(*outDirPtr, filename)
 	f, err := os.Create(logfile)
