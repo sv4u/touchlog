@@ -1,6 +1,5 @@
 stages:
   - build
-  - install
   - publish
   - release
 
@@ -17,10 +16,8 @@ build-job:
 
 install-job:
   image: golang:latest
-  stage: install
-  dependencies:
-    - build-job
-  needs: ["build-job"]
+  stage: build
+  needs: []
   before_script:
     - apt-get update
     - apt-get install -y make
