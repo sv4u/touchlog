@@ -28,6 +28,14 @@ TODO
 
 The man page for `touchlog` can be found here: [touchlog.1](touchlog.1.html). Please manually install touchlog to your system to use both `touchlog` and the man page.
 
+## Changelog
+
+To generate a changelog, use [`git-chglog`](https://github.com/git-chglog/git-chglog/). Follow this command:
+
+```bash
+git-chglog -o CHANGELOG.md
+```
+
 ## License
 
 See the [License](LICENSE).
