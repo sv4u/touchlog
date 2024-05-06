@@ -1,7 +1,7 @@
 stages:
   - build
-  - install
   - publish
+  - release
 
 build-job:
   image: golang:latest
@@ -16,10 +16,8 @@ build-job:
 
 install-job:
   image: golang:latest
-  stage: install
-  dependencies:
-    - build-job
-  needs: ["build-job"]
+  stage: build
+  needs: []
   before_script:
     - apt-get update
     - apt-get install -y make
@@ -67,6 +65,17 @@ publish-job:
   artifacts:
     paths:
       - dist/touchlog-$CI_COMMIT_TAG.tar
+
+release-job:
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  stage: release
+  only:
+    - tags
+  dependencies:
+    - publish-job
+  needs: ["publish-job"]
+  script:
+    - echo release job
   release:
     tag_name: '$CI_COMMIT_TAG'
     name: 'Release $CI_COMMIT_TAG'
