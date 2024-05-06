@@ -9,7 +9,6 @@ touchlog: touchlog.go
 
 install:
 	go install -v -ldflags=${BUILD_FLAG}
-	touchlog --version --verbose
 
 docs:
 	[ -d dist ] || mkdir -p dist
