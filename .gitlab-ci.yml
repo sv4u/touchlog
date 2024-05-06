@@ -27,6 +27,22 @@ install-job:
     - make install
     - touchlog --version --verbose
 
+package-job:
+  image: golang:latest
+  stage: publish
+  dependencies:
+    - install-job
+  needs: ["install-job"]
+  before_script:
+    - apt-get update
+    - apt-get install -y make pandoc git tar
+  script:
+    - make package
+  artifacts:
+    expose_as: "source package"
+    paths:
+      - dist/touchlog-*.tar
+
 publish-job:
   image: golang:latest
   stage: publish
@@ -37,7 +53,10 @@ publish-job:
   needs: ["install-job"]
   before_script:
     - apt-get update
-    - apt-get install -y make ncftp pandoc git
+    - apt-get install -y make ncftp pandoc git tar
   script:
     - make publish
     - ./ftp.sh
+  artifacts:
+    paths:
+      - dist/touchlog-*.tar
