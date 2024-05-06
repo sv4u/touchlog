@@ -24,6 +24,8 @@ package: touchlog docs
 	cp README.md dist
 	cp LICENSE dist
 	cp touchlog dist
+	cp touchlog.go dist
+	cp go.mod dist
 
 publish: package
 	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
