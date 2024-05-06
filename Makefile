@@ -4,7 +4,7 @@ GIT_VERSION := $(shell git describe --tags --abbrev=0)
 BUILD_FLAG := "-X main.buildTime=${BUILD_TIME} -X main.version=${GIT_VERSION}"
 GH_PUBLISH_PATH := "github.com/sv4u/touchlog@${GIT_VERSION}"
 
-touchlog: main.go
+touchlog: touchlog.go
 	go build -v -ldflags=${BUILD_FLAG}
 
 install:
