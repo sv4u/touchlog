@@ -69,4 +69,5 @@ publish-job:
       - dist/touchlog-$CI_COMMIT_TAG.tar
   release:
     tag_name: '$CI_COMMIT_TAG'
-    description: '$CI_COMMIT_TAG > $CI_COMMIT_TAG_MESSAGE'
+    name: 'Release $CI_COMMIT_TAG'
+    description: './CHANGELOG.md'
