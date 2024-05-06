@@ -1,5 +1,6 @@
 stages:
   - build
+  - install
   - publish
 
 build-job:
@@ -11,8 +12,37 @@ build-job:
     - apt-get install -y make
   script:
     - make touchlog
+    - ./touchlog --version --verbose
+
+install-job:
+  image: golang:latest
+  stage: install
+  dependencies:
+    - build-job
+  needs: ["build-job"]
+  before_script:
+    - apt-get update
+    - apt-get install -y make
+  script:
+    - make install
+    - touchlog --version --verbose
+
+package-job:
+  image: golang:latest
+  stage: publish
+  dependencies:
+    - install-job
+  needs: ["install-job"]
+  before_script:
+    - apt-get update
+    - apt-get install -y make pandoc git tar
+  script:
+    - make package
   artifacts:
-    untracked: true
+    expose_as: "source package"
+    name: "$CI_COMMIT_REG_SLUG"
+    paths:
+      - dist
 
 publish-job:
   image: golang:latest
@@ -20,11 +50,14 @@ publish-job:
   only:
     - tags
   dependencies:
-    - build-job
-  needs: ["build-job"]
+    - install-job
+  needs: ["install-job"]
   before_script:
     - apt-get update
-    - apt-get install -y make ncftp pandoc git
+    - apt-get install -y make ncftp pandoc git tar
   script:
     - make publish
     - ./ftp.sh
+  artifacts:
+    paths:
+      - dist/touchlog-$CI_COMMIT_TAG.tar
