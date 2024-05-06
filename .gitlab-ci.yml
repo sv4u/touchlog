@@ -1,5 +1,6 @@
 stages:
   - build
+  - install
   - publish
 
 build-job:
@@ -11,8 +12,20 @@ build-job:
     - apt-get install -y make
   script:
     - make touchlog
-  artifacts:
-    untracked: true
+    - ./touchlog --version --verbose
+
+install-job:
+  image: golang:latest
+  stage: install
+  dependencies:
+    - build-job
+  needs: ["build-job"]
+  before_script:
+    - apt-get update
+    - apt-get install -y make
+  script:
+    - make install
+    - touchlog --version --verbose
 
 publish-job:
   image: golang:latest
@@ -20,8 +33,8 @@ publish-job:
   only:
     - tags
   dependencies:
-    - build-job
-  needs: ["build-job"]
+    - install-job
+  needs: ["install-job"]
   before_script:
     - apt-get update
     - apt-get install -y make ncftp pandoc git
