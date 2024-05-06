@@ -40,8 +40,9 @@ package-job:
     - make package
   artifacts:
     expose_as: "source package"
+    name: "$CI_COMMIT_REG_SLUG"
     paths:
-      - dist/touchlog-*.tar
+      - dist
 
 publish-job:
   image: golang:latest
@@ -59,4 +60,4 @@ publish-job:
     - ./ftp.sh
   artifacts:
     paths:
-      - dist/touchlog-*.tar
+      - dist/touchlog-$CI_COMMIT_TAG.tar

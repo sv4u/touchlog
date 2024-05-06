@@ -25,10 +25,10 @@ package: touchlog docs
 	cp README.md dist
 	cp LICENSE dist
 	cp touchlog dist
-	cd dist && tar cvf touchlog-${GIT_VERSION}.tar .
 
 publish: package
 	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
+	cd dist && tar cvf touchlog-${GIT_VERSION}.tar .
 
 default: touchlog
 
