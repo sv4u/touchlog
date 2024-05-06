@@ -38,11 +38,14 @@ package-job:
     - apt-get install -y make pandoc git tar
   script:
     - make package
+    - cd dist
+    - tar cvf touchlog-$CI_COMMIT_SHORT_SHA.tar .
+    - cd ..
   artifacts:
-    expose_as: "source package"
+    expose_as: "source"
     name: "$CI_COMMIT_REG_SLUG"
     paths:
-      - dist
+      - dist/touchlog-$CI_COMMIT_SHORT_SHA.tar
 
 publish-job:
   image: golang:latest
@@ -57,7 +60,14 @@ publish-job:
     - apt-get install -y make ncftp pandoc git tar
   script:
     - make publish
+    - cd dist
+    - tar cvf touchlog-$CI_COMMIT_TAG.tar .
+    - cd ..
     - ./ftp.sh
   artifacts:
     paths:
       - dist/touchlog-$CI_COMMIT_TAG.tar
+  release:
+    tag_name: '$CI_COMMIT_TAG'
+    name: 'Release $CI_COMMIT_TAG'
+    description: './CHANGELOG.md'
