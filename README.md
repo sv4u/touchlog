@@ -28,7 +28,9 @@ Install from tarball:
 
 Install source:
 
-TODO
+- From [development.sasankvishnubhatla.net/log-suite/touchlog](https://development.sasankvishnubhatla.net/log-suite/touchlog) download the [`touchlog-latest-src.tar`](https://development.sasankvishnubhatla.net/log-suite/touchlog/touchlog-latest-src.tar)
+- Extract `touchlog-latest-src.tar` to `/usr/bin/local/touchlog`
+- Add `/usr/bin/local/touchlog` to `PATH`
 
 ## Man Page
 
