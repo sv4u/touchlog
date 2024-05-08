@@ -6,6 +6,8 @@ stages:
 build-job:
   image: golang:latest
   stage: build
+  only:
+    - branches
   needs: []
   before_script:
     - apt-get update
@@ -13,6 +15,23 @@ build-job:
   script:
     - make touchlog
     - ./touchlog --version --verbose
+
+docs-job:
+  image: golang:latest
+  stage: build
+  only:
+    - branches
+  needs: []
+  before_script:
+    - apt-get update
+    - apt-get install -y make pandoc
+  script:
+    - make docs
+  artifacts:
+    expose_as: "documentation"
+    paths:
+      - dist/touchlog.1.html
+      - dist/README.html
 
 install-job:
   image: golang:latest
@@ -23,11 +42,14 @@ install-job:
     - apt-get install -y make
   script:
     - make install
+    - which touchlog
     - touchlog --version --verbose
 
 package-job:
   image: golang:latest
   stage: publish
+  only:
+    - branches
   dependencies:
     - install-job
   needs: ["install-job"]
@@ -37,13 +59,20 @@ package-job:
   script:
     - make package
     - cd dist
-    - tar cvf touchlog-$CI_COMMIT_SHORT_SHA.tar .
+    - tar cvf touchlog-$CI_COMMIT_SHORT_SHA.tar README.md touchlog LICENSE
+    - tar cvf touchlog-$CI_COMMIT_SHORT_SHA-src.tar README.md touchlog LICENSE touchlog.1 touchlog.go
+    - cp touchlog-$CI_COMMIT_SHORT_SHA.tar touchlog-latest.tar
+    - cp touchlog-$CI_COMMIT_SHORT_SHA-src.tar touchlog-latest-src.tar
+    - tar tvf touchlog-$CI_COMMIT_SHORT_SHA.tar
+    - tar tvf touchlog-latest.tar
+    - tar tvf touchlog-$CI_COMMIT_SHORT_SHA-src.tar
+    - tar tvf touchlog-latest-src.tar
     - cd ..
   artifacts:
-    expose_as: "source"
-    name: "$CI_COMMIT_REG_SLUG"
+    expose_as: "tarballs"
     paths:
-      - dist/touchlog-$CI_COMMIT_SHORT_SHA.tar
+      - dist/touchlog-latest.tar
+      - dist/touchlog-latest-src.tar
 
 publish-job:
   image: golang:latest
@@ -55,16 +84,24 @@ publish-job:
   needs: ["install-job"]
   before_script:
     - apt-get update
-    - apt-get install -y make ncftp pandoc git tar
+    - apt-get install -y make ncftp pandoc git tar ncftppush
   script:
     - make publish
     - cd dist
-    - tar cvf touchlog-$CI_COMMIT_TAG.tar .
+    - tar cvf touchlog-$CI_COMMIT_TAG.tar README.md touchlog LICENSE
+    - tar cvf touchlog-$CI_COMMIT_TAG-src.tar README.md touchlog LICENSE touchlog.1 touchlog.go
+    - cp touchlog-$CI_COMMIT_TAG.tar touchlog-latest.tar
+    - cp touchlog-$CI_COMMIT_TAG-src.tar touchlog-latest-src.tar
+    - tar tvf touchlog-$CI_COMMIT_TAG.tar
+    - tar tvf touchlog-latest.tar
+    - tar tvf touchlog-$CI_COMMIT_TAG-src.tar
+    - tar tvf touchlog-latest-src.tar
     - cd ..
     - ./ftp.sh
   artifacts:
     paths:
-      - dist/touchlog-$CI_COMMIT_TAG.tar
+      - dist/touchlog-latest.tar
+      - dist/touchlog-latest-src.tar
 
 release-job:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
