@@ -25,6 +25,7 @@ install-job:
     - apt-get install -y make
   script:
     - make install
+    - which touchlog
     - touchlog --version --verbose
 
 package-job:
