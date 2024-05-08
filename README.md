@@ -22,7 +22,9 @@ go install github.com/sv4u/touchlog@latest
 
 Install from tarball:
 
-TODO
+- From [development.sasankvishnubhatla.net/log-suite/touchlog](https://development.sasankvishnubhatla.net/log-suite/touchlog) download the [`touchlog-latest.tar`](https://development.sasankvishnubhatla.net/log-suite/touchlog/touchlog-latest.tar)
+- Extract `touchlog-latest.tar` to `/usr/bin/local/touchlog`
+- Add `/usr/bin/local/touchlog` to `PATH`
 
 Install source:
 
@@ -30,7 +32,11 @@ TODO
 
 ## Man Page
 
-The man page for `touchlog` can be found here: [touchlog.1](touchlog.1.html). Please manually install touchlog to your system to use both `touchlog` and the man page.
+The man page for `touchlog` can be found here: [manpage.md](manpage.md). Please manually install touchlog with source to your system to use both `touchlog` and the man page.
+
+To install the manpage:
+
+TODO
 
 ## Changelog
 
