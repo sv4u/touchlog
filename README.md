@@ -22,15 +22,15 @@ go install github.com/sv4u/touchlog@latest
 
 Install from tarball:
 
-- From [development.sasankvishnubhatla.net/log-suite/touchlog](https://development.sasankvishnubhatla.net/log-suite/touchlog) download the [`touchlog-latest.tar`](https://development.sasankvishnubhatla.net/log-suite/touchlog/touchlog-latest.tar)
-- Extract `touchlog-latest.tar` to `/usr/bin/local/touchlog`
-- Add `/usr/bin/local/touchlog` to `PATH`
+1. From [development.sasankvishnubhatla.net/log-suite/touchlog](https://development.sasankvishnubhatla.net/log-suite/touchlog) download the [`touchlog-latest.tar`](https://development.sasankvishnubhatla.net/log-suite/touchlog/touchlog-latest.tar)
+2. Extract `touchlog-latest.tar` to `/usr/bin/local/touchlog`
+3. Add `/usr/bin/local/touchlog` to `PATH`
 
 Install source:
 
-- From [development.sasankvishnubhatla.net/log-suite/touchlog](https://development.sasankvishnubhatla.net/log-suite/touchlog) download the [`touchlog-latest-src.tar`](https://development.sasankvishnubhatla.net/log-suite/touchlog/touchlog-latest-src.tar)
-- Extract `touchlog-latest-src.tar` to `/usr/bin/local/touchlog`
-- Add `/usr/bin/local/touchlog` to `PATH`
+1. From [development.sasankvishnubhatla.net/log-suite/touchlog](https://development.sasankvishnubhatla.net/log-suite/touchlog) download the [`touchlog-latest-src.tar`](https://development.sasankvishnubhatla.net/log-suite/touchlog/touchlog-latest-src.tar)
+2. Extract `touchlog-latest-src.tar` to `/usr/bin/local/touchlog`
+3. Add `/usr/bin/local/touchlog` to `PATH`
 
 ## Man Page
 
