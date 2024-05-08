@@ -38,7 +38,7 @@ The man page for `touchlog` can be found here: [manpage.md](manpage.md). Please 
 
 To install the manpage:
 
-TODO
+TODO - [issue #24](https://gitlab.com/sv4u/touchlog/-/issues/24)
 
 ## Changelog
 
