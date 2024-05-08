@@ -16,6 +16,23 @@ build-job:
     - make touchlog
     - ./touchlog --version --verbose
 
+docs-job:
+  image: golang:latest
+  stage: build
+  only:
+    - branches
+  needs: []
+  before_script:
+    - apt-get update
+    - apt-get install -y make pandoc
+  script:
+    - make docs
+  artifacts:
+    expose_as: "documentation"
+    paths:
+      - dist/touchlog.1.html
+      - dist/README.html
+
 install-job:
   image: golang:latest
   stage: build
@@ -46,9 +63,10 @@ package-job:
     - tar cvf touchlog-$CI_COMMIT_SHORT_SHA-src.tar README.md touchlog LICENSE touchlog.1 touchlog.go
     - cp touchlog-$CI_COMMIT_SHORT_SHA.tar touchlog-latest.tar
     - cp touchlog-$CI_COMMIT_SHORT_SHA-src.tar touchlog-latest-src.tar
+    - tar tvf touchlog-*.tar
     - cd ..
   artifacts:
-    expose_as: "source"
+    expose_as: "tarballs"
     paths:
       - dist/touchlog-latest.tar
       - dist/touchlog-latest-src.tar
@@ -71,6 +89,7 @@ publish-job:
     - tar cvf touchlog-$CI_COMMIT_TAG-src.tar README.md touchlog LICENSE touchlog.1 touchlog.go
     - cp touchlog-$CI_COMMIT_TAG.tar touchlog-latest.tar
     - cp touchlog-$CI_COMMIT_TAG-src.tar touchlog-latest-src.tar
+    - tar tvf touchlog-*.tar
     - cd ..
     - ./ftp.sh
   artifacts:
