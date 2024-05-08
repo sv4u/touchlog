@@ -17,16 +17,28 @@ The `touchlog` executable has the following options:
 Install via go module:
 
 ```bash
-go get -v gitlab.com/sv4u/touchlog
+go install github.com/sv4u/touchlog@latest
 ```
+
+Install from tarball:
+
+1. From [development.sasankvishnubhatla.net/log-suite/touchlog](https://development.sasankvishnubhatla.net/log-suite/touchlog) download the [`touchlog-latest.tar`](https://development.sasankvishnubhatla.net/log-suite/touchlog/touchlog-latest.tar)
+2. Extract `touchlog-latest.tar` to `/usr/bin/local/touchlog`
+3. Add `/usr/bin/local/touchlog` to `PATH`
 
 Install source:
 
-TODO
+1. From [development.sasankvishnubhatla.net/log-suite/touchlog](https://development.sasankvishnubhatla.net/log-suite/touchlog) download the [`touchlog-latest-src.tar`](https://development.sasankvishnubhatla.net/log-suite/touchlog/touchlog-latest-src.tar)
+2. Extract `touchlog-latest-src.tar` to `/usr/bin/local/touchlog`
+3. Add `/usr/bin/local/touchlog` to `PATH`
 
 ## Man Page
 
-The man page for `touchlog` can be found here: [touchlog.1](touchlog.1.html). Please manually install touchlog to your system to use both `touchlog` and the man page.
+The man page for `touchlog` can be found here: [touchlog.md](touchlog.md). Please manually install touchlog with source to your system to use both `touchlog` and the man page.
+
+To install the manpage:
+
+TODO - [issue #24](https://gitlab.com/sv4u/touchlog/-/issues/24)
 
 ## Changelog
 

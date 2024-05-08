@@ -12,7 +12,7 @@ install:
 
 docs:
 	[ -d dist ] || mkdir -p dist
-	pandoc manpage.md -s -t man -o dist/touchlog.1
+	pandoc touchlog.md -s -t man -o dist/touchlog.1
 	pandoc dist/touchlog.1 --from man --to html -s -o dist/touchlog.1.html
 	pandoc README.md -s -t html -o dist/README.html
 
