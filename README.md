@@ -17,8 +17,12 @@ The `touchlog` executable has the following options:
 Install via go module:
 
 ```bash
-go get -v gitlab.com/sv4u/touchlog
+go install github.com/sv4u/touchlog@latest
 ```
+
+Install from tarball:
+
+TODO
 
 Install source:
 
