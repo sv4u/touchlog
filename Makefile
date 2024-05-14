@@ -4,6 +4,11 @@ GIT_VERSION := $(shell git describe --tags --abbrev=0)
 BUILD_FLAG := "-X main.buildTime=${BUILD_TIME} -X main.version=${GIT_VERSION}"
 GH_PUBLISH_PATH := "github.com/sv4u/touchlog@${GIT_VERSION}"
 
+HOST := "cpanel.freehosting.com"
+UNAME := "sasankvi"
+PASSWD := $(shell echo ${WEBSITE_ENC_KEY} | base64 --decode)
+WEB_PATH := "domains/development.sasankvishnubhatla.net/public_html/log-suite/touchlog/"
+
 touchlog: touchlog.go
 	go build -v -ldflags=${BUILD_FLAG}
 
