@@ -32,6 +32,9 @@ package: touchlog docs
 	cp touchlog.go dist
 	cp go.mod dist
 
+website: package
+	ncftpput -u ${UNAME} -p ${PASSWD} ${HOST} ${WEB_PATH} dist
+
 publish: package
 	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
 
