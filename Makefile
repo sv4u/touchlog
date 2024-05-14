@@ -9,6 +9,8 @@ UNAME := "sasankvi"
 PASSWD := $(shell echo ${WEBSITE_ENC_KEY} | base64 --decode)
 WEB_PATH := "domains/development.sasankvishnubhatla.net/public_html/log-suite/touchlog/"
 
+# TODO store latest git commit hash
+
 touchlog: touchlog.go
 	go build -v -ldflags=${BUILD_FLAG}
 
@@ -32,7 +34,17 @@ package: touchlog docs
 	cp touchlog.go dist
 	cp go.mod dist
 
-website: package
+dtarballs: package
+	# TODO build dist tarball using latest commit hash
+	# TODO build source tarball using latest commit hash
+	echo noop	
+
+ptarballs: package
+	# TODO build dist tarball using latest git tag
+	# TODO build source taball using latest git tag
+	echo noop
+
+website: ptarballs
 	ncftpput -u ${UNAME} -p ${PASSWD} ${HOST} ${WEB_PATH} dist
 
 publish: package
