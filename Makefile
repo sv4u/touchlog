@@ -1,6 +1,8 @@
 .PHONY: default
 BUILD_TIME := $(shell date +"%Y-%m-%d.%H:%M:%S")
 GIT_VERSION := $(shell git describe --tags --abbrev=0)
+GIT_HASH := $(shell git rev-parse --short @)
+
 BUILD_FLAG := "-X main.buildTime=${BUILD_TIME} -X main.version=${GIT_VERSION}"
 GH_PUBLISH_PATH := "github.com/sv4u/touchlog@${GIT_VERSION}"
 
@@ -8,8 +10,6 @@ HOST := "cpanel.freehosting.com"
 UNAME := "sasankvi"
 PASSWD := $(shell echo ${WEBSITE_ENC_KEY} | base64 --decode)
 WEB_PATH := "domains/development.sasankvishnubhatla.net/public_html/log-suite/touchlog/"
-
-# TODO store latest git commit hash
 
 touchlog: touchlog.go
 	go build -v -ldflags=${BUILD_FLAG}
@@ -34,21 +34,18 @@ package: touchlog docs
 	cp touchlog.go dist
 	cp go.mod dist
 
+publish: package
+	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
+
 dtarballs: package
-	# TODO build dist tarball using latest commit hash
-	# TODO build source tarball using latest commit hash
-	echo noop	
+	tar cvf dist/touchlog-${GIT_HASH}-bin.tar -C dist README.md touchlog LICENSE
+	tar cvf dist/touchlog-${GIT_HASH}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go
 
 ptarballs: package
-	# TODO build dist tarball using latest git tag
-	# TODO build source taball using latest git tag
-	echo noop
+	tar cvf dist/touchlog-${GIT_VERSION}-bin.tar -C dist README.md touchlog LICENSE
+	tar cvf dist/touchlog-${GIT_VERSION}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go
 
 website: ptarballs
 	ncftpput -u ${UNAME} -p ${PASSWD} ${HOST} ${WEB_PATH} dist
 
-publish: package
-	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
-
 default: touchlog
-
