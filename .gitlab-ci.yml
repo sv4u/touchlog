@@ -61,7 +61,7 @@ package-job:
   artifacts:
     expose_as: "tarballs"
     paths:
-      - dist/touchlog-*.tar
+      - dist/touchlog-$CI_COMMIT_SHORT_SHA.tar
 
 publish-job:
   image: golang:latest
