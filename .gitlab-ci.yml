@@ -59,9 +59,10 @@ package-job:
   script:
     - make dtarballs
   artifacts:
-    expose_as: "tarballs"
+    expose_as: "dists"
     paths:
-      - dist/touchlog-$CI_COMMIT_SHORT_SHA.tar
+      - dist/touchlog-$CI_COMMIT_SHORT_SHA-bin.tar
+      - dist/touchlog-$CI_COMMIT_SHORT_SHA-src.tar
 
 publish-job:
   image: golang:latest
