@@ -1,8 +1,15 @@
 .PHONY: default
 BUILD_TIME := $(shell date +"%Y-%m-%d.%H:%M:%S")
 GIT_VERSION := $(shell git describe --tags --abbrev=0)
+GIT_HASH := $(shell git rev-parse --short=8 @)
+
 BUILD_FLAG := "-X main.buildTime=${BUILD_TIME} -X main.version=${GIT_VERSION}"
 GH_PUBLISH_PATH := "github.com/sv4u/touchlog@${GIT_VERSION}"
+
+HOST := "cpanel.freehosting.com"
+UNAME := "sasankvi"
+PASSWD := $(shell echo ${WEBSITE_ENC_KEY} | base64 --decode)
+WEB_PATH := "domains/development.sasankvishnubhatla.net/public_html/log-suite/touchlog/"
 
 touchlog: touchlog.go
 	go build -v -ldflags=${BUILD_FLAG}
@@ -30,5 +37,15 @@ package: touchlog docs
 publish: package
 	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
 
-default: touchlog
+dtarballs: package
+	tar cvf dist/touchlog-${GIT_HASH}-bin.tar -C dist README.md touchlog LICENSE
+	tar cvf dist/touchlog-${GIT_HASH}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go
 
+ptarballs: package
+	tar cvf dist/touchlog-${GIT_VERSION}-bin.tar -C dist README.md touchlog LICENSE
+	tar cvf dist/touchlog-${GIT_VERSION}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go
+
+website: ptarballs
+	ncftpput -u ${UNAME} -p ${PASSWD} ${HOST} ${WEB_PATH} dist
+
+default: touchlog

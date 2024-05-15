@@ -57,22 +57,12 @@ package-job:
     - apt-get update
     - apt-get install -y make pandoc git tar
   script:
-    - make package
-    - cd dist
-    - tar cvf touchlog-$CI_COMMIT_SHORT_SHA.tar README.md touchlog LICENSE
-    - tar cvf touchlog-$CI_COMMIT_SHORT_SHA-src.tar README.md touchlog LICENSE touchlog.1 touchlog.go
-    - cp touchlog-$CI_COMMIT_SHORT_SHA.tar touchlog-latest.tar
-    - cp touchlog-$CI_COMMIT_SHORT_SHA-src.tar touchlog-latest-src.tar
-    - tar tvf touchlog-$CI_COMMIT_SHORT_SHA.tar
-    - tar tvf touchlog-latest.tar
-    - tar tvf touchlog-$CI_COMMIT_SHORT_SHA-src.tar
-    - tar tvf touchlog-latest-src.tar
-    - cd ..
+    - make dtarballs
   artifacts:
-    expose_as: "tarballs"
+    expose_as: "dists"
     paths:
-      - dist/touchlog-latest.tar
-      - dist/touchlog-latest-src.tar
+      - dist/touchlog-$CI_COMMIT_SHORT_SHA-bin.tar
+      - dist/touchlog-$CI_COMMIT_SHORT_SHA-src.tar
 
 publish-job:
   image: golang:latest
@@ -87,21 +77,10 @@ publish-job:
     - apt-get install -y make ncftp pandoc git tar ncftppush
   script:
     - make publish
-    - cd dist
-    - tar cvf touchlog-$CI_COMMIT_TAG.tar README.md touchlog LICENSE
-    - tar cvf touchlog-$CI_COMMIT_TAG-src.tar README.md touchlog LICENSE touchlog.1 touchlog.go
-    - cp touchlog-$CI_COMMIT_TAG.tar touchlog-latest.tar
-    - cp touchlog-$CI_COMMIT_TAG-src.tar touchlog-latest-src.tar
-    - tar tvf touchlog-$CI_COMMIT_TAG.tar
-    - tar tvf touchlog-latest.tar
-    - tar tvf touchlog-$CI_COMMIT_TAG-src.tar
-    - tar tvf touchlog-latest-src.tar
-    - cd ..
-    - ./ftp.sh
+    - make website
   artifacts:
     paths:
-      - dist/touchlog-latest.tar
-      - dist/touchlog-latest-src.tar
+      - dist/touchlog-*.tar
 
 release-job:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
