@@ -27,23 +27,21 @@ docs-job:
     - apt-get install -y make pandoc
   script:
     - make docs
-  artifacts:
-    expose_as: "documentation"
-    paths:
-      - dist/touchlog.1.html
-      - dist/README.html
 
 install-job:
   image: golang:latest
   stage: build
-  needs: []
+  dependencies:
+    - docs-job
+  needs: ["docs-job"]
   before_script:
     - apt-get update
-    - apt-get install -y make
+    - apt-get install -y make man-db pandoc
   script:
     - make install
     - which touchlog
     - touchlog --version --verbose
+    - man touchlog | cat
 
 package-job:
   image: golang:latest

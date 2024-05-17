@@ -14,8 +14,11 @@ WEB_PATH := "domains/development.sasankvishnubhatla.net/public_html/log-suite/to
 touchlog: touchlog.go
 	go build -v -ldflags=${BUILD_FLAG}
 
-install:
+install: docs
 	go install -v -ldflags=${BUILD_FLAG}
+	mkdir -p /usr/local/share/man/man1
+	cp dist/touchlog.1 /usr/local/share/man/man1/
+	mandb
 
 docs:
 	[ -d dist ] || mkdir -p dist
