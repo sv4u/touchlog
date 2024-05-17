@@ -15,11 +15,10 @@ touchlog: touchlog.go
 	go build -v -ldflags=${BUILD_FLAG}
 
 install: docs
-	echo install requires elevated privileges
 	go install -v -ldflags=${BUILD_FLAG}
-	sudo mkdir -p /usr/local/share/man/man1
-	sudo cp dist/touchlog.1 /usr/local/share/man/man1/
-	sudo mandb
+	mkdir -p /usr/local/share/man/man1
+	cp dist/touchlog.1 /usr/local/share/man/man1/
+	mandb
 
 docs:
 	[ -d dist ] || mkdir -p dist
