@@ -39,11 +39,12 @@ install-job:
   needs: []
   before_script:
     - apt-get update
-    - apt-get install -y make
+    - apt-get install -y make mandb
   script:
     - make install
     - which touchlog
     - touchlog --version --verbose
+    - man touchlog | cat
 
 package-job:
   image: golang:latest
