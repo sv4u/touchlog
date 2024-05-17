@@ -39,7 +39,7 @@ install-job:
   needs: []
   before_script:
     - apt-get update
-    - apt-get install -y make man-db
+    - apt-get install -y make man-db pandoc
   script:
     - make install
     - which touchlog
