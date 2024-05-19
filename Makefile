@@ -8,7 +8,7 @@ GH_PUBLISH_PATH := "github.com/sv4u/touchlog@${GIT_VERSION}"
 
 HOST := "cpanel.freehosting.com"
 UNAME := "sasankvi"
-PASSWD := $(shell echo ${WEBSITE_ENC_KEY} | base64 --decode)
+PASSWD := "$(shell echo ${WEBSITE_ENC_KEY} | base64 --decode)""
 WEB_PATH := "domains/development.sasankvishnubhatla.net/public_html/log-suite/touchlog/"
 
 touchlog: touchlog.go
