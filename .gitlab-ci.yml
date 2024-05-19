@@ -31,9 +31,7 @@ docs-job:
 install-job:
   image: golang:latest
   stage: build
-  dependencies:
-    - docs-job
-  needs: ["docs-job"]
+  needs: []
   before_script:
     - apt-get update
     - apt-get install -y make man-db pandoc
