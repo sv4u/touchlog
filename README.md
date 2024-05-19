@@ -36,9 +36,7 @@ Install source:
 
 The man page for `touchlog` can be found here: [touchlog.md](touchlog.md). Please manually install touchlog with source to your system to use both `touchlog` and the man page.
 
-To install the manpage:
-
-TODO - [issue #24](https://gitlab.com/sv4u/touchlog/-/issues/24)
+To install the manpage, run `sudo make install` in the project.
 
 ## Changelog
 
