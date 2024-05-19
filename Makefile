@@ -8,8 +8,7 @@ GH_PUBLISH_PATH := "github.com/sv4u/touchlog@${GIT_VERSION}"
 
 HOST := "cpanel.freehosting.com"
 UNAME := "sasankvi"
-PASSWD := "$(shell echo ${WEBSITE_ENC_KEY} | base64 --decode)""
-WEB_PATH := "domains/development.sasankvishnubhatla.net/public_html/log-suite/touchlog/"
+WEB_PATH := "domains/development.sasankvishnubhatla.net/public_html/log-suite/"
 
 touchlog: touchlog.go
 	go build -v -ldflags=${BUILD_FLAG}
@@ -33,7 +32,7 @@ clean:
 package: touchlog docs
 	cp README.md dist
 	cp LICENSE dist
-	cp touchlog dist
+	mv touchlog dist
 	cp touchlog.go dist
 	cp go.mod dist
 
@@ -49,6 +48,9 @@ ptarballs: package
 	tar cvf dist/touchlog-${GIT_VERSION}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go
 
 website: ptarballs
-	cd dist && ncftpput -R -u ${UNAME} -p ${PASSWD} ${HOST} ${WEB_PATH} .
+	mv dist touchlog
+	$(eval PASSWD := $(shell echo ${WEBSITE_ENC_KEY} | base64 --decode))
+	ncftpput -R -u ${UNAME} -p ${PASSWD} ${HOST} ${WEB_PATH} touchlog/
+	mv touchlog dist
 
 default: touchlog
