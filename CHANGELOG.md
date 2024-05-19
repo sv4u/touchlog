@@ -1,4 +1,16 @@
 
+<a name="v1.2.5"></a>
+## [v1.2.5](https://gitlab.com/sv4u/touchlog/compare/v1.2.4...v1.2.5) (2024-05-18)
+
+### Merge Requests
+
+* Merge branch '24-update-install-target-to-add-manpage' into 'master'
+* Merge branch '23-refactor-website-update-into-makefile' into 'master'
+* Merge branch '25-update-pipeline-to-build-correct-tarballs-2' into 'master'
+* Merge branch '22-documentation-updates' into 'master'
+* Merge branch '18-update-pipeline-to-automatically-publish-whenever-a-version-tag-is-created' into 'master'
+
+
 <a name="v1.2.4"></a>
 ## [v1.2.4](https://gitlab.com/sv4u/touchlog/compare/v1.2.3...v1.2.4) (2024-05-05)
 
