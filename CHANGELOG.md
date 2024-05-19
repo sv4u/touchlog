@@ -1,6 +1,6 @@
 
 <a name="v1.2.5"></a>
-## [v1.2.5](https://gitlab.com/sv4u/touchlog/compare/v1.2.4...v1.2.5) (2024-05-18)
+## [v1.2.5](https://gitlab.com/sv4u/touchlog/compare/v1.2.4...v1.2.5) (2024-05-19)
 
 ### Merge Requests
 
