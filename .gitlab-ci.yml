@@ -70,7 +70,7 @@ publish-job:
   needs: ["install-job"]
   before_script:
     - apt-get update
-    - apt-get install -y make ncftp pandoc git tar ncftppush
+    - apt-get install -y make ncftp pandoc git tar
   script:
     - make publish
     - make website
