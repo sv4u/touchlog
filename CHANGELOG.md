@@ -1,4 +1,18 @@
 
+<a name="v1.2.4"></a>
+## [v1.2.4](https://gitlab.com/sv4u/touchlog/compare/v1.2.3...v1.2.4) (2024-05-05)
+
+
+<a name="v1.2.3"></a>
+## [v1.2.3](https://gitlab.com/sv4u/touchlog/compare/v1.2.2...v1.2.3) (2024-05-05)
+
+### Merge Requests
+
+* Merge branch '18-update-pipeline-to-automatically-publish-whenever-a-version-tag-is-created' into 'master'
+* Merge branch '17-refactor-outdir-input-to-allow-no-input-for-current-date' into 'master'
+* Merge branch '21-create-changelog-and-process-documentation' into 'master'
+
+
 <a name="v1.2.2"></a>
 ## [v1.2.2](https://gitlab.com/sv4u/touchlog/compare/v1.2.1...v1.2.2) (2024-05-05)
 
