@@ -34,7 +34,7 @@ Example Output:
 |> emotions
 - 
 
-| things to remember
+|> things to remember
 - 
 
 ```
