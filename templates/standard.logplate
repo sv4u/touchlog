@@ -2,8 +2,8 @@
 > day: %d
 > year: %y
 
-%li:|> events
+%uli:|> events
 
-%li:|> emotions
+%uli:|> emotions
 
-%li:|> things to remember
+%uli:|> things to remember

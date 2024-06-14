@@ -41,4 +41,9 @@ Example Output:
 
 ## Language Specification
 
-TODO Define language specification
+| Command | Expected Input (if any) | Output |
+| :---- | :---------------------- | :----- |
+| `%m` | N/A | current month - ex: `06` |
+| `%d` | N/A | current day - ex: `14` |
+| `%y` | N/A | current year - ex: `2024` |
+| `%uli:<X>` | `<X>` is the title of an unordered list of items | `<X>` followed by an empty unordered list |
