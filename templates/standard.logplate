@@ -1,0 +1,9 @@
+> month: %m
+> day: %d
+> year: %y
+
+%li:|> events
+
+%li:|> emotions
+
+%li:|> things to remember
