@@ -48,4 +48,5 @@ Example Output:
 | `%y` | N/A | current year - ex: `2024` |
 | `%uli:<X>` | `<X>` is the title of an unordered list of items | `<X>` followed by an empty unordered list |
 | `%nli:<X>` | `<X>` is the title of numbered list of items | `<X>` followed by an empty numbered list |
-| `%br` | N/A | horizontal line break (`-----`) |
+| `%br` | N/A | horizontal line break (`-----` of length 80) |
+| `%tab:<X>...` | `<X>` is the title of a column in a table | table with `<X>...` as column titles |
