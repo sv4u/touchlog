@@ -24,6 +24,7 @@ docs:
 	pandoc touchlog.md -s -t man -o dist/touchlog.1
 	pandoc dist/touchlog.1 --from man --to html -s -o dist/touchlog.1.html
 	pandoc README.md -s -t html -o dist/README.html
+	pandoc template-dsl.md -s -t html -o dist/template-dsl.html
 
 clean:
 	-rm -rf dist
@@ -31,21 +32,23 @@ clean:
 
 package: touchlog docs
 	cp README.md dist
+	cp template-dsl.md dist
 	cp LICENSE dist
 	mv touchlog dist
 	cp touchlog.go dist
 	cp go.mod dist
+	cp -r templates dist
 
 publish: package
 	GOPROXY=proxy.golang.org go list -m ${GH_PUBLISH_PATH}
 
 dtarballs: package
-	tar cvf dist/touchlog-${GIT_HASH}-bin.tar -C dist README.md touchlog LICENSE
-	tar cvf dist/touchlog-${GIT_HASH}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go
+	tar cvf dist/touchlog-${GIT_HASH}-bin.tar -C dist README.md touchlog LICENSE templates
+	tar cvf dist/touchlog-${GIT_HASH}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go templates
 
 ptarballs: package
-	tar cvf dist/touchlog-${GIT_VERSION}-bin.tar -C dist README.md touchlog LICENSE
-	tar cvf dist/touchlog-${GIT_VERSION}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go
+	tar cvf dist/touchlog-${GIT_VERSION}-bin.tar -C dist README.md touchlog LICENSE templates
+	tar cvf dist/touchlog-${GIT_VERSION}-src.tar -C dist README.md touchlog LICENSE touchlog.1 touchlog.go templates
 
 website: ptarballs
 	mv dist touchlog
