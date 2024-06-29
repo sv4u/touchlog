@@ -29,13 +29,13 @@ Example Output:
 > year: 2024
 
 |> events
-- 
+-
 
 |> emotions
-- 
+-
 
 |> things to remember
-- 
+-
 
 ```
 
@@ -50,3 +50,4 @@ Example Output:
 | `%nli:<X>` | `<X>` is the title of numbered list of items | `<X>` followed by an empty numbered list |
 | `%br` | N/A | horizontal line break (`-----` of length 80) |
 | `%tab:<X>...` | `<X>` is the title of a column in a table | table with `<X>...` as column titles |
+
