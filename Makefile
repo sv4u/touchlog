@@ -24,7 +24,7 @@ docs:
 	pandoc manpage.md -s -t man -o dist/touchlog.1
 	pandoc dist/touchlog.1 --from man --to html -s -o dist/touchlog.1.html
 	pandoc README.md -s -t html -o dist/README.html
-	pandoc lodplate.md -s -t html -o dist/logplate.html
+	pandoc logplate.md -s -t html -o dist/logplate.html
 
 clean:
 	-rm -rf dist
