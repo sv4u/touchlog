@@ -122,12 +122,15 @@ func ValidateTimeFormat(format string) bool {
 		return false
 	}
 	// Try to format the current time with the given format
-	// If it panics or produces an invalid result, the format is invalid
+	// If it panics, the format is invalid
+	panicked := false
 	defer func() {
-		recover()
+		if r := recover(); r != nil {
+			panicked = true
+		}
 	}()
 	testTime := time.Now()
 	_ = testTime.Format(format)
-	return true
+	return !panicked
 }
 

@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -66,6 +67,10 @@ func NewModel() (tea.Model, error) {
 
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
+		// Check if config file doesn't exist and provide helpful error message
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("config file not found at '%s'. Please create a config file. See examples/config.yaml for reference", configPath)
+		}
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
@@ -79,6 +84,11 @@ func NewModel() (tea.Model, error) {
 			description: tmpl.File,
 			file:        tmpl.File,
 		})
+	}
+
+	// Validate that at least one template is configured
+	if len(items) == 0 {
+		return nil, fmt.Errorf("no templates configured. Please add at least one template to your config file at '%s'", configPath)
 	}
 
 	// Initialize list component
@@ -266,16 +276,47 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.textarea.Focus()
 						return m, nil
 					case "dd":
-						// Delete line - simplified: clear current line
+						// Delete current line based on cursor position
 						lines := strings.Split(m.noteContent, "\n")
 						if len(lines) > 0 {
-							// Remove first line as a simple implementation
+							// Get current line from cursor position
+							// Line() returns 0-indexed line number
+							currentLine := m.textarea.Line()
+							if currentLine < 0 {
+								currentLine = 0
+							}
+							if currentLine >= len(lines) {
+								currentLine = len(lines) - 1
+							}
+							// Remove the current line
 							if len(lines) > 1 {
-								m.noteContent = strings.Join(lines[1:], "\n")
+								newLines := make([]string, 0, len(lines)-1)
+								newLines = append(newLines, lines[:currentLine]...)
+								newLines = append(newLines, lines[currentLine+1:]...)
+								m.noteContent = strings.Join(newLines, "\n")
+								m.textarea.SetValue(m.noteContent)
+								// Move cursor to the same line (or last line if we deleted the last line)
+								if currentLine >= len(newLines) && len(newLines) > 0 {
+									// Deleted the last line, move to new last line
+									// Calculate character position for the start of the new last line
+									charPos := 0
+									for i := 0; i < len(newLines)-1; i++ {
+										charPos += len(newLines[i]) + 1 // +1 for newline
+									}
+									m.textarea.SetCursor(charPos)
+								} else if len(newLines) > 0 {
+									// Calculate character position for the start of current line
+									charPos := 0
+									for i := 0; i < currentLine; i++ {
+										charPos += len(newLines[i]) + 1 // +1 for newline
+									}
+									m.textarea.SetCursor(charPos)
+								}
 							} else {
 								m.noteContent = ""
+								m.textarea.SetValue(m.noteContent)
+								m.textarea.SetCursor(0)
 							}
-							m.textarea.SetValue(m.noteContent)
 						}
 						return m, nil
 					case "yy":
@@ -478,16 +519,15 @@ func (m model) saveNoteCmd() tea.Cmd {
 		filename := fmt.Sprintf("%s.md", time.Now().Format("2006-01-02-150405"))
 		fullPath := filepath.Join(expandedDir, filename)
 
-		// Extract directory path and create it if it doesn't exist
-		dirPath := filepath.Dir(fullPath)
-		if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		// Create directory if it doesn't exist
+		if _, err := os.Stat(expandedDir); os.IsNotExist(err) {
 			// Directory doesn't exist, create it recursively
-			if err := os.MkdirAll(dirPath, 0755); err != nil {
-				return errMsg{fmt.Errorf("failed to create notes directory '%s': %w", dirPath, err)}
+			if err := os.MkdirAll(expandedDir, 0755); err != nil {
+				return errMsg{fmt.Errorf("failed to create notes directory '%s': %w", expandedDir, err)}
 			}
 		} else if err != nil {
 			// Some other error checking directory
-			return errMsg{fmt.Errorf("failed to check notes directory '%s': %w", dirPath, err)}
+			return errMsg{fmt.Errorf("failed to check notes directory '%s': %w", expandedDir, err)}
 		}
 
 		// Write the file

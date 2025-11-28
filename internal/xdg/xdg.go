@@ -55,6 +55,12 @@ func TemplatesDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dataDir, "templates"), nil
+	templatesPath := filepath.Join(dataDir, "templates")
+	// Ensure the templates directory exists
+	err = os.MkdirAll(templatesPath, 0755)
+	if err != nil {
+		return "", err
+	}
+	return templatesPath, nil
 }
 
