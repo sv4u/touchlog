@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/sv4u/touchlog/internal/config"
 )
 
 // LoadTemplate reads a template file from the templates directory
@@ -61,15 +63,82 @@ func ExtractVariables(content string) []string {
 	return variables
 }
 
-// GetDefaultVariables returns a map of default variable values
-func GetDefaultVariables() map[string]string {
+// GetDefaultVariables returns a map of default variable values based on configuration
+// If cfg is nil, uses default behavior (all variables enabled with default formats)
+func GetDefaultVariables(cfg *config.Config) map[string]string {
 	now := time.Now()
+	vars := make(map[string]string)
 
-	// Go map literal syntax
-	return map[string]string{
-		"date":     now.Format("2006-01-02"),          // Go's reference time
-		"time":     now.Format("15:04:05"),            // HH:MM:SS
-		"datetime": now.Format("2006-01-02 15:04:05"), // Date and time
+	// Default formats
+	defaultDateFormat := "2006-01-02"
+	defaultTimeFormat := "15:04:05"
+	defaultDateTimeFormat := "2006-01-02 15:04:05"
+
+	// If config is nil, use default behavior (all enabled with default formats)
+	if cfg == nil {
+		return map[string]string{
+			"date":     now.Format(defaultDateFormat),
+			"time":     now.Format(defaultTimeFormat),
+			"datetime": now.Format(defaultDateTimeFormat),
+		}
 	}
+
+	// Get date/time configuration from config
+	dtVars := cfg.GetDateTimeVars()
+
+	// Date variable
+	if dtVars.Date.Enabled {
+		format := dtVars.Date.Format
+		if format == "" {
+			format = defaultDateFormat
+		} else if !config.ValidateTimeFormat(format) {
+			// Fallback to default format if validation fails
+			format = defaultDateFormat
+		}
+		vars["date"] = now.Format(format)
+	}
+
+	// Time variable
+	if dtVars.Time.Enabled {
+		format := dtVars.Time.Format
+		if format == "" {
+			format = defaultTimeFormat
+		} else if !config.ValidateTimeFormat(format) {
+			// Fallback to default format if validation fails
+			format = defaultTimeFormat
+		}
+		vars["time"] = now.Format(format)
+	}
+
+	// DateTime variable
+	if dtVars.DateTime.Enabled {
+		format := dtVars.DateTime.Format
+		if format == "" {
+			format = defaultDateTimeFormat
+		} else if !config.ValidateTimeFormat(format) {
+			// Fallback to default format if validation fails
+			format = defaultDateTimeFormat
+		}
+		vars["datetime"] = now.Format(format)
+	}
+
+	// If no date/time variables are enabled, default to all enabled with default formats
+	// This maintains backward compatibility
+	if len(vars) == 0 {
+		vars = map[string]string{
+			"date":     now.Format(defaultDateFormat),
+			"time":     now.Format(defaultTimeFormat),
+			"datetime": now.Format(defaultDateTimeFormat),
+		}
+	}
+
+	// Merge custom variables from config
+	customVars := cfg.GetVariables()
+	for key, value := range customVars {
+		// Custom variables can override default variables
+		vars[key] = value
+	}
+
+	return vars
 }
 

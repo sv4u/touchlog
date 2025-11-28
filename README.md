@@ -53,6 +53,26 @@ templates:
   - name: "Book Note"
     file: "book-note.md"
 notes_directory: "/path/to/your/notes"
+
+# Optional: Configure date/time/datetime variable formats
+datetime_vars:
+  date:
+    enabled: true
+    format: "2006-01-02"  # Go time format (YYYY-MM-DD)
+  time:
+    enabled: true
+    format: "15:04:05"    # Go time format (HH:MM:SS)
+  datetime:
+    enabled: true
+    format: "2006-01-02 15:04:05"  # Go time format (YYYY-MM-DD HH:MM:SS)
+
+# Optional: Define custom static variables
+variables:
+  author: "Your Name"
+  project: "My Project"
+
+# Optional: Enable vim keymap support
+vim_mode: false
 ```
 
 ### Template Files
@@ -76,9 +96,60 @@ Create template files in `~/.local/share/touchlog/templates/`. Templates support
 
 **Available default variables**:
 
-- `{{date}}` - Current date in format `YYYY-MM-DD`
-- `{{time}}` - Current time in format `HH:MM:SS`
-- `{{datetime}}` - Current date and time in format `YYYY-MM-DD HH:MM:SS`
+- `{{date}}` - Current date (default format: `YYYY-MM-DD`)
+- `{{time}}` - Current time (default format: `HH:MM:SS`)
+- `{{datetime}}` - Current date and time (default format: `YYYY-MM-DD HH:MM:SS`)
+
+**Customizing date/time formats**:
+
+You can customize the format of date, time, and datetime variables in your configuration file using Go's time format syntax. The format uses Go's reference time: `Mon Jan 2 15:04:05 MST 2006` (which is `01/02 03:04:05PM '06 -0700`).
+
+**Example formats**:
+
+```yaml
+datetime_vars:
+  date:
+    enabled: true
+    format: "January 2, 2006"      # "January 15, 2024"
+  time:
+    enabled: true
+    format: "3:04 PM"              # "2:30 PM"
+  datetime:
+    enabled: true
+    format: "2006-01-02T15:04:05"  # "2024-01-15T14:30:22"
+```
+
+You can also disable specific variables by setting `enabled: false`. If `datetime_vars` is not specified in the config, all variables are enabled with default formats.
+
+**Custom variables**:
+
+You can define custom static variables in your configuration file that will be available in all templates:
+
+```yaml
+variables:
+  author: "John Doe"
+  project: "My Project"
+  location: "Home Office"
+```
+
+These variables can then be used in templates using `{{author}}`, `{{project}}`, `{{location}}`, etc. Custom variables can override default date/time/datetime variables, but it's recommended to avoid using reserved names (`date`, `time`, `datetime`) for custom variables.
+
+**Vim keymap support**:
+
+You can enable vim-style keybindings by setting `vim_mode: true` in your configuration:
+
+```yaml
+vim_mode: true
+```
+
+When vim mode is enabled:
+
+- **Template selection**: Use `j`/`k` to navigate, `Enter` to select, `q` to quit
+- **Note editing**:
+  - Press `i` or `a` to enter insert mode
+  - Press `Esc` to exit insert mode (normal mode)
+  - In normal mode: `h`/`j`/`k`/`l` for movement, `dd` to delete line, `:w` to save, `:q` to quit
+  - `Ctrl+S` works in both modes to save
 
 ## Usage
 
@@ -92,16 +163,38 @@ Create template files in `~/.local/share/touchlog/templates/`. Templates support
 
 3. **Edit your note**: The template will be loaded with variables substituted. Edit as needed.
 
-4. **Save the note**: Press `Ctrl+S` to save. The note will be saved as a Markdown file with a timestamp-based filename (e.g., `2024-01-15-143022.md`) in your configured notes directory.
+4. **Save the note**: Press `Ctrl+S` to save. The note will be saved as a Markdown file with a timestamp-based filename (e.g., `2024-01-15-143022.md`) in your configured notes directory. The directory will be created automatically if it doesn't exist.
 
 5. **Quit**: Press `Ctrl+C` or `q` to exit
 
 ## Keyboard Shortcuts
 
+### Default Mode
+
 - `↑/↓` - Navigate template list
 - `Enter` - Select template
 - `Ctrl+S` - Save note
 - `Ctrl+C` or `q` - Quit application
+
+### Vim Mode (when `vim_mode: true` in config)
+
+**Template Selection**:
+
+- `j`/`k` - Navigate up/down template list
+- `Enter` - Select template
+- `q` - Quit
+
+**Note Editing**:
+
+- `i`/`a` - Enter insert mode
+- `Esc` - Exit insert mode (normal mode)
+- `h`/`j`/`k`/`l` - Cursor movement (in normal mode, enters insert mode)
+- `w`/`b` - Word forward/backward (simplified)
+- `0`/`$` - Beginning/end of line (simplified)
+- `dd` - Delete line
+- `:w` - Save (vim-style)
+- `:q` - Quit (vim-style)
+- `Ctrl+S` - Save (works in both modes)
 
 ## Project Structure
 

@@ -26,3 +26,30 @@ templates:
 # Use an absolute path or a path relative to your home directory
 notes_directory: "~/Documents/notes"
 
+# Date/Time/Datetime variable configuration
+# Configure how date, time, and datetime variables are formatted in templates
+# If not specified, all variables are enabled with default formats
+datetime_vars:
+  date:
+    enabled: true
+    format: "2006-01-02"  # Go time format (YYYY-MM-DD)
+  time:
+    enabled: true
+    format: "15:04:05"    # Go time format (HH:MM:SS)
+  datetime:
+    enabled: true
+    format: "2006-01-02 15:04:05"  # Go time format (YYYY-MM-DD HH:MM:SS)
+
+# Custom variables
+# Define your own static variables that can be used in templates
+# Variable names cannot conflict with reserved names: date, time, datetime
+variables:
+  author: "Your Name"
+  project: "My Project"
+  location: "Home Office"
+
+# Vim mode
+# Enable vim keymap support for the full application
+# When enabled, you can use vim keybindings for navigation and editing
+vim_mode: false
+
