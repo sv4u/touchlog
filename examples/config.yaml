@@ -1,0 +1,28 @@
+# touchlog Configuration File
+# 
+# This file should be placed at: ~/.config/touchlog/config.yaml
+# (or $XDG_CONFIG_HOME/touchlog/config.yaml)
+#
+# Template files should be placed at: ~/.local/share/touchlog/templates/
+# (or $XDG_DATA_HOME/touchlog/templates/)
+
+# List of available templates
+# Each template has a display name and a corresponding template file
+templates:
+  - name: "Daily Note"
+    file: "daily.md"
+  - name: "Meeting Notes"
+    file: "meeting.md"
+  - name: "Book Note"
+    file: "book-note.md"
+  - name: "Zettelkasten Note"
+    file: "zettelkasten.md"
+  - name: "Project Note"
+    file: "project-note.md"
+  - name: "Journal Entry"
+    file: "journal.md"
+
+# Directory where notes will be saved
+# Use an absolute path or a path relative to your home directory
+notes_directory: "~/Documents/notes"
+
