@@ -62,7 +62,7 @@ func TestExpandPath(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "path with multiple ~ at start",
+			name: "path with multiple ~ at start",
 			// Note: expandPath only checks if path starts with "~", so "~~/notes"
 			// becomes path[2:] which is "/notes", resulting in homeDir + "/notes"
 			path:    "~~/notes",
@@ -89,4 +89,3 @@ func TestExpandPath(t *testing.T) {
 		})
 	}
 }
-

@@ -11,7 +11,7 @@ import (
 // DateTimeVarConfig represents configuration for a date/time variable
 type DateTimeVarConfig struct {
 	Enabled bool   `yaml:"enabled"` // Whether this variable is enabled
-	Format  string `yaml:"format"`   // Go time format string
+	Format  string `yaml:"format"`  // Go time format string
 }
 
 // DateTimeVarsConfig represents configuration for date/time/datetime variables
@@ -24,11 +24,11 @@ type DateTimeVarsConfig struct {
 // Config represents the application configuration
 // Struct fields with uppercase names are exported (public)
 type Config struct {
-	Templates      []Template        `yaml:"templates"`       // YAML tag maps to "templates" key
-	NotesDirectory string            `yaml:"notes_directory"` // YAML tag maps to "notes_directory" key
-	DateTimeVars   DateTimeVarsConfig `yaml:"datetime_vars"` // Date/time/datetime variable configuration
-	Variables      map[string]string `yaml:"variables"`      // Custom static variables
-	VimMode        bool              `yaml:"vim_mode"`       // Enable vim keymap support
+	Templates      []Template         `yaml:"templates"`       // YAML tag maps to "templates" key
+	NotesDirectory string             `yaml:"notes_directory"` // YAML tag maps to "notes_directory" key
+	DateTimeVars   DateTimeVarsConfig `yaml:"datetime_vars"`   // Date/time/datetime variable configuration
+	Variables      map[string]string  `yaml:"variables"`       // Custom static variables
+	VimMode        bool               `yaml:"vim_mode"`        // Enable vim keymap support
 }
 
 // Template represents a single template definition
@@ -133,4 +133,3 @@ func ValidateTimeFormat(format string) bool {
 	_ = testTime.Format(format)
 	return !panicked
 }
-

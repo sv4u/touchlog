@@ -63,4 +63,3 @@ func TemplatesDir() (string, error) {
 	}
 	return templatesPath, nil
 }
-

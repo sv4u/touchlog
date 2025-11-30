@@ -41,19 +41,19 @@ const (
 // model represents the application state
 // In Bubble Tea, the model holds all state
 type model struct {
-	state            state           // Current application state
-	config           *config.Config  // Loaded configuration
-	templateList     list.Model      // Bubbles list component
-	textarea         textarea.Model  // Bubbles textarea component
-	selectedTemplate *config.Template // Currently selected template
-	noteContent      string          // Current note content
+	state            state             // Current application state
+	config           *config.Config    // Loaded configuration
+	templateList     list.Model        // Bubbles list component
+	textarea         textarea.Model    // Bubbles textarea component
+	selectedTemplate *config.Template  // Currently selected template
+	noteContent      string            // Current note content
 	variables        map[string]string // Template variables
-	err              error            // Error state
-	width            int              // Terminal width
-	height           int              // Terminal height
-	vimMode          bool             // Whether vim mode is enabled
-	vimState         vimState         // Current vim state (normal/insert)
-	commandBuffer    string           // Buffer for vim commands (e.g., :w, :q)
+	err              error             // Error state
+	width            int               // Terminal width
+	height           int               // Terminal height
+	vimMode          bool              // Whether vim mode is enabled
+	vimState         vimState          // Current vim state (normal/insert)
+	commandBuffer    string            // Buffer for vim commands (e.g., :w, :q)
 }
 
 // NewModel creates and initializes a new editor model
@@ -559,4 +559,3 @@ type errMsg struct {
 
 // Styling
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-
