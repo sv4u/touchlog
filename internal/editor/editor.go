@@ -101,12 +101,14 @@ func NewModel(opts ...ModelOption) (tea.Model, error) {
 		// Log warning but don't fail - templates directory creation is optional
 		// Could use a logger here, but for now we'll just continue
 		// In a future enhancement, we could add logging
+		_ = err // Explicitly ignore error - template creation is optional
 	} else {
 		// Try to create templates (non-fatal if it fails)
 		if err := template.CreateExampleTemplates(templatesDir); err != nil {
 			// Template creation failed, but don't fail the entire application
 			// This is a nice-to-have feature, not critical
 			// Could log this error in the future
+			_ = err // Explicitly ignore error - template creation is optional
 		}
 	}
 
