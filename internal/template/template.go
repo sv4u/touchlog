@@ -141,4 +141,3 @@ func GetDefaultVariables(cfg *config.Config) map[string]string {
 
 	return vars
 }
-

@@ -87,11 +87,11 @@ func TestProcessTemplate(t *testing.T) {
 
 func TestExtractVariables(t *testing.T) {
 	tests := []struct {
-		name     string
-		content  string
-		want     []string
-		wantLen  int
-		exact    bool // If true, check exact match; if false, only check length
+		name    string
+		content string
+		want    []string
+		wantLen int
+		exact   bool // If true, check exact match; if false, only check length
 	}{
 		{
 			name:    "single variable extraction",
@@ -197,7 +197,7 @@ func TestExtractVariables(t *testing.T) {
 func TestGetDefaultVariables(t *testing.T) {
 	t.Run("nil config", func(t *testing.T) {
 		vars := GetDefaultVariables(nil)
-		
+
 		// Should have date, time, and datetime
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables(nil) missing 'date' variable")
@@ -208,7 +208,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables(nil) missing 'datetime' variable")
 		}
-		
+
 		// Should have exactly 3 variables
 		if len(vars) != 3 {
 			t.Errorf("GetDefaultVariables(nil) returned %d variables, want 3", len(vars))
@@ -223,9 +223,9 @@ func TestGetDefaultVariables(t *testing.T) {
 				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02 15:04:05"},
 			},
 		}
-		
+
 		vars := GetDefaultVariables(cfg)
-		
+
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable")
 		}
@@ -235,7 +235,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable")
 		}
-		
+
 		if len(vars) != 3 {
 			t.Errorf("GetDefaultVariables() returned %d variables, want 3", len(vars))
 		}
@@ -249,9 +249,9 @@ func TestGetDefaultVariables(t *testing.T) {
 				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02 15:04:05"},
 			},
 		}
-		
+
 		vars := GetDefaultVariables(cfg)
-		
+
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable")
 		}
@@ -261,7 +261,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable")
 		}
-		
+
 		if len(vars) != 2 {
 			t.Errorf("GetDefaultVariables() returned %d variables, want 2", len(vars))
 		}
@@ -275,9 +275,9 @@ func TestGetDefaultVariables(t *testing.T) {
 				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "01/02/2006 03:04 PM"},
 			},
 		}
-		
+
 		vars := GetDefaultVariables(cfg)
-		
+
 		// Should have all three variables
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable")
@@ -288,7 +288,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable")
 		}
-		
+
 		// Note: We can't test the exact format output since it's time-dependent,
 		// but we can verify the variables exist
 		if len(vars) != 3 {
@@ -304,9 +304,9 @@ func TestGetDefaultVariables(t *testing.T) {
 				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "invalid-too"},
 			},
 		}
-		
+
 		vars := GetDefaultVariables(cfg)
-		
+
 		// Should still have all three variables (fallback to default formats)
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable after invalid format")
@@ -317,7 +317,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable after invalid format")
 		}
-		
+
 		if len(vars) != 3 {
 			t.Errorf("GetDefaultVariables() returned %d variables, want 3", len(vars))
 		}
@@ -331,9 +331,9 @@ func TestGetDefaultVariables(t *testing.T) {
 				DateTime: config.DateTimeVarConfig{Enabled: true, Format: ""},
 			},
 		}
-		
+
 		vars := GetDefaultVariables(cfg)
-		
+
 		// Should have all three variables with default formats
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable with empty format")
@@ -344,7 +344,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable with empty format")
 		}
-		
+
 		if len(vars) != 3 {
 			t.Errorf("GetDefaultVariables() returned %d variables, want 3", len(vars))
 		}
@@ -358,9 +358,9 @@ func TestGetDefaultVariables(t *testing.T) {
 				DateTime: config.DateTimeVarConfig{Enabled: false, Format: ""},
 			},
 		}
-		
+
 		vars := GetDefaultVariables(cfg)
-		
+
 		// Should fallback to all enabled (backward compatibility)
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable when all disabled (should fallback)")
@@ -371,7 +371,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable when all disabled (should fallback)")
 		}
-		
+
 		if len(vars) != 3 {
 			t.Errorf("GetDefaultVariables() returned %d variables, want 3 (fallback)", len(vars))
 		}
@@ -385,13 +385,13 @@ func TestGetDefaultVariables(t *testing.T) {
 				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02 15:04:05"},
 			},
 			Variables: map[string]string{
-				"author": "Test Author",
+				"author":  "Test Author",
 				"project": "Test Project",
 			},
 		}
-		
+
 		vars := GetDefaultVariables(cfg)
-		
+
 		// Should have date/time/datetime
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable")
@@ -402,7 +402,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable")
 		}
-		
+
 		// Should have custom variables
 		if vars["author"] != "Test Author" {
 			t.Errorf("GetDefaultVariables() custom variable 'author' = %v, want 'Test Author'", vars["author"])
@@ -410,7 +410,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		if vars["project"] != "Test Project" {
 			t.Errorf("GetDefaultVariables() custom variable 'project' = %v, want 'Test Project'", vars["project"])
 		}
-		
+
 		if len(vars) != 5 {
 			t.Errorf("GetDefaultVariables() returned %d variables, want 5", len(vars))
 		}
@@ -427,14 +427,14 @@ func TestGetDefaultVariables(t *testing.T) {
 				"date": "Custom Date Override",
 			},
 		}
-		
+
 		vars := GetDefaultVariables(cfg)
-		
+
 		// Custom variable should override default date variable
 		if vars["date"] != "Custom Date Override" {
 			t.Errorf("GetDefaultVariables() 'date' variable = %v, want 'Custom Date Override'", vars["date"])
 		}
-		
+
 		// Other default variables should still exist
 		if _, ok := vars["time"]; !ok {
 			t.Error("GetDefaultVariables() missing 'time' variable")
@@ -444,4 +444,3 @@ func TestGetDefaultVariables(t *testing.T) {
 		}
 	})
 }
-
