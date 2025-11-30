@@ -54,18 +54,41 @@ type model struct {
 	vimMode          bool              // Whether vim mode is enabled
 	vimState         vimState          // Current vim state (normal/insert)
 	commandBuffer    string            // Buffer for vim commands (e.g., :w, :q)
+	outputDirOverride string           // Override for output directory (from CLI or API)
+}
+
+// modelConfig holds configuration options for NewModel
+type modelConfig struct {
+	outputDirectory string
+}
+
+// ModelOption is a function that configures a modelConfig
+type ModelOption func(*modelConfig)
+
+// WithOutputDirectory sets the output directory override
+func WithOutputDirectory(dir string) ModelOption {
+	return func(cfg *modelConfig) {
+		cfg.outputDirectory = dir
+	}
 }
 
 // NewModel creates and initializes a new editor model
 // This is called when the application starts
-func NewModel() (tea.Model, error) {
+// It accepts optional ModelOption functions to configure the model
+func NewModel(opts ...ModelOption) (tea.Model, error) {
+	// Apply options to default config
+	cfg := &modelConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	// Load configuration
 	configPath, err := xdg.ConfigFilePath()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get config path: %w", err)
 	}
 
-	cfg, err := config.LoadConfig(configPath)
+	configCfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		// Check if config file doesn't exist and provide helpful error message
 		if errors.Is(err, os.ErrNotExist) {
@@ -78,7 +101,7 @@ func NewModel() (tea.Model, error) {
 	// In Go, we need to convert []config.Template to []list.Item
 	// list.Item is an interface that requires Item() methods
 	items := make([]list.Item, 0)
-	for _, tmpl := range cfg.GetTemplates() {
+	for _, tmpl := range configCfg.GetTemplates() {
 		items = append(items, templateItem{
 			title:       tmpl.Name,
 			description: tmpl.File,
@@ -106,13 +129,14 @@ func NewModel() (tea.Model, error) {
 
 	// Return initial model
 	return model{
-		state:        stateSelectTemplate,
-		config:       cfg,
-		templateList: l,
-		textarea:     ta,
-		variables:    template.GetDefaultVariables(cfg),
-		vimMode:      cfg.GetVimMode(),
-		vimState:     vimNormal, // Start in normal mode when vim mode is enabled
+		state:            stateSelectTemplate,
+		config:           configCfg,
+		templateList:     l,
+		textarea:         ta,
+		variables:        template.GetDefaultVariables(configCfg),
+		vimMode:          configCfg.GetVimMode(),
+		vimState:         vimNormal, // Start in normal mode when vim mode is enabled
+		outputDirOverride: cfg.outputDirectory,
 	}, nil
 }
 
@@ -509,7 +533,14 @@ func expandPath(path string) (string, error) {
 // saveNoteCmd returns a command that saves the note
 func (m model) saveNoteCmd() tea.Cmd {
 	return func() tea.Msg {
-		notesDir := m.config.GetNotesDirectory()
+		// Priority: CLI/API override > config file
+		var notesDir string
+		if m.outputDirOverride != "" {
+			notesDir = m.outputDirOverride
+		} else {
+			notesDir = m.config.GetNotesDirectory()
+		}
+
 		if notesDir == "" {
 			return errMsg{fmt.Errorf("notes directory not configured")}
 		}

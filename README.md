@@ -166,6 +166,14 @@ When vim mode is enabled:
    touchlog
    ```
 
+   Or with a custom output directory:
+
+   ```bash
+   touchlog -output-dir ~/my-notes
+   # or using the shorthand
+   touchlog -o ~/my-notes
+   ```
+
 2. **Select a template**: Use arrow keys to navigate and press `Enter` to select
 
 3. **Edit your note**: The template will be loaded with variables substituted. Edit as needed.
@@ -173,6 +181,20 @@ When vim mode is enabled:
 4. **Save the note**: Press `Ctrl+S` to save. The note will be saved as a Markdown file with a timestamp-based filename (e.g., `2024-01-15-143022.md`) in your configured notes directory. The directory will be created automatically if it doesn't exist.
 
 5. **Quit**: Press `Ctrl+C` or `q` to exit
+
+### Command Line Options
+
+- `-output-dir <path>` or `-o <path>`: Override the notes directory specified in the config file
+
+   The output directory can be an absolute path or a path starting with `~` (which will be expanded to your home directory). This option takes precedence over the `notes_directory` setting in the config file.
+
+   **Examples**:
+
+   ```bash
+   touchlog -output-dir ~/my-notes
+   touchlog -o /tmp/notes
+   touchlog --output-dir ~/Documents/journal
+   ```
 
 ## Keyboard Shortcuts
 
@@ -222,6 +244,45 @@ touchlog/
 ├── go.mod                       # Go module definition
 └── README.md
 ```
+
+## Programmatic API
+
+touchlog can be used programmatically by other Go applications. This is useful for external tools like a Zettelkasten daemon that needs to create notes programmatically.
+
+### Basic Usage
+
+```go
+import "github.com/sv4u/touchlog/internal/api"
+
+opts := &api.Options{
+    OutputDirectory: "/path/to/notes",
+}
+err := api.Run(opts)
+if err != nil {
+    // Handle error
+}
+```
+
+### API Reference
+
+**`api.Options`**:
+
+- `OutputDirectory` (string): Override the notes directory specified in the config file. This takes precedence over the config file setting. Supports `~` expansion for home directory paths.
+- `ConfigPath` (string): Reserved for future use. Currently, the default config file location is always used.
+
+**`api.Run(opts *Options) error`**:
+
+Creates and runs a touchlog instance with the given options. Returns an error if initialization or execution fails.
+
+**Priority Order**:
+
+When determining which output directory to use, touchlog follows this priority:
+
+1. CLI flag (`-output-dir` or `-o`) - highest priority
+2. API parameter (`Options.OutputDirectory`)
+3. Config file setting (`notes_directory`) - lowest priority
+
+Only one source is used (no merging). The first non-empty value in the priority order is used.
 
 ## Architecture
 
