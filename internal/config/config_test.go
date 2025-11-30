@@ -268,7 +268,7 @@ templates:
 		if cfg.NotesDirectory != "" {
 			t.Errorf("LoadConfig() notes_directory = %q, want empty string", cfg.NotesDirectory)
 		}
-		if cfg.Variables != nil && len(cfg.Variables) != 0 {
+		if len(cfg.Variables) != 0 {
 			t.Errorf("LoadConfig() variables = %v, want nil or empty", cfg.Variables)
 		}
 	})
@@ -356,7 +356,7 @@ datetime_vars:
 		}
 
 		// All fields should be zero values
-		if cfg.Templates != nil && len(cfg.Templates) != 0 {
+		if len(cfg.Templates) != 0 {
 			t.Errorf("LoadConfig() templates = %v, want nil or empty", cfg.Templates)
 		}
 		if cfg.NotesDirectory != "" {
