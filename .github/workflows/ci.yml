@@ -42,15 +42,13 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Cache Go modules
+      - name: Cache Go build
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go-build-
 
       - name: Download dependencies
         run: go mod download
@@ -72,15 +70,13 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Cache Go modules
+      - name: Cache Go build
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go-build-
 
       - name: Download dependencies
         run: go mod download
@@ -124,15 +120,13 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Cache Go modules
+      - name: Cache Go build
         uses: actions/cache@v4
         with:
-          path: |
-            ${{ matrix.cache-path }}
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          path: ${{ matrix.cache-path }}
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go-build-
 
       - name: Download dependencies
         run: go mod download
@@ -167,15 +161,13 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Cache Go modules
+      - name: Cache Go build
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go-build-
 
       - name: Download dependencies
         run: go mod download
