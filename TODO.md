@@ -6,3 +6,4 @@
 - [ ] Make config file creation activity when config file is not found
 - [ ] Add code quality GitHub Actions to check for bugs and code coverage
 - [ ] Add status indicators for code quality and pipeline health to README
+- [ ] Automated changelog creation
