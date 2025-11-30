@@ -1,5 +1,12 @@
 # touchlog
 
+[![CI](https://github.com/sv4u/touchlog/workflows/CI/badge.svg)](https://github.com/sv4u/touchlog/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sv4u/touchlog)](https://goreportcard.com/report/github.com/sv4u/touchlog)
+[![Coverage](https://img.shields.io/badge/coverage-not%20configured-lightgrey)](https://github.com/sv4u/touchlog/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/sv4u/touchlog.svg)](https://github.com/sv4u/touchlog/blob/main/LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/sv4u/touchlog)](https://github.com/sv4u/touchlog/blob/main/go.mod)
+[![GitHub release](https://img.shields.io/github/release/sv4u/touchlog.svg)](https://github.com/sv4u/touchlog/releases)
+
 A terminal-based note editor with template support, designed for Zettelkasten note-taking methodology. Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea), touchlog provides an interactive TUI for quickly creating structured notes from customizable Markdown templates.
 
 ## Features
