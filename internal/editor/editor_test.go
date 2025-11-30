@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/adrg/xdg"
 	"github.com/sv4u/touchlog/internal/config"
 )
 
@@ -173,10 +174,29 @@ notes_directory: ~/default-notes
 		}
 	}()
 
+	// Set environment variables before running tests
+	// The xdg package caches values at init(), so we need to set them and reload
 	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
 	_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+	xdg.Reload() // Force xdg package to reload environment variables
+
+	// Verify the config file exists at the expected location
+	expectedConfigPath := filepath.Join(tmpDir, ".config", "touchlog", "config.yaml")
+	if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
+		t.Fatalf("Config file not found at expected path: %s", expectedConfigPath)
+	}
 
 	t.Run("accepts output directory option without error", func(t *testing.T) {
+		// Ensure environment is set for this subtest
+		// Unset first to clear any cached values, then set to new values
+		_ = os.Unsetenv("XDG_CONFIG_HOME")
+		_ = os.Unsetenv("XDG_DATA_HOME")
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+
+		// Force xdg package to reload environment variables
+		xdg.Reload()
+
 		overridePath := "/custom/output/path"
 		_, err := NewModel(WithOutputDirectory(overridePath))
 		if err != nil {
@@ -185,6 +205,15 @@ notes_directory: ~/default-notes
 	})
 
 	t.Run("accepts tilde path in output directory option", func(t *testing.T) {
+		// Ensure environment is set for this subtest
+		_ = os.Unsetenv("XDG_CONFIG_HOME")
+		_ = os.Unsetenv("XDG_DATA_HOME")
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+
+		// Force xdg package to reload environment variables
+		xdg.Reload()
+
 		overridePath := "~/custom-notes"
 		_, err := NewModel(WithOutputDirectory(overridePath))
 		if err != nil {
@@ -193,6 +222,15 @@ notes_directory: ~/default-notes
 	})
 
 	t.Run("accepts multiple options", func(t *testing.T) {
+		// Ensure environment is set for this subtest
+		_ = os.Unsetenv("XDG_CONFIG_HOME")
+		_ = os.Unsetenv("XDG_DATA_HOME")
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+
+		// Force xdg package to reload environment variables
+		xdg.Reload()
+
 		overridePath := "/test/path"
 		_, err := NewModel(WithOutputDirectory(overridePath), WithOutputDirectory("/another/path"))
 		if err != nil {
