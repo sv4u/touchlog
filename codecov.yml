@@ -1,10 +1,6 @@
 # Codecov Configuration File
 # Documentation: https://docs.codecov.com/docs/codecov-yaml
 
-# Codecov version for configuration compatibility
-codecov:
-  version: "0.1.19"
-
 # Coverage settings
 coverage:
   # Precision: number of decimal places for coverage percentages (0-4)
@@ -25,38 +21,37 @@ coverage:
         target: 20
         # Threshold: minimum coverage change allowed (percentage points)
         threshold: 1
-        # Base: base branch for comparison (usually main or master)
-        base: master
+        # Base: base branch for comparison (auto, or branch name)
+        base: auto
         # Flags: which flags to include in status check
         flags: null
         # Paths: which paths to include in status check
         paths: null
         # If true, only report status if coverage decreases
         only_pulls: false
-        # If true, only report status if coverage increases
-        only_project: false
     
     # Patch status: coverage for the patch/diff
     patch:
       default:
         target: 20
         threshold: 1
-        base: master
+        base: auto
         flags: null
         paths: null
         only_pulls: false
-        only_project: false
     
     # Changes status: coverage changes in the PR
-    changes:
+    changes: false
+  
+  # Notification settings
+  notify:
+    # Slack notifications (if configured)
+    slack:
       default:
-        target: 20
-        threshold: 1
-        base: master
-        flags: null
-        paths: null
+        # Only notify on coverage changes
         only_pulls: false
-        only_project: false
+        # Minimum coverage threshold for notifications
+        threshold: 20
 
 # Comment settings for pull requests
 comment:
@@ -68,17 +63,8 @@ comment:
   # Options: "default", "once", "never", "spammy"
   behavior: default
   
-  # Require base: require base coverage to post comment
-  require_base: false
-  
-  # Require head: require head coverage to post comment
-  require_head: false
-  
-  # Require changed files: require changed files to post comment
-  require_changed_files: false
-  
-  # Show coverage: show coverage in comments
-  show_carryforward_flags: false
+  # Require changes: only post comment if coverage changes
+  require_changes: false
 
 # Flags configuration
 # Flags allow you to group coverage reports by test type or component
@@ -90,24 +76,6 @@ flags:
       - cmd/
     # Carryforward: if true, carry forward coverage from previous commits
     carryforward: false
-    # Type: flag type (e.g., "coverage", "test")
-    type: coverage
-
-# Path filtering
-# Specify which paths to include or exclude from coverage
-paths:
-  # Paths to include in coverage reports
-  include:
-    - internal/
-    - cmd/
-  
-  # Paths to exclude from coverage reports
-  exclude:
-    - "**/*_test.go"
-    - "**/*.pb.go"
-    - "**/vendor/"
-    - "**/examples/"
-    - "**/cmd/touchlog/main.go"  # Exclude main entry point
 
 # Ignore patterns
 # Files or paths to completely ignore
@@ -123,16 +91,6 @@ github_checks:
   # Annotations: show coverage annotations in GitHub checks
   annotations: true
 
-# Notification settings
-notify:
-  # Slack notifications (if configured)
-  slack:
-    default:
-      # Only notify on coverage changes
-      only_pulls: false
-      # Minimum coverage threshold for notifications
-      threshold: 20
-
 # Parsing settings
 parsers:
   # Gcov parser settings
@@ -142,10 +100,6 @@ parsers:
       loop: true
       macro: false
       method: false
-      # Paths to search for coverage files
-      paths:
-        - internal/
-        - cmd/
 
 # Fixes: specify how to fix coverage paths
 fixes:
