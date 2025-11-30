@@ -8,6 +8,9 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+
+formatters:
+  enable:
     - gofmt
     - goimports
 
