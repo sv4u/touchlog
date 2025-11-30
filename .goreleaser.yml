@@ -1,3 +1,5 @@
+version: 2
+
 project_name: touchlog
 
 builds:
@@ -23,6 +25,9 @@ archives:
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
   algorithm: sha256
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
 
 release:
   mode: replace

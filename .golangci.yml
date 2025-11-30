@@ -14,7 +14,11 @@ formatters:
     - gofmt
     - goimports
 
+run:
+  relative-path-mode: wd
+
 issues:
+  # 0 = unlimited (intentional - fail on any issues)
   max-issues-per-linter: 0
   max-same-issues: 0
 
