@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -385,6 +387,287 @@ templates:
 		}
 		if cfg.Templates[0].File != "daily.md" {
 			t.Errorf("LoadConfig() template file = %q, want %q", cfg.Templates[0].File, "daily.md")
+		}
+	})
+}
+
+func TestCreateDefaultConfig(t *testing.T) {
+	t.Run("returns non-nil config", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		if cfg == nil {
+			t.Fatal("CreateDefaultConfig() returned nil")
+		}
+	})
+
+	t.Run("has correct template count", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		if len(cfg.Templates) != 3 {
+			t.Errorf("CreateDefaultConfig() templates length = %d, want 3", len(cfg.Templates))
+		}
+	})
+
+	t.Run("has correct template names and files", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		expectedTemplates := map[string]string{
+			"Daily Note":    "daily.md",
+			"Meeting Notes": "meeting.md",
+			"Journal":       "journal.md",
+		}
+		for _, tmpl := range cfg.Templates {
+			expectedFile, ok := expectedTemplates[tmpl.Name]
+			if !ok {
+				t.Errorf("CreateDefaultConfig() unexpected template name: %q", tmpl.Name)
+			} else if tmpl.File != expectedFile {
+				t.Errorf("CreateDefaultConfig() template %q file = %q, want %q", tmpl.Name, tmpl.File, expectedFile)
+			}
+		}
+	})
+
+	t.Run("has correct notes directory", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		if cfg.NotesDirectory != "~/notes" {
+			t.Errorf("CreateDefaultConfig() notes_directory = %q, want %q", cfg.NotesDirectory, "~/notes")
+		}
+	})
+
+	t.Run("has all date/time variables enabled", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		if !cfg.DateTimeVars.Date.Enabled {
+			t.Error("CreateDefaultConfig() date enabled = false, want true")
+		}
+		if !cfg.DateTimeVars.Time.Enabled {
+			t.Error("CreateDefaultConfig() time enabled = false, want true")
+		}
+		if !cfg.DateTimeVars.DateTime.Enabled {
+			t.Error("CreateDefaultConfig() datetime enabled = false, want true")
+		}
+	})
+
+	t.Run("has correct date/time formats", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		if cfg.DateTimeVars.Date.Format != "2006-01-02" {
+			t.Errorf("CreateDefaultConfig() date format = %q, want %q", cfg.DateTimeVars.Date.Format, "2006-01-02")
+		}
+		if cfg.DateTimeVars.Time.Format != "15:04:05" {
+			t.Errorf("CreateDefaultConfig() time format = %q, want %q", cfg.DateTimeVars.Time.Format, "15:04:05")
+		}
+		if cfg.DateTimeVars.DateTime.Format != "2006-01-02 15:04:05" {
+			t.Errorf("CreateDefaultConfig() datetime format = %q, want %q", cfg.DateTimeVars.DateTime.Format, "2006-01-02 15:04:05")
+		}
+	})
+
+	t.Run("has empty variables map", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		if cfg.Variables == nil {
+			t.Error("CreateDefaultConfig() variables = nil, want initialized map")
+		}
+		if len(cfg.Variables) != 0 {
+			t.Errorf("CreateDefaultConfig() variables length = %d, want 0", len(cfg.Variables))
+		}
+	})
+
+	t.Run("has vim mode disabled", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		if cfg.VimMode {
+			t.Error("CreateDefaultConfig() vim_mode = true, want false")
+		}
+	})
+}
+
+func TestSaveConfig(t *testing.T) {
+	t.Run("creates config file successfully", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+
+		cfg := CreateDefaultConfig()
+		if err := SaveConfig(cfg, configPath); err != nil {
+			t.Fatalf("SaveConfig() error = %v", err)
+		}
+
+		// Verify file exists
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			t.Errorf("SaveConfig() file not created at %q", configPath)
+		}
+
+		// Verify file permissions (approximately - exact check may vary by OS)
+		info, err := os.Stat(configPath)
+		if err != nil {
+			t.Fatalf("os.Stat() error = %v", err)
+		}
+		mode := info.Mode()
+		if mode&0644 != 0644 {
+			t.Errorf("SaveConfig() file permissions = %o, want 0644", mode&0777)
+		}
+	})
+
+	t.Run("creates parent directory if missing", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "subdir", "config.yaml")
+
+		cfg := CreateDefaultConfig()
+		if err := SaveConfig(cfg, configPath); err != nil {
+			t.Fatalf("SaveConfig() error = %v", err)
+		}
+
+		// Verify parent directory was created
+		parentDir := filepath.Dir(configPath)
+		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+			t.Errorf("SaveConfig() parent directory not created at %q", parentDir)
+		}
+
+		// Verify config file exists
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			t.Errorf("SaveConfig() file not created at %q", configPath)
+		}
+	})
+
+	t.Run("writes valid YAML content", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+
+		cfg := CreateDefaultConfig()
+		if err := SaveConfig(cfg, configPath); err != nil {
+			t.Fatalf("SaveConfig() error = %v", err)
+		}
+
+		// Read file back and verify it can be unmarshaled
+		loadedCfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+
+		// Verify loaded config matches original
+		if len(loadedCfg.Templates) != len(cfg.Templates) {
+			t.Errorf("LoadConfig() templates length = %d, want %d", len(loadedCfg.Templates), len(cfg.Templates))
+		}
+		if loadedCfg.NotesDirectory != cfg.NotesDirectory {
+			t.Errorf("LoadConfig() notes_directory = %q, want %q", loadedCfg.NotesDirectory, cfg.NotesDirectory)
+		}
+		if loadedCfg.VimMode != cfg.VimMode {
+			t.Errorf("LoadConfig() vim_mode = %v, want %v", loadedCfg.VimMode, cfg.VimMode)
+		}
+	})
+}
+
+func TestLoadOrCreateConfig(t *testing.T) {
+	t.Run("loads existing valid config", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+
+		// Create a custom config file
+		customConfig := &Config{
+			Templates: []Template{
+				{Name: "Custom Template", File: "custom.md"},
+			},
+			NotesDirectory: "~/custom-notes",
+			VimMode:        true,
+		}
+		if err := SaveConfig(customConfig, configPath); err != nil {
+			t.Fatalf("SaveConfig() error = %v", err)
+		}
+
+		// Load it using LoadOrCreateConfig
+		loadedCfg, err := LoadOrCreateConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadOrCreateConfig() error = %v", err)
+		}
+
+		// Verify loaded config matches custom config
+		if len(loadedCfg.Templates) != 1 {
+			t.Errorf("LoadOrCreateConfig() templates length = %d, want 1", len(loadedCfg.Templates))
+		}
+		if loadedCfg.Templates[0].Name != "Custom Template" {
+			t.Errorf("LoadOrCreateConfig() template name = %q, want %q", loadedCfg.Templates[0].Name, "Custom Template")
+		}
+		if loadedCfg.NotesDirectory != "~/custom-notes" {
+			t.Errorf("LoadOrCreateConfig() notes_directory = %q, want %q", loadedCfg.NotesDirectory, "~/custom-notes")
+		}
+		if !loadedCfg.VimMode {
+			t.Error("LoadOrCreateConfig() vim_mode = false, want true")
+		}
+	})
+
+	t.Run("creates default config when file doesn't exist", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+
+		// File doesn't exist, LoadOrCreateConfig should create it
+		cfg, err := LoadOrCreateConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadOrCreateConfig() error = %v", err)
+		}
+
+		// Verify config file was created
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			t.Errorf("LoadOrCreateConfig() file not created at %q", configPath)
+		}
+
+		// Verify created config matches default
+		if len(cfg.Templates) != 3 {
+			t.Errorf("LoadOrCreateConfig() templates length = %d, want 3", len(cfg.Templates))
+		}
+		if cfg.NotesDirectory != "~/notes" {
+			t.Errorf("LoadOrCreateConfig() notes_directory = %q, want %q", cfg.NotesDirectory, "~/notes")
+		}
+		if cfg.VimMode {
+			t.Error("LoadOrCreateConfig() vim_mode = true, want false")
+		}
+	})
+
+	t.Run("creates parent directory when needed", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "subdir", "config.yaml")
+
+		// File doesn't exist, LoadOrCreateConfig should create parent directory and file
+		cfg, err := LoadOrCreateConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadOrCreateConfig() error = %v", err)
+		}
+
+		// Verify parent directory was created
+		parentDir := filepath.Dir(configPath)
+		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+			t.Errorf("LoadOrCreateConfig() parent directory not created at %q", parentDir)
+		}
+
+		// Verify config file was created
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			t.Errorf("LoadOrCreateConfig() file not created at %q", configPath)
+		}
+
+		// Verify created config is valid
+		if cfg == nil {
+			t.Fatal("LoadOrCreateConfig() returned nil config")
+		}
+	})
+
+	t.Run("returns error for invalid existing config", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configPath := filepath.Join(tmpDir, "config.yaml")
+
+		// Create config file with invalid YAML
+		invalidYAML := `templates:
+  - name: Test
+    file: test.md
+invalid yaml: [unclosed bracket
+`
+		if err := os.WriteFile(configPath, []byte(invalidYAML), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		// LoadOrCreateConfig should return error (not overwrite invalid config)
+		_, err := LoadOrCreateConfig(configPath)
+		if err == nil {
+			t.Error("LoadOrCreateConfig() expected error for invalid YAML, got nil")
+		}
+
+		// Verify invalid config file is not overwritten
+		content, err := os.ReadFile(configPath)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		if !strings.Contains(string(content), "invalid yaml") {
+			t.Error("LoadOrCreateConfig() overwrote invalid config file")
 		}
 	})
 }

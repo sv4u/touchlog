@@ -1,7 +1,6 @@
 package editor
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -88,13 +87,27 @@ func NewModel(opts ...ModelOption) (tea.Model, error) {
 		return nil, fmt.Errorf("failed to get config path: %w", err)
 	}
 
-	configCfg, err := config.LoadConfig(configPath)
+	// Load or create config (auto-creates default config if missing)
+	configCfg, err := config.LoadOrCreateConfig(configPath)
 	if err != nil {
-		// Check if config file doesn't exist and provide helpful error message
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("config file not found at '%s'. Please create a config file. See examples/config.yaml for reference", configPath)
-		}
+		// Only non-existence errors are handled by LoadOrCreateConfig
+		// Other errors (permission, invalid YAML, etc.) are returned as-is
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Optionally create example templates if templates directory is empty
+	templatesDir, err := xdg.TemplatesDir()
+	if err != nil {
+		// Log warning but don't fail - templates directory creation is optional
+		// Could use a logger here, but for now we'll just continue
+		// In a future enhancement, we could add logging
+	} else {
+		// Try to create templates (non-fatal if it fails)
+		if err := template.CreateExampleTemplates(templatesDir); err != nil {
+			// Template creation failed, but don't fail the entire application
+			// This is a nice-to-have feature, not critical
+			// Could log this error in the future
+		}
 	}
 
 	// Create template list items

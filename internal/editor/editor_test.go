@@ -353,3 +353,357 @@ func TestSaveNotePriorityLogic(t *testing.T) {
 		}
 	})
 }
+
+func TestNewModelWithAutoCreatedConfig(t *testing.T) {
+	t.Run("creates config and initializes model successfully", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configDir := filepath.Join(tmpDir, ".config", "touchlog")
+		templatesDir := filepath.Join(tmpDir, ".local", "share", "touchlog", "templates")
+
+		// Create directories but no config file
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Fatalf("Failed to create config directory: %v", err)
+		}
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("Failed to create templates directory: %v", err)
+		}
+
+		// Override XDG paths for testing
+		originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+		originalDataHome := os.Getenv("XDG_DATA_HOME")
+		defer func() {
+			if originalConfigHome != "" {
+				_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+			} else {
+				_ = os.Unsetenv("XDG_CONFIG_HOME")
+			}
+			if originalDataHome != "" {
+				_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+			} else {
+				_ = os.Unsetenv("XDG_DATA_HOME")
+			}
+		}()
+
+		// Set environment variables before running tests
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+		xdg.Reload() // Force xdg package to reload environment variables
+
+		// Call NewModel - should auto-create config
+		_, err := NewModel()
+		if err != nil {
+			t.Fatalf("NewModel() error = %v", err)
+		}
+
+		// Verify config file was created
+		expectedConfigPath := filepath.Join(tmpDir, ".config", "touchlog", "config.yaml")
+		if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
+			t.Errorf("NewModel() config file not created at %q", expectedConfigPath)
+		}
+
+		// Verify config file has default content
+		cfg, err := config.LoadConfig(expectedConfigPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if len(cfg.Templates) != 3 {
+			t.Errorf("NewModel() created config with %d templates, want 3", len(cfg.Templates))
+		}
+		if cfg.NotesDirectory != "~/notes" {
+			t.Errorf("NewModel() created config with notes_directory = %q, want %q", cfg.NotesDirectory, "~/notes")
+		}
+	})
+
+	t.Run("works with output directory option", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configDir := filepath.Join(tmpDir, ".config", "touchlog")
+		templatesDir := filepath.Join(tmpDir, ".local", "share", "touchlog", "templates")
+
+		// Create directories but no config file
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Fatalf("Failed to create config directory: %v", err)
+		}
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("Failed to create templates directory: %v", err)
+		}
+
+		// Override XDG paths for testing
+		originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+		originalDataHome := os.Getenv("XDG_DATA_HOME")
+		defer func() {
+			if originalConfigHome != "" {
+				_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+			} else {
+				_ = os.Unsetenv("XDG_CONFIG_HOME")
+			}
+			if originalDataHome != "" {
+				_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+			} else {
+				_ = os.Unsetenv("XDG_DATA_HOME")
+			}
+		}()
+
+		// Set environment variables
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+		xdg.Reload()
+
+		// Call NewModel with output directory option
+		overridePath := "/test/path"
+		_, err := NewModel(WithOutputDirectory(overridePath))
+		if err != nil {
+			t.Fatalf("NewModel() with output directory option error = %v", err)
+		}
+
+		// Verify config file was created
+		expectedConfigPath := filepath.Join(tmpDir, ".config", "touchlog", "config.yaml")
+		if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
+			t.Errorf("NewModel() config file not created at %q", expectedConfigPath)
+		}
+	})
+
+	t.Run("creates templates when directory is empty", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configDir := filepath.Join(tmpDir, ".config", "touchlog")
+		templatesDir := filepath.Join(tmpDir, ".local", "share", "touchlog", "templates")
+
+		// Create directories but no config file and empty templates directory
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Fatalf("Failed to create config directory: %v", err)
+		}
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("Failed to create templates directory: %v", err)
+		}
+
+		// Override XDG paths for testing
+		originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+		originalDataHome := os.Getenv("XDG_DATA_HOME")
+		defer func() {
+			if originalConfigHome != "" {
+				_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+			} else {
+				_ = os.Unsetenv("XDG_CONFIG_HOME")
+			}
+			if originalDataHome != "" {
+				_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+			} else {
+				_ = os.Unsetenv("XDG_DATA_HOME")
+			}
+		}()
+
+		// Set environment variables
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+		xdg.Reload()
+
+		// Call NewModel - should auto-create config and templates
+		_, err := NewModel()
+		if err != nil {
+			t.Fatalf("NewModel() error = %v", err)
+		}
+
+		// Verify template files were created
+		expectedFiles := []string{"daily.md", "meeting.md", "journal.md"}
+		for _, filename := range expectedFiles {
+			path := filepath.Join(templatesDir, filename)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				t.Errorf("NewModel() template file not created: %q", filename)
+			}
+		}
+	})
+
+	t.Run("does not create templates if directory has files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configDir := filepath.Join(tmpDir, ".config", "touchlog")
+		templatesDir := filepath.Join(tmpDir, ".local", "share", "touchlog", "templates")
+
+		// Create directories with existing template
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Fatalf("Failed to create config directory: %v", err)
+		}
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("Failed to create templates directory: %v", err)
+		}
+
+		// Create existing template file
+		existingTemplate := filepath.Join(templatesDir, "existing.md")
+		existingContent := "# Existing Template\n\nThis should not be modified"
+		if err := os.WriteFile(existingTemplate, []byte(existingContent), 0644); err != nil {
+			t.Fatalf("Failed to write existing template: %v", err)
+		}
+
+		// Override XDG paths for testing
+		originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+		originalDataHome := os.Getenv("XDG_DATA_HOME")
+		defer func() {
+			if originalConfigHome != "" {
+				_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+			} else {
+				_ = os.Unsetenv("XDG_CONFIG_HOME")
+			}
+			if originalDataHome != "" {
+				_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+			} else {
+				_ = os.Unsetenv("XDG_DATA_HOME")
+			}
+		}()
+
+		// Set environment variables
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+		xdg.Reload()
+
+		// Call NewModel - should auto-create config but not templates
+		_, err := NewModel()
+		if err != nil {
+			t.Fatalf("NewModel() error = %v", err)
+		}
+
+		// Verify existing template is unchanged
+		content, err := os.ReadFile(existingTemplate)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		if string(content) != existingContent {
+			t.Error("NewModel() modified existing template")
+		}
+
+		// Verify config was still created
+		expectedConfigPath := filepath.Join(tmpDir, ".config", "touchlog", "config.yaml")
+		if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
+			t.Errorf("NewModel() config file not created at %q", expectedConfigPath)
+		}
+	})
+}
+
+func TestNewModelWithExistingConfig(t *testing.T) {
+	t.Run("loads existing config successfully", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configDir := filepath.Join(tmpDir, ".config", "touchlog")
+		templatesDir := filepath.Join(tmpDir, ".local", "share", "touchlog", "templates")
+
+		// Create directories
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Fatalf("Failed to create config directory: %v", err)
+		}
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("Failed to create templates directory: %v", err)
+		}
+
+		// Create custom config file
+		configPath := filepath.Join(configDir, "config.yaml")
+		customConfig := `templates:
+  - name: Custom Template
+    file: custom.md
+notes_directory: ~/custom-notes
+vim_mode: true
+`
+		if err := os.WriteFile(configPath, []byte(customConfig), 0644); err != nil {
+			t.Fatalf("Failed to write config file: %v", err)
+		}
+
+		// Create template file
+		templatePath := filepath.Join(templatesDir, "custom.md")
+		templateContent := "# Custom Template\n\nContent here"
+		if err := os.WriteFile(templatePath, []byte(templateContent), 0644); err != nil {
+			t.Fatalf("Failed to write template file: %v", err)
+		}
+
+		// Override XDG paths for testing
+		originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+		originalDataHome := os.Getenv("XDG_DATA_HOME")
+		defer func() {
+			if originalConfigHome != "" {
+				_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+			} else {
+				_ = os.Unsetenv("XDG_CONFIG_HOME")
+			}
+			if originalDataHome != "" {
+				_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+			} else {
+				_ = os.Unsetenv("XDG_DATA_HOME")
+			}
+		}()
+
+		// Set environment variables
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+		xdg.Reload()
+
+		// Call NewModel - should load existing config
+		_, err := NewModel()
+		if err != nil {
+			t.Fatalf("NewModel() error = %v", err)
+		}
+
+		// Verify config file was not modified (should still have custom content)
+		content, err := os.ReadFile(configPath)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		if !strings.Contains(string(content), "Custom Template") {
+			t.Error("NewModel() overwrote existing config file")
+		}
+	})
+
+	t.Run("returns error for invalid existing config", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configDir := filepath.Join(tmpDir, ".config", "touchlog")
+		templatesDir := filepath.Join(tmpDir, ".local", "share", "touchlog", "templates")
+
+		// Create directories
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Fatalf("Failed to create config directory: %v", err)
+		}
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("Failed to create templates directory: %v", err)
+		}
+
+		// Create config file with invalid YAML
+		configPath := filepath.Join(configDir, "config.yaml")
+		invalidConfig := `templates:
+  - name: Test
+    file: test.md
+invalid yaml: [unclosed bracket
+`
+		if err := os.WriteFile(configPath, []byte(invalidConfig), 0644); err != nil {
+			t.Fatalf("Failed to write config file: %v", err)
+		}
+
+		// Override XDG paths for testing
+		originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+		originalDataHome := os.Getenv("XDG_DATA_HOME")
+		defer func() {
+			if originalConfigHome != "" {
+				_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+			} else {
+				_ = os.Unsetenv("XDG_CONFIG_HOME")
+			}
+			if originalDataHome != "" {
+				_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+			} else {
+				_ = os.Unsetenv("XDG_DATA_HOME")
+			}
+		}()
+
+		// Set environment variables
+		_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+		_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+		xdg.Reload()
+
+		// Call NewModel - should return error
+		_, err := NewModel()
+		if err == nil {
+			t.Error("NewModel() expected error for invalid config, got nil")
+		}
+
+		// Verify invalid config file is not overwritten
+		content, err := os.ReadFile(configPath)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		if !strings.Contains(string(content), "invalid yaml") {
+			t.Error("NewModel() overwrote invalid config file")
+		}
+	})
+}
