@@ -496,7 +496,12 @@ func expandPath(path string) (string, error) {
 		if path == "~" {
 			return homeDir, nil
 		}
-		return filepath.Join(homeDir, path[2:]), nil
+		// Skip the leading ~ and the following /
+		remaining := path[2:]
+		// Strip leading / if present to avoid issues with filepath.Join
+		// This handles cases like "~~/path" where path[2:] would be "/path"
+		remaining = strings.TrimPrefix(remaining, "/")
+		return filepath.Join(homeDir, remaining), nil
 	}
 	return path, nil
 }
