@@ -141,3 +141,84 @@ func GetDefaultVariables(cfg *config.Config) map[string]string {
 
 	return vars
 }
+
+// CreateExampleTemplates creates minimal inline template files in the specified directory
+// if the directory is empty. It only creates templates that are referenced in the default
+// config (daily.md, meeting.md, journal.md). If the directory already contains files,
+// this function does nothing (non-destructive).
+func CreateExampleTemplates(templatesDir string) error {
+	// Check if directory exists and is empty
+	entries, err := os.ReadDir(templatesDir)
+	if err != nil {
+		// Directory doesn't exist - xdg.TemplatesDir() should have created it,
+		// but handle the case where it doesn't exist
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("failed to read templates directory: %w", err)
+		}
+		// Directory doesn't exist, create it
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			return fmt.Errorf("failed to create templates directory: %w", err)
+		}
+	} else if len(entries) > 0 {
+		// Directory exists and is not empty - don't overwrite existing templates
+		return nil
+	}
+
+	// Define minimal inline templates matching default config
+	examples := map[string]string{
+		"daily.md": `# Daily Note - {{date}}
+
+## Events
+- 
+
+## Thoughts
+- 
+
+## Tasks
+- [ ] 
+
+## Notes
+- 
+`,
+		"meeting.md": `# Meeting Notes - {{date}} {{time}}
+
+## Attendees
+- 
+
+## Agenda
+- 
+
+## Notes
+- 
+
+## Action Items
+- [ ] 
+`,
+		"journal.md": `# Journal Entry - {{date}}
+
+## Today's Highlights
+- 
+
+## Reflections
+- 
+
+## Tomorrow's Focus
+- 
+`,
+	}
+
+	// Create each template file
+	for filename, content := range examples {
+		path := filepath.Join(templatesDir, filename)
+		// Check if file already exists (shouldn't happen if directory was empty, but be safe)
+		if _, err := os.Stat(path); err == nil {
+			// File exists, skip it (non-destructive)
+			continue
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to create template %s: %w", filename, err)
+		}
+	}
+
+	return nil
+}

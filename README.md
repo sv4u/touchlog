@@ -49,7 +49,18 @@ touchlog uses XDG Base Directory Specification for storing configuration and tem
 
 ### Configuration File
 
-Create `~/.config/touchlog/config.yaml`:
+**Automatic Configuration Creation**: On first run, touchlog automatically creates a default configuration file at `~/.config/touchlog/config.yaml` (or `$XDG_CONFIG_HOME/touchlog/config.yaml`) if it doesn't exist. The default configuration includes:
+
+- Three common templates: Daily Note, Meeting Notes, and Journal
+- Default notes directory: `~/notes`
+- All date/time variables enabled with standard formats
+- Vim mode disabled
+
+You can customize the configuration file at any time. If the templates directory is empty, touchlog will also create minimal example template files (`daily.md`, `meeting.md`, `journal.md`) to get you started.
+
+**Manual Configuration** (optional):
+
+If you prefer to create the configuration file manually, create `~/.config/touchlog/config.yaml`:
 
 ```yaml
 templates:
@@ -84,7 +95,13 @@ vim_mode: false
 
 ### Template Files
 
-Create template files in `~/.local/share/touchlog/templates/`. Templates support variable substitution using `{{variable}}` syntax.
+Template files are stored in `~/.local/share/touchlog/templates/` (or `$XDG_DATA_HOME/touchlog/templates/`). Templates support variable substitution using `{{variable}}` syntax.
+
+**Automatic Template Creation**: If the templates directory is empty on first run, touchlog will automatically create minimal example templates (`daily.md`, `meeting.md`, `journal.md`) that match the default configuration. These templates are simple but functional and can be customized as needed.
+
+**Manual Template Creation** (optional):
+
+Create template files in `~/.local/share/touchlog/templates/`:
 
 **Example template** (`daily.md`):
 

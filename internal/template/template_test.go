@@ -1,6 +1,9 @@
 package template
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/sv4u/touchlog/internal/config"
@@ -441,6 +444,209 @@ func TestGetDefaultVariables(t *testing.T) {
 		}
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable")
+		}
+	})
+}
+
+func TestCreateExampleTemplates(t *testing.T) {
+	t.Run("creates templates in empty directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Create empty directory
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Create templates
+		if err := CreateExampleTemplates(templatesDir); err != nil {
+			t.Fatalf("CreateExampleTemplates() error = %v", err)
+		}
+
+		// Verify three template files exist
+		expectedFiles := []string{"daily.md", "meeting.md", "journal.md"}
+		for _, filename := range expectedFiles {
+			path := filepath.Join(templatesDir, filename)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				t.Errorf("CreateExampleTemplates() file not created: %q", filename)
+			}
+
+			// Verify file permissions (approximately)
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatalf("os.Stat() error = %v", err)
+			}
+			mode := info.Mode()
+			if mode&0644 != 0644 {
+				t.Errorf("CreateExampleTemplates() file %q permissions = %o, want 0644", filename, mode&0777)
+			}
+
+			// Verify file content contains template variables
+			content, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("os.ReadFile() error = %v", err)
+			}
+			contentStr := string(content)
+			if !strings.Contains(contentStr, "{{date}}") {
+				t.Errorf("CreateExampleTemplates() file %q missing {{date}} variable", filename)
+			}
+		}
+	})
+
+	t.Run("creates directory if it doesn't exist", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Directory doesn't exist, CreateExampleTemplates should create it
+		if err := CreateExampleTemplates(templatesDir); err != nil {
+			t.Fatalf("CreateExampleTemplates() error = %v", err)
+		}
+
+		// Verify directory was created
+		if _, err := os.Stat(templatesDir); os.IsNotExist(err) {
+			t.Errorf("CreateExampleTemplates() directory not created at %q", templatesDir)
+		}
+
+		// Verify template files were created
+		expectedFiles := []string{"daily.md", "meeting.md", "journal.md"}
+		for _, filename := range expectedFiles {
+			path := filepath.Join(templatesDir, filename)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				t.Errorf("CreateExampleTemplates() file not created: %q", filename)
+			}
+		}
+	})
+
+	t.Run("does nothing if directory has files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Create directory with existing template file
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		existingFile := filepath.Join(templatesDir, "existing.md")
+		existingContent := "# Existing Template\n\nThis should not be modified"
+		if err := os.WriteFile(existingFile, []byte(existingContent), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		// Create templates (should do nothing since directory is not empty)
+		if err := CreateExampleTemplates(templatesDir); err != nil {
+			t.Fatalf("CreateExampleTemplates() error = %v", err)
+		}
+
+		// Verify existing file is unchanged
+		content, err := os.ReadFile(existingFile)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		if string(content) != existingContent {
+			t.Error("CreateExampleTemplates() modified existing file")
+		}
+
+		// Verify no new files were created (directory was not empty)
+		entries, err := os.ReadDir(templatesDir)
+		if err != nil {
+			t.Fatalf("os.ReadDir() error = %v", err)
+		}
+		if len(entries) != 1 {
+			t.Errorf("CreateExampleTemplates() created files in non-empty directory, found %d files", len(entries))
+		}
+	})
+
+	t.Run("does not overwrite existing templates", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Create directory with daily.md already present
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		existingDaily := filepath.Join(templatesDir, "daily.md")
+		existingContent := "# Custom Daily Note\n\nThis should not be overwritten"
+		if err := os.WriteFile(existingDaily, []byte(existingContent), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		// Create templates (should do nothing since directory is not empty)
+		if err := CreateExampleTemplates(templatesDir); err != nil {
+			t.Fatalf("CreateExampleTemplates() error = %v", err)
+		}
+
+		// Verify existing daily.md is unchanged
+		content, err := os.ReadFile(existingDaily)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		if string(content) != existingContent {
+			t.Error("CreateExampleTemplates() overwrote existing daily.md")
+		}
+
+		// Verify no new templates were created (directory was not empty)
+		entries, err := os.ReadDir(templatesDir)
+		if err != nil {
+			t.Fatalf("os.ReadDir() error = %v", err)
+		}
+		if len(entries) != 1 {
+			t.Errorf("CreateExampleTemplates() created files in non-empty directory, found %d files", len(entries))
+		}
+	})
+
+	t.Run("template content is valid", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Create templates
+		if err := CreateExampleTemplates(templatesDir); err != nil {
+			t.Fatalf("CreateExampleTemplates() error = %v", err)
+		}
+
+		// Verify daily.md content
+		dailyPath := filepath.Join(templatesDir, "daily.md")
+		dailyContent, err := os.ReadFile(dailyPath)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		dailyStr := string(dailyContent)
+		if !strings.Contains(dailyStr, "# Daily Note") {
+			t.Error("CreateExampleTemplates() daily.md missing title")
+		}
+		if !strings.Contains(dailyStr, "{{date}}") {
+			t.Error("CreateExampleTemplates() daily.md missing {{date}} variable")
+		}
+
+		// Verify meeting.md content
+		meetingPath := filepath.Join(templatesDir, "meeting.md")
+		meetingContent, err := os.ReadFile(meetingPath)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		meetingStr := string(meetingContent)
+		if !strings.Contains(meetingStr, "# Meeting Notes") {
+			t.Error("CreateExampleTemplates() meeting.md missing title")
+		}
+		if !strings.Contains(meetingStr, "{{date}}") {
+			t.Error("CreateExampleTemplates() meeting.md missing {{date}} variable")
+		}
+		if !strings.Contains(meetingStr, "{{time}}") {
+			t.Error("CreateExampleTemplates() meeting.md missing {{time}} variable")
+		}
+
+		// Verify journal.md content
+		journalPath := filepath.Join(templatesDir, "journal.md")
+		journalContent, err := os.ReadFile(journalPath)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		journalStr := string(journalContent)
+		if !strings.Contains(journalStr, "# Journal Entry") {
+			t.Error("CreateExampleTemplates() journal.md missing title")
+		}
+		if !strings.Contains(journalStr, "{{date}}") {
+			t.Error("CreateExampleTemplates() journal.md missing {{date}} variable")
 		}
 	})
 }
