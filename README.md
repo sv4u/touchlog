@@ -246,6 +246,85 @@ The application flow:
 - [XDG](https://github.com/adrg/xdg) - XDG Base Directory implementation
 - [YAML v3](https://github.com/go-yaml/yaml) - YAML parsing
 
+## Contributing
+
+### Commit Message Guidelines
+
+This project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification. All commit messages should follow this format:
+
+```text
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Commit Types**:
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `test`: Adding or updating tests
+- `refactor`: Code refactoring without changing functionality
+- `perf`: Performance improvements
+- `ci`: Changes to CI/CD configuration
+- `chore`: Other changes that don't modify src or test files
+
+**Examples**:
+
+```text
+feat(editor): add vim mode support
+fix(config): resolve path resolution issue
+docs(readme): update installation instructions
+test(template): add tests for variable substitution
+```
+
+**Breaking Changes**: Use `BREAKING CHANGE:` in the footer or append `!` after the type/scope to indicate breaking changes:
+
+```text
+feat(api)!: change configuration file format
+
+BREAKING CHANGE: The config file now uses YAML instead of JSON
+```
+
+### Changelog
+
+The project maintains an automated changelog generated from git commit history. The changelog is located in `CHANGELOG.md` and follows the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format.
+
+**How commits appear in the changelog**:
+
+- Commits are automatically categorized by type (Features, Bug Fixes, Documentation, etc.)
+- The commit subject (description) appears in the changelog
+- Commits with scopes show the scope as a prefix (e.g., `**ci:** fix workflow`)
+- Breaking changes are highlighted separately
+
+**Generating the changelog locally**:
+
+```bash
+# Install git-chglog
+go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
+
+# Generate changelog
+export PATH="$PATH:$(go env GOPATH)/bin"
+git-chglog --output CHANGELOG.md
+```
+
+**Automatic changelog updates**:
+
+- The changelog is automatically generated and updated during the release process
+- When a new release is published, the changelog is regenerated and committed to the repository
+- GoReleaser uses git-chglog to generate release notes from the changelog
+
+**Release process**:
+
+1. Create a new git tag (e.g., `v1.2.6`)
+2. Push the tag to trigger the release workflow
+3. The workflow will:
+   - Generate the changelog from commits since the last release
+   - Commit the updated changelog to the repository
+   - Use GoReleaser to create the GitHub release with changelog entries
+
 ## License
 
 See the [LICENSE](LICENSE) file for details.
