@@ -7,8 +7,74 @@ on:
     branches: ['**']
 
 jobs:
+  format-check:
+    name: Check Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Check code formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+  lint:
+    name: Run golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+
+  vet:
+    name: Run go vet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run go vet
+        run: go vet ./...
+
   build:
-    name: Build and Test
+    name: Build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -59,15 +125,6 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
 
-      - name: Check code formatting
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "Unformatted files:"
-            echo "$unformatted"
-            exit 1
-          fi
-
       - name: Check dependencies
         run: |
           go mod tidy
@@ -81,13 +138,30 @@ jobs:
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 0
 
-      - name: Run go vet
-        run: go vet ./...
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          version: latest
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
 
       - name: Run staticcheck
         run: |
@@ -106,7 +180,7 @@ jobs:
         run: |
           coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           threshold=70
-          if awk "BEGIN {exit !($coverage < $threshold)}"; then
+          if awk "BEGIN {if ($coverage < $threshold) exit 0; else exit 1}"; then
             echo "Coverage $coverage% is below $threshold% threshold"
             exit 1
           fi
