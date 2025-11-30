@@ -162,19 +162,19 @@ notes_directory: ~/default-notes
 	originalDataHome := os.Getenv("XDG_DATA_HOME")
 	defer func() {
 		if originalConfigHome != "" {
-			os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+			_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
 		} else {
-			os.Unsetenv("XDG_CONFIG_HOME")
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
 		}
 		if originalDataHome != "" {
-			os.Setenv("XDG_DATA_HOME", originalDataHome)
+			_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
 		} else {
-			os.Unsetenv("XDG_DATA_HOME")
+			_ = os.Unsetenv("XDG_DATA_HOME")
 		}
 	}()
 
-	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
-	os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
 
 	t.Run("accepts output directory option without error", func(t *testing.T) {
 		overridePath := "/custom/output/path"

@@ -54,10 +54,7 @@ func TestRun(t *testing.T) {
 		err := Run(nil)
 		// We expect an error because there's no config file in test environment
 		// but nil should be handled without panicking
-		if err == nil {
-			// If there happens to be a config file, that's fine
-			// We're just checking it doesn't panic
-		}
+		_ = err // Error is expected, we're just checking it doesn't panic
 	})
 
 	t.Run("Run with empty options", func(t *testing.T) {
@@ -126,19 +123,19 @@ notes_directory: ~/default-notes
 	originalDataHome := os.Getenv("XDG_DATA_HOME")
 	defer func() {
 		if originalConfigHome != "" {
-			os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+			_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
 		} else {
-			os.Unsetenv("XDG_CONFIG_HOME")
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
 		}
 		if originalDataHome != "" {
-			os.Setenv("XDG_DATA_HOME", originalDataHome)
+			_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
 		} else {
-			os.Unsetenv("XDG_DATA_HOME")
+			_ = os.Unsetenv("XDG_DATA_HOME")
 		}
 	}()
 
-	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
-	os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
 
 	t.Run("Run accepts output directory option", func(t *testing.T) {
 		opts := &Options{
