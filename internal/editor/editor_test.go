@@ -226,9 +226,9 @@ func TestSaveNotePriorityLogic(t *testing.T) {
 
 	t.Run("uses override directory when set", func(t *testing.T) {
 		m := model{
-			config:           cfg,
+			config:            cfg,
 			outputDirOverride: overrideNotesDir,
-			noteContent:      "Test note content",
+			noteContent:       "Test note content",
 		}
 
 		cmd := m.saveNoteCmd()
@@ -256,9 +256,9 @@ func TestSaveNotePriorityLogic(t *testing.T) {
 
 	t.Run("uses config directory when override is empty", func(t *testing.T) {
 		m := model{
-			config:           cfg,
+			config:            cfg,
 			outputDirOverride: "",
-			noteContent:      "Test note content",
+			noteContent:       "Test note content",
 		}
 
 		cmd := m.saveNoteCmd()
@@ -292,9 +292,9 @@ func TestSaveNotePriorityLogic(t *testing.T) {
 		}
 
 		m := model{
-			config:           cfg,
+			config:            cfg,
 			outputDirOverride: "~/test-notes",
-			noteContent:      "Test note content",
+			noteContent:       "Test note content",
 		}
 
 		cmd := m.saveNoteCmd()
