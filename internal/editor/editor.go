@@ -41,20 +41,20 @@ const (
 // model represents the application state
 // In Bubble Tea, the model holds all state
 type model struct {
-	state            state             // Current application state
-	config           *config.Config    // Loaded configuration
-	templateList     list.Model        // Bubbles list component
-	textarea         textarea.Model    // Bubbles textarea component
-	selectedTemplate *config.Template  // Currently selected template
-	noteContent      string            // Current note content
-	variables        map[string]string // Template variables
-	err              error             // Error state
-	width            int               // Terminal width
-	height           int               // Terminal height
-	vimMode          bool              // Whether vim mode is enabled
-	vimState         vimState          // Current vim state (normal/insert)
-	commandBuffer    string            // Buffer for vim commands (e.g., :w, :q)
-	outputDirOverride string           // Override for output directory (from CLI or API)
+	state             state             // Current application state
+	config            *config.Config    // Loaded configuration
+	templateList      list.Model        // Bubbles list component
+	textarea          textarea.Model    // Bubbles textarea component
+	selectedTemplate  *config.Template  // Currently selected template
+	noteContent       string            // Current note content
+	variables         map[string]string // Template variables
+	err               error             // Error state
+	width             int               // Terminal width
+	height            int               // Terminal height
+	vimMode           bool              // Whether vim mode is enabled
+	vimState          vimState          // Current vim state (normal/insert)
+	commandBuffer     string            // Buffer for vim commands (e.g., :w, :q)
+	outputDirOverride string            // Override for output directory (from CLI or API)
 }
 
 // modelConfig holds configuration options for NewModel
@@ -129,13 +129,13 @@ func NewModel(opts ...ModelOption) (tea.Model, error) {
 
 	// Return initial model
 	return model{
-		state:            stateSelectTemplate,
-		config:           configCfg,
-		templateList:     l,
-		textarea:         ta,
-		variables:        template.GetDefaultVariables(configCfg),
-		vimMode:          configCfg.GetVimMode(),
-		vimState:         vimNormal, // Start in normal mode when vim mode is enabled
+		state:             stateSelectTemplate,
+		config:            configCfg,
+		templateList:      l,
+		textarea:          ta,
+		variables:         template.GetDefaultVariables(configCfg),
+		vimMode:           configCfg.GetVimMode(),
+		vimState:          vimNormal, // Start in normal mode when vim mode is enabled
 		outputDirOverride: cfg.outputDirectory,
 	}, nil
 }

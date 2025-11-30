@@ -152,4 +152,3 @@ notes_directory: ~/default-notes
 		// This test verifies the structure is correct
 	})
 }
-
