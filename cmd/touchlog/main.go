@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -9,11 +10,32 @@ import (
 	"github.com/sv4u/touchlog/internal/editor"
 )
 
+var (
+	outputDir      = flag.String("output-dir", "", "Output directory for notes (overrides config file)")
+	outputDirShort = flag.String("o", "", "Output directory for notes (shorthand for -output-dir)")
+)
+
 // main is the entry point of the program
 // In Go, the main function in package main is where execution starts
 func main() {
+	flag.Parse()
+
+	// Determine output directory override from flags
+	var outputDirOverride string
+	if *outputDir != "" {
+		outputDirOverride = *outputDir
+	} else if *outputDirShort != "" {
+		outputDirOverride = *outputDirShort
+	}
+
 	// Create the initial model
-	m, err := editor.NewModel()
+	var m tea.Model
+	var err error
+	if outputDirOverride != "" {
+		m, err = editor.NewModel(editor.WithOutputDirectory(outputDirOverride))
+	} else {
+		m, err = editor.NewModel()
+	}
 	if err != nil {
 		// Print error and exit
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
