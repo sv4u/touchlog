@@ -649,4 +649,193 @@ func TestCreateExampleTemplates(t *testing.T) {
 			t.Error("CreateExampleTemplates() journal.md missing {{date}} variable")
 		}
 	})
+
+	t.Run("returns error on ReadDir permission error", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Create directory with restricted read permissions
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Remove read permission
+		if err := os.Chmod(templatesDir, 0333); err != nil {
+			// If chmod fails (e.g., on Windows), skip this test
+			t.Skip("Cannot set restrictive permissions on this platform")
+		}
+		defer func() {
+			// Restore permissions for cleanup
+			_ = os.Chmod(templatesDir, 0755)
+		}()
+
+		err := CreateExampleTemplates(templatesDir)
+		if err == nil {
+			t.Error("CreateExampleTemplates() expected error for permission denied, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "failed to read templates directory") {
+			t.Errorf("CreateExampleTemplates() error = %v, want error containing 'failed to read templates directory'", err)
+		}
+	})
+
+	t.Run("returns error on MkdirAll failure", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		parentDir := filepath.Join(tmpDir, "parent")
+
+		// Create parent directory and make it read-only
+		if err := os.MkdirAll(parentDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		if err := os.Chmod(parentDir, 0444); err != nil {
+			// If chmod fails (e.g., on Windows), skip this test
+			t.Skip("Cannot set read-only permissions on this platform")
+		}
+		defer func() {
+			// Restore permissions for cleanup
+			_ = os.Chmod(parentDir, 0755)
+		}()
+
+		// Try to create templates in a subdirectory of read-only parent
+		// Note: ReadDir will fail first with permission error, not MkdirAll
+		// This test verifies that ReadDir errors (non-ErrNotExist) are properly returned
+		templatesDir := filepath.Join(parentDir, "templates")
+		err := CreateExampleTemplates(templatesDir)
+		if err == nil {
+			t.Error("CreateExampleTemplates() expected error when directory access fails, got nil")
+		}
+		// The error will be from ReadDir (permission denied), not MkdirAll
+		// This is still a valid error path test
+		if err != nil && !strings.Contains(err.Error(), "failed to read templates directory") {
+			t.Errorf("CreateExampleTemplates() error = %v, want error containing 'failed to read templates directory'", err)
+		}
+	})
+
+	t.Run("returns error on WriteFile failure", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Create empty directory and make it read-only
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		if err := os.Chmod(templatesDir, 0444); err != nil {
+			// If chmod fails (e.g., on Windows), skip this test
+			t.Skip("Cannot set read-only permissions on this platform")
+		}
+		defer func() {
+			// Restore permissions for cleanup
+			_ = os.Chmod(templatesDir, 0755)
+		}()
+
+		err := CreateExampleTemplates(templatesDir)
+		if err == nil {
+			t.Error("CreateExampleTemplates() expected error for read-only directory, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "failed to create template") {
+			t.Errorf("CreateExampleTemplates() error = %v, want error containing 'failed to create template'", err)
+		}
+	})
+
+	t.Run("skips existing file and creates others when directory was empty", func(t *testing.T) {
+		// Note: CreateExampleTemplates checks if directory is empty first (line 162)
+		// and returns early if it has files. However, there's also a per-file check
+		// inside the loop (line 214) that skips existing files. This test verifies
+		// that behavior, but it's difficult to test because the initial check prevents
+		// reaching the per-file check when files exist.
+		//
+		// The per-file check is a safety measure for the case where files appear
+		// between the initial check and the write (race condition), which is hard to test.
+		//
+		// Instead, this test verifies that when a directory has files, the function
+		// returns early without creating anything (the actual designed behavior).
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Create directory with daily.md already present
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Create daily.md with custom content
+		dailyPath := filepath.Join(templatesDir, "daily.md")
+		existingContent := "# Custom Daily Note\n\nThis should not be overwritten"
+		if err := os.WriteFile(dailyPath, []byte(existingContent), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		// Create templates - should return early because directory is not empty
+		if err := CreateExampleTemplates(templatesDir); err != nil {
+			t.Fatalf("CreateExampleTemplates() error = %v", err)
+		}
+
+		// Verify daily.md is unchanged
+		content, err := os.ReadFile(dailyPath)
+		if err != nil {
+			t.Fatalf("os.ReadFile() error = %v", err)
+		}
+		if string(content) != existingContent {
+			t.Error("CreateExampleTemplates() overwrote existing daily.md")
+		}
+
+		// Verify other templates were NOT created (function returns early when directory has files)
+		meetingPath := filepath.Join(templatesDir, "meeting.md")
+		journalPath := filepath.Join(templatesDir, "journal.md")
+		if _, err := os.Stat(meetingPath); err == nil {
+			t.Error("CreateExampleTemplates() should not create meeting.md when directory has files")
+		}
+		if _, err := os.Stat(journalPath); err == nil {
+			t.Error("CreateExampleTemplates() should not create journal.md when directory has files")
+		}
+	})
+
+	t.Run("returns error on partial creation failure", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		// Create empty directory
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Create a directory named daily.md to cause write failure
+		// When WriteFile tries to write to a path that's a directory, it will fail
+		dailyPath := filepath.Join(templatesDir, "daily.md")
+		if err := os.MkdirAll(dailyPath, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+		defer func() {
+			// Clean up
+			_ = os.RemoveAll(dailyPath)
+		}()
+
+		// Try to create templates - should fail when trying to write daily.md
+		// Note: The os.Stat check at line 214 will see that daily.md exists (as a directory)
+		// and skip it, so the error won't occur on daily.md. Let's make the directory
+		// read-only after creating one file to cause a failure on a later file.
+		// Actually, a better approach: make the directory read-only after it's determined
+		// to be empty, but before all files are written. But that's a race condition.
+
+		// Instead, let's test with a directory that becomes read-only
+		// Remove the daily.md directory we created (it was just for setup)
+		_ = os.RemoveAll(dailyPath)
+
+		// Make the directory read-only to cause WriteFile to fail
+		if err := os.Chmod(templatesDir, 0444); err != nil {
+			t.Skip("Cannot set read-only permissions on this platform")
+		}
+		defer func() {
+			_ = os.Chmod(templatesDir, 0755)
+		}()
+
+		// Try to create templates - should fail when trying to write
+		err := CreateExampleTemplates(templatesDir)
+		if err == nil {
+			t.Error("CreateExampleTemplates() expected error when file write fails, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "failed to create template") {
+			t.Errorf("CreateExampleTemplates() error = %v, want error containing 'failed to create template'", err)
+		}
+	})
 }

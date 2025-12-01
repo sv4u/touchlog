@@ -707,3 +707,163 @@ invalid yaml: [unclosed bracket
 		}
 	})
 }
+
+func TestNewModel_TemplatesDirError(t *testing.T) {
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, ".config", "touchlog")
+
+	// Create config directory but no templates directory setup
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	// Override XDG paths for testing
+	originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+	originalDataHome := os.Getenv("XDG_DATA_HOME")
+	defer func() {
+		if originalConfigHome != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if originalDataHome != "" {
+			_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+		} else {
+			_ = os.Unsetenv("XDG_DATA_HOME")
+		}
+		xdg.Reload()
+	}()
+
+	// Set XDG_DATA_HOME to a non-existent path to cause TemplatesDir to fail
+	// by setting it to a path that doesn't exist and can't be created
+	invalidDataHome := filepath.Join(tmpDir, "nonexistent", "data")
+	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	_ = os.Setenv("XDG_DATA_HOME", invalidDataHome)
+	xdg.Reload()
+
+	// Call NewModel - should succeed even if TemplatesDir fails
+	_, err := NewModel()
+	if err != nil {
+		t.Fatalf("NewModel() error = %v (should succeed even when TemplatesDir fails)", err)
+	}
+
+	// Verify config file was created successfully
+	expectedConfigPath := filepath.Join(tmpDir, ".config", "touchlog", "config.yaml")
+	if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
+		t.Errorf("NewModel() config file not created at %q", expectedConfigPath)
+	}
+}
+
+func TestNewModel_CreateExampleTemplatesError(t *testing.T) {
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, ".config", "touchlog")
+	templatesDir := filepath.Join(tmpDir, ".local", "share", "touchlog", "templates")
+
+	// Create directories
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+	if err := os.MkdirAll(templatesDir, 0755); err != nil {
+		t.Fatalf("Failed to create templates directory: %v", err)
+	}
+
+	// Make templates directory read-only to cause CreateExampleTemplates to fail
+	if err := os.Chmod(templatesDir, 0444); err != nil {
+		// If chmod fails (e.g., on Windows), skip this test
+		t.Skip("Cannot set read-only permissions on this platform")
+	}
+	defer func() {
+		// Restore permissions for cleanup
+		_ = os.Chmod(templatesDir, 0755)
+	}()
+
+	// Override XDG paths for testing
+	originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+	originalDataHome := os.Getenv("XDG_DATA_HOME")
+	defer func() {
+		if originalConfigHome != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if originalDataHome != "" {
+			_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+		} else {
+			_ = os.Unsetenv("XDG_DATA_HOME")
+		}
+		xdg.Reload()
+	}()
+
+	// Set environment variables
+	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	_ = os.Setenv("XDG_DATA_HOME", filepath.Join(tmpDir, ".local", "share"))
+	xdg.Reload()
+
+	// Call NewModel - should succeed even if CreateExampleTemplates fails
+	_, err := NewModel()
+	if err != nil {
+		t.Fatalf("NewModel() error = %v (should succeed even when CreateExampleTemplates fails)", err)
+	}
+
+	// Verify config file was created successfully
+	expectedConfigPath := filepath.Join(tmpDir, ".config", "touchlog", "config.yaml")
+	if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
+		t.Errorf("NewModel() config file not created at %q", expectedConfigPath)
+	}
+
+	// Verify templates directory remains empty (creation failed but was ignored)
+	entries, err := os.ReadDir(templatesDir)
+	if err == nil {
+		if len(entries) != 0 {
+			t.Errorf("NewModel() templates directory should be empty when creation fails, found %d entries", len(entries))
+		}
+	}
+}
+
+func TestNewModel_BothTemplateErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, ".config", "touchlog")
+
+	// Create config directory but set invalid templates directory path
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	// Override XDG paths for testing
+	originalConfigHome := os.Getenv("XDG_CONFIG_HOME")
+	originalDataHome := os.Getenv("XDG_DATA_HOME")
+	defer func() {
+		if originalConfigHome != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", originalConfigHome)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if originalDataHome != "" {
+			_ = os.Setenv("XDG_DATA_HOME", originalDataHome)
+		} else {
+			_ = os.Unsetenv("XDG_DATA_HOME")
+		}
+		xdg.Reload()
+	}()
+
+	// Set XDG_DATA_HOME to invalid path to cause both TemplatesDir and CreateExampleTemplates to fail
+	invalidDataHome := filepath.Join(tmpDir, "invalid", "path", "that", "cannot", "be", "created")
+	_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	_ = os.Setenv("XDG_DATA_HOME", invalidDataHome)
+	xdg.Reload()
+
+	// Call NewModel - should succeed even when both errors occur
+	_, err := NewModel()
+	if err != nil {
+		t.Fatalf("NewModel() error = %v (should succeed even when both template errors occur)", err)
+	}
+
+	// Verify config file was created successfully
+	expectedConfigPath := filepath.Join(tmpDir, ".config", "touchlog", "config.yaml")
+	if _, err := os.Stat(expectedConfigPath); os.IsNotExist(err) {
+		t.Errorf("NewModel() config file not created at %q", expectedConfigPath)
+	}
+
+	// Verify application initialization completes without errors
+	// (config is created, which is the critical path)
+}
