@@ -36,7 +36,6 @@ changelog:
       - '^docs:'
       - '^test:'
   use: git-chglog
-  use_config: .chglog/config.yml
 
 release:
   mode: replace
