@@ -403,6 +403,50 @@ git-chglog --output CHANGELOG.md
    - Commit the updated changelog to the repository
    - Use GoReleaser to create the GitHub release with changelog entries
 
+**Testing Release Process (Dry-Run Mode)**:
+
+The release workflow supports a dry-run mode that allows you to test the entire release process without creating actual releases, committing changes, or publishing artifacts. This is useful for:
+
+- Validating GoReleaser configuration changes before merging PRs
+- Testing changelog generation with new commits without creating releases
+- Verifying release workflow changes in pull requests
+- Debugging release issues without creating test releases
+- Validating artifact builds across all target platforms (linux/darwin, amd64/arm64)
+
+**How to use dry-run mode**:
+
+1. Navigate to the [Actions](https://github.com/sv4u/touchlog/actions) tab in GitHub
+2. Select the "Release" workflow from the left sidebar
+3. Click "Run workflow" button (top right)
+4. Check the "Run in dry-run mode (no releases or commits)" checkbox
+5. Click "Run workflow" to start the dry-run
+
+**What dry-run mode does**:
+
+- ✅ Generates the changelog from commits since the last release
+- ✅ Validates GoReleaser configuration
+- ✅ Builds artifacts for all target platforms (linux/darwin, amd64/arm64)
+- ✅ Displays the generated changelog in workflow logs
+- ✅ Uploads the changelog as a downloadable artifact
+- ✅ Uses GoReleaser's `--snapshot` mode (skips publishing and validations)
+
+**What dry-run mode does NOT do**:
+
+- ❌ Create GitHub releases
+- ❌ Commit changes to the repository
+- ❌ Publish artifacts
+- ❌ Consume GitHub API rate limits for releases
+
+**Accessing the changelog artifact**:
+
+After the dry-run workflow completes:
+
+1. Go to the workflow run page
+2. Scroll down to the "Artifacts" section
+3. Download the `changelog-dry-run` artifact to view the generated changelog
+
+**Note**: The dry-run mode uses GoReleaser's `--snapshot` flag, which generates unversioned snapshot releases without publishing. This allows you to validate the build process and configuration without affecting the repository.
+
 ## License
 
 See the [LICENSE](LICENSE) file for details.
