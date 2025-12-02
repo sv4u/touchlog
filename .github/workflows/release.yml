@@ -33,11 +33,11 @@ jobs:
 
       - name: Check dry-run mode
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" == "true" ]; then
-            echo "🚀 DRY-RUN MODE: No releases or commits will be created"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            echo "DRY-RUN MODE: No releases or commits will be created"
             echo "This run will validate the release process without making any changes to the repository."
           else
-            echo "📦 NORMAL MODE: This run will create releases and commit changes."
+            echo "NORMAL MODE: This run will create releases and commit changes."
           fi
 
       - name: Install git-chglog
@@ -49,33 +49,42 @@ jobs:
           git-chglog --output CHANGELOG.md
 
       - name: Display Changelog (dry-run only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
         run: |
           echo "=== Generated Changelog ==="
           cat CHANGELOG.md
           echo "=== End of Changelog ==="
 
       - name: Upload Changelog Artifact (dry-run only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: changelog-dry-run
           path: CHANGELOG.md
 
       - name: Commit Changelog
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
           git diff --staged --quiet || (git commit -m "chore: update CHANGELOG.md" && git push) || exit 0
 
+      - name: Set GoReleaser args
+        id: goreleaser-args
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            echo "args=--snapshot --clean" >> $GITHUB_OUTPUT
+          else
+            echo "args=release --clean" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true && '--snapshot --clean' || 'release --clean' }}
+          args: ${{ steps.goreleaser-args.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
