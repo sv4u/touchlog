@@ -3,14 +3,22 @@ name: Release
 on:
   release:
     types: [published]
-
-permissions:
-  contents: write
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no releases or commits)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # Permissions set to write for normal releases. In dry-run mode, conditional steps
+    # prevent any commits or releases, so no writes occur despite write permissions.
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,6 +31,15 @@ jobs:
         with:
           go-version: '1.21'
 
+      - name: Check dry-run mode
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" == "true" ]; then
+            echo "🚀 DRY-RUN MODE: No releases or commits will be created"
+            echo "This run will validate the release process without making any changes to the repository."
+          else
+            echo "📦 NORMAL MODE: This run will create releases and commit changes."
+          fi
+
       - name: Install git-chglog
         run: go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
 
@@ -31,7 +48,22 @@ jobs:
           export PATH="$PATH:$(go env GOPATH)/bin"
           git-chglog --output CHANGELOG.md
 
+      - name: Display Changelog (dry-run only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        run: |
+          echo "=== Generated Changelog ==="
+          cat CHANGELOG.md
+          echo "=== End of Changelog ==="
+
+      - name: Upload Changelog Artifact (dry-run only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-dry-run
+          path: CHANGELOG.md
+
       - name: Commit Changelog
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -43,7 +75,7 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true && '--snapshot --clean' || 'release --clean' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
