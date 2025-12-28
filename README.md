@@ -368,7 +368,7 @@ BREAKING CHANGE: The config file now uses YAML instead of JSON
 
 ### Changelog
 
-The project maintains an automated changelog generated from git commit history. The changelog is located in `CHANGELOG.md` and follows the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format.
+The project uses GoReleaser to automatically generate changelogs from git commit history following the [Conventional Commits](https://www.conventionalcommits.org/) standard. The changelog appears in GitHub release notes and is not committed to the repository.
 
 **How commits appear in the changelog**:
 
@@ -376,39 +376,60 @@ The project maintains an automated changelog generated from git commit history. 
 - The commit subject (description) appears in the changelog
 - Commits with scopes show the scope as a prefix (e.g., `**ci:** fix workflow`)
 - Breaking changes are highlighted separately
+- Only commits matching Conventional Commits format are included (feat, fix, docs, refactor, perf, ci, chore)
 
-**Generating the changelog locally**:
+**Changelog generation**:
 
-```bash
-# Install git-chglog
-go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
+- Changelogs are generated automatically by GoReleaser during the release process
+- The changelog is included in GitHub release notes only
+- No `CHANGELOG.md` file is committed to the repository
 
-# Generate changelog
-export PATH="$PATH:$(go env GOPATH)/bin"
-git-chglog --output CHANGELOG.md
-```
+### Release Process
 
-**Automatic changelog updates**:
+The release workflow is manually triggered and provides full control over when and how releases are created.
 
-- The changelog is automatically generated and updated during the release process
-- When a new release is published, the changelog is regenerated and committed to the repository
-- GoReleaser uses git-chglog to generate release notes from the changelog
+**Prerequisites**:
 
-**Release process**:
+- All changes must be merged to the `master` branch
+- Working directory must be clean (no uncommitted changes)
+- Local branch must be up-to-date with remote `origin/master`
 
-1. Create a new git tag (e.g., `v1.2.6`)
-2. Push the tag to trigger the release workflow
-3. The workflow will:
-   - Generate the changelog from commits since the last release
-   - Commit the updated changelog to the repository
-   - Use GoReleaser to create the GitHub release with changelog entries
+**How to create a release**:
+
+1. Navigate to the [Actions](https://github.com/sv4u/touchlog/actions) tab in GitHub
+2. Select the "Release" workflow from the left sidebar
+3. Click "Run workflow" button (top right)
+4. Select the release type:
+   - **major**: Increments major version, resets minor and patch to 0 (e.g., v1.2.3 → v2.0.0)
+   - **minor**: Increments minor version, resets patch to 0 (e.g., v1.2.3 → v1.3.0)
+   - **hotfix**: Increments patch version only (e.g., v1.2.3 → v1.2.4)
+5. Optionally enable dry-run mode to test without creating a release
+6. Click "Run workflow" to start
+
+**What the workflow does**:
+
+1. Validates branch and working directory state
+2. Calculates the next version based on the selected release type
+3. Validates that there are commits to include in the release
+4. Displays a preview of the release (version, commit count, commit types)
+5. Creates and pushes a git tag with the new version
+6. Builds release artifacts for all platforms (linux/darwin, amd64/arm64)
+7. Generates changelog from Conventional Commits
+8. Creates and publishes GitHub release with changelog and artifacts
+9. Verifies the release was created successfully
+
+**Version calculation**:
+
+- The workflow automatically calculates the next version from the latest git tag
+- If no tags exist, it defaults to `v0.1.0` for the first release
+- Version format must follow semantic versioning (vX.Y.Z)
 
 **Testing Release Process (Dry-Run Mode)**:
 
-The release workflow supports a dry-run mode that allows you to test the entire release process without creating actual releases, committing changes, or publishing artifacts. This is useful for:
+The release workflow supports a dry-run mode that allows you to test the entire release process without creating actual releases, tags, or publishing artifacts. This is useful for:
 
 - Validating GoReleaser configuration changes before merging PRs
-- Testing changelog generation with new commits without creating releases
+- Testing version calculation logic
 - Verifying release workflow changes in pull requests
 - Debugging release issues without creating test releases
 - Validating artifact builds across all target platforms (linux/darwin, amd64/arm64)
@@ -418,34 +439,34 @@ The release workflow supports a dry-run mode that allows you to test the entire 
 1. Navigate to the [Actions](https://github.com/sv4u/touchlog/actions) tab in GitHub
 2. Select the "Release" workflow from the left sidebar
 3. Click "Run workflow" button (top right)
-4. Check the "Run in dry-run mode (no releases or commits)" checkbox
-5. Click "Run workflow" to start the dry-run
+4. Select a release type (major, minor, or hotfix)
+5. Check the "Run in dry-run mode (no releases or commits)" checkbox
+6. Click "Run workflow" to start the dry-run
 
 **What dry-run mode does**:
 
-- ✅ Generates the changelog from commits since the last release
+- ✅ Validates branch and working directory
+- ✅ Calculates and displays next version
+- ✅ Shows preview with commit count and types
 - ✅ Validates GoReleaser configuration
 - ✅ Builds artifacts for all target platforms (linux/darwin, amd64/arm64)
-- ✅ Displays the generated changelog in workflow logs
-- ✅ Uploads the changelog as a downloadable artifact
-- ✅ Uses GoReleaser's `--snapshot` mode (skips publishing and validations)
+- ✅ Uses GoReleaser's `--snapshot` mode (skips publishing)
 
 **What dry-run mode does NOT do**:
 
+- ❌ Create git tags
 - ❌ Create GitHub releases
 - ❌ Commit changes to the repository
 - ❌ Publish artifacts
 - ❌ Consume GitHub API rate limits for releases
 
-**Accessing the changelog artifact**:
+**Error Recovery**:
 
-After the dry-run workflow completes:
+If the workflow fails after creating a tag but before completing the release:
 
-1. Go to the workflow run page
-2. Scroll down to the "Artifacts" section
-3. Download the `changelog-dry-run` artifact to view the generated changelog
-
-**Note**: The dry-run mode uses GoReleaser's `--snapshot` flag, which generates unversioned snapshot releases without publishing. This allows you to validate the build process and configuration without affecting the repository.
+- The workflow will automatically rollback (delete the tag)
+- If automatic rollback fails, you can manually delete the tag and retry
+- See the workflow logs for detailed error messages and recovery instructions
 
 ## License
 

@@ -32,10 +32,39 @@ snapshot:
 changelog:
   sort: asc
   filters:
+    include:
+      - '^feat(\([^)]+\))?!?:'
+      - '^fix(\([^)]+\))?!?:'
+      - '^docs(\([^)]+\))?!?:'
+      - '^refactor(\([^)]+\))?!?:'
+      - '^perf(\([^)]+\))?!?:'
+      - '^ci(\([^)]+\))?!?:'
+      - '^chore(\([^)]+\))?!?:'
     exclude:
-      - '^docs:'
-      - '^test:'
-  use: git-chglog
+      - '^docs(\([^)]+\))?!?:.*README'
+      - '^test(\([^)]+\))?!?:'
+  groups:
+    - title: 'Features'
+      regexp: '^feat'
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: '^fix'
+      order: 1
+    - title: 'Documentation'
+      regexp: '^docs'
+      order: 2
+    - title: 'Code Refactoring'
+      regexp: '^refactor'
+      order: 3
+    - title: 'Performance Improvements'
+      regexp: '^perf'
+      order: 4
+    - title: 'CI/CD'
+      regexp: '^ci'
+      order: 5
+    - title: 'Chores'
+      regexp: '^chore'
+      order: 6
 
 release:
   mode: replace
@@ -70,4 +99,3 @@ release:
     ```bash
     sudo mv touchlog /usr/local/bin/
     ```
-
