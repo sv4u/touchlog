@@ -1,10 +1,16 @@
 name: Release
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
+      release_type:
+        description: 'Type of release'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - hotfix
       dry_run:
         description: 'Run in dry-run mode (no releases or commits)'
         required: false
@@ -15,14 +21,13 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    # Permissions set to write for normal releases. In dry-run mode, conditional steps
-    # prevent any commits or releases, so no writes occur despite write permissions.
     permissions:
       contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: master
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -31,55 +36,477 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Check dry-run mode
+      - name: Verify branch and working directory
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
-            echo "DRY-RUN MODE: No releases or commits will be created"
-            echo "This run will validate the release process without making any changes to the repository."
+          # Check if we're on master branch
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$CURRENT_BRANCH" != "master" ]; then
+            echo "[X] Error: This workflow must be run from the 'master' branch"
+            echo "Current branch: $CURRENT_BRANCH"
+            exit 1
+          fi
+          
+          # Check if working directory is clean
+          if ! git diff-index --quiet HEAD --; then
+            echo "[X] Error: Working directory is not clean. Please commit or stash changes."
+            git status
+            exit 1
+          fi
+          
+          # Check if branch is up-to-date with remote
+          git fetch origin master
+          LOCAL=$(git rev-parse HEAD)
+          REMOTE=$(git rev-parse origin/master)
+          if [ "$LOCAL" != "$REMOTE" ]; then
+            echo "[X] Error: Local branch is not up-to-date with remote. Please pull latest changes."
+            echo "Local: $LOCAL"
+            echo "Remote: $REMOTE"
+            exit 1
+          fi
+          
+          echo "[OK] Branch verification passed"
+
+      - name: Get current version
+        id: current-version
+        run: |
+          # Fetch all tags to ensure we have latest
+          git fetch --tags
+          
+          # Get latest tag, preferring v-prefixed tags
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || \
+                       git describe --tags --abbrev=0 2>/dev/null || \
+                       echo "v0.0.0")
+          
+          # Remove 'v' prefix if present
+          VERSION=${LATEST_TAG#v}
+          
+          echo "Current version tag: $LATEST_TAG"
+          echo "Current version: $VERSION"
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Calculate next version
+        id: next-version
+        run: |
+          LATEST_TAG="${{ steps.current-version.outputs.tag }}"
+          CURRENT_VERSION="${{ steps.current-version.outputs.version }}"
+          RELEASE_TYPE="${{ inputs.release_type }}"
+          
+          # For first release (no tags exist), always default to v0.1.0 regardless of release type
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            NEXT_VERSION="0.1.0"
+            NEXT_TAG="v0.1.0"
+            echo "First release detected. Defaulting to v0.1.0 (release type '$RELEASE_TYPE' is ignored for first release)."
+            echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Validate current version format (must be X.Y.Z, no pre-release suffixes)
+          if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "[X] Error: Invalid version format: $CURRENT_VERSION"
+            echo "   Expected format: X.Y.Z (e.g., 1.2.3)"
+            echo "   Latest tag: $LATEST_TAG"
+            exit 1
+          fi
+          
+          # Parse version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          # Validate all components are non-empty
+          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ]; then
+            echo "[X] Error: Invalid version format: $CURRENT_VERSION"
+            echo "   Version must have three components: MAJOR.MINOR.PATCH"
+            echo "   Parsed components: MAJOR='$MAJOR' MINOR='$MINOR' PATCH='$PATCH'"
+            exit 1
+          fi
+          
+          # Calculate next version based on release type
+          # Use 10# prefix to force decimal interpretation and prevent octal issues with leading zeros
+          case "$RELEASE_TYPE" in
+            major)
+              MAJOR=$((10#$MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((10#$MINOR + 1))
+              PATCH=0
+              ;;
+            hotfix)
+              PATCH=$((10#$PATCH + 1))
+              ;;
+            *)
+              echo "[X] Error: Invalid release type: $RELEASE_TYPE"
+              exit 1
+              ;;
+          esac
+          
+          NEXT_VERSION="$MAJOR.$MINOR.$PATCH"
+          NEXT_TAG="v$NEXT_VERSION"
+          
+          # Validate calculated version format
+          if ! echo "$NEXT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "[X] Error: Calculated version format is invalid: $NEXT_VERSION"
+            exit 1
+          fi
+          
+          # Validate tag name format (Git restrictions: no spaces, no special chars except - and .)
+          # Tag names must be valid ref names: cannot contain spaces, control chars, or certain special chars
+          if ! echo "$NEXT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "[X] Error: Invalid tag name format: $NEXT_TAG"
+            echo "   Tag names must match pattern: vX.Y.Z (e.g., v1.2.3)"
+            exit 1
+          fi
+          
+          # Validate tag name length (Git limit is 255 characters for ref names)
+          TAG_NAME_LENGTH=$(printf '%s' "$NEXT_TAG" | wc -c)
+          MAX_TAG_NAME_LENGTH=255
+          if [ "$TAG_NAME_LENGTH" -gt "$MAX_TAG_NAME_LENGTH" ]; then
+            echo "[X] Error: Tag name exceeds maximum length ($TAG_NAME_LENGTH > $MAX_TAG_NAME_LENGTH characters)"
+            exit 1
+          fi
+          
+          echo "Release type: $RELEASE_TYPE"
+          echo "Current version: $CURRENT_VERSION"
+          echo "Next version: $NEXT_VERSION"
+          echo "Next tag: $NEXT_TAG"
+          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+
+      - name: Check commit range
+        id: commit-range
+        run: |
+          LATEST_TAG="${{ steps.current-version.outputs.tag }}"
+          
+          # If no tags exist (LATEST_TAG is v0.0.0), count all commits
+          # Otherwise, count commits since the latest tag
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+            echo "No existing tags found. Counting all commits for first release."
           else
-            echo "NORMAL MODE: This run will create releases and commit changes."
+            COMMIT_COUNT=$(git rev-list --count ${LATEST_TAG}..HEAD 2>/dev/null || echo "0")
+          fi
+          
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
+            echo "[X] Error: No commits to release"
+            if [ "$LATEST_TAG" != "v0.0.0" ]; then
+              echo "   No commits since $LATEST_TAG"
+            else
+              echo "   Repository has no commits"
+            fi
+            echo "   This prevents duplicate releases. Please ensure there are new commits."
+            exit 1
+          fi
+          
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            echo "Commit count (all commits): $COMMIT_COUNT"
+          else
+            echo "Commit count since $LATEST_TAG: $COMMIT_COUNT"
+          fi
+          echo "count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+          
+          # Get commit types for preview (only from commits that match GoReleaser's filters)
+          # This ensures the preview accurately reflects what will appear in the final changelog
+          # Supports both scoped and unscoped Conventional Commits (e.g., feat: and feat(scope):)
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            COMMIT_TYPES=$(git log --format="%s" HEAD | \
+              grep -E '^(feat|fix|docs|refactor|perf|ci|chore)(\([^)]+\))?!?:' | \
+              grep -vE '^docs(\([^)]+\))?!?:.*README' | \
+              grep -vE '^test(\([^)]+\))?!?:' | \
+              sed -E 's/^([a-z]+)(\([^)]+\))?!?:.*/\1/' | \
+              sort -u | \
+              tr '\n' ', ' | \
+              sed 's/,$//')
+          else
+            COMMIT_TYPES=$(git log --format="%s" ${LATEST_TAG}..HEAD | \
+              grep -E '^(feat|fix|docs|refactor|perf|ci|chore)(\([^)]+\))?!?:' | \
+              grep -vE '^docs(\([^)]+\))?!?:.*README' | \
+              grep -vE '^test(\([^)]+\))?!?:' | \
+              sed -E 's/^([a-z]+)(\([^)]+\))?!?:.*/\1/' | \
+              sort -u | \
+              tr '\n' ', ' | \
+              sed 's/,$//')
+          fi
+          
+          # Handle empty commit types (no Conventional Commits found)
+          if [ -z "$COMMIT_TYPES" ]; then
+            COMMIT_TYPES="(none - no Conventional Commits found)"
+          fi
+          echo "commit_types=$COMMIT_TYPES" >> $GITHUB_OUTPUT
+
+      - name: Preview version and confirm
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          LATEST_TAG="${{ steps.current-version.outputs.tag }}"
+          IS_FIRST_RELEASE=false
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            IS_FIRST_RELEASE=true
+          fi
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "[PKG] RELEASE PREVIEW"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Release Type:    ${{ inputs.release_type }}"
+          if [ "$IS_FIRST_RELEASE" = "true" ]; then
+            echo "Current Version: (none - first release)"
+          else
+            echo "Current Version: $LATEST_TAG"
+          fi
+          echo "Next Version:    ${{ steps.next-version.outputs.tag }}"
+          if [ "$IS_FIRST_RELEASE" = "true" ]; then
+            echo "Commits:         ${{ steps.commit-range.outputs.count }} commits (all commits)"
+          else
+            echo "Commits:         ${{ steps.commit-range.outputs.count }} commits since last release"
+          fi
+          echo "Commit Types:    ${{ steps.commit-range.outputs.commit_types }}"
+          echo ""
+          if [ "$IS_FIRST_RELEASE" = "true" ]; then
+            echo "Compare View:    (Initial release - no previous version to compare)"
+          else
+            echo "Compare View:    https://github.com/${{ github.repository }}/compare/$LATEST_TAG...HEAD"
+          fi
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "[!] This will:"
+          echo "   1. Create and push tag: ${{ steps.next-version.outputs.tag }}"
+          echo "   2. Build release artifacts"
+          echo "   3. Generate changelog from commits"
+          echo "   4. Create and publish GitHub release"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "[||] Waiting 10 seconds before proceeding..."
+          echo "   (This workflow will continue automatically)"
+          sleep 10
+
+      - name: Display dry-run preview
+        if: ${{ inputs.dry_run == 'true' }}
+        run: |
+          LATEST_TAG="${{ steps.current-version.outputs.tag }}"
+          IS_FIRST_RELEASE=false
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            IS_FIRST_RELEASE=true
+          fi
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "[?] DRY-RUN MODE - PREVIEW ONLY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Release Type:    ${{ inputs.release_type }}"
+          if [ "$IS_FIRST_RELEASE" = "true" ]; then
+            echo "Current Version: (none - first release)"
+          else
+            echo "Current Version: $LATEST_TAG"
+          fi
+          echo "Next Version:    ${{ steps.next-version.outputs.tag }}"
+          if [ "$IS_FIRST_RELEASE" = "true" ]; then
+            echo "Commits:         ${{ steps.commit-range.outputs.count }} commits (all commits)"
+          else
+            echo "Commits:         ${{ steps.commit-range.outputs.count }} commits since last release"
+          fi
+          echo "Commit Types:    ${{ steps.commit-range.outputs.commit_types }}"
+          echo ""
+          if [ "$IS_FIRST_RELEASE" = "true" ]; then
+            echo "Compare View:    (Initial release - no previous version to compare)"
+          else
+            echo "Compare View:    https://github.com/${{ github.repository }}/compare/$LATEST_TAG...HEAD"
+          fi
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "[i] In dry-run mode, no tags or releases will be created."
+
+      - name: Check if tag already exists
+        id: tag-check
+        run: |
+          NEXT_TAG="${{ steps.next-version.outputs.tag }}"
+          DRY_RUN="${{ inputs.dry_run }}"
+          
+          # Check local tag
+          if git rev-parse --verify "$NEXT_TAG" >/dev/null 2>&1; then
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[!] Warning: Tag $NEXT_TAG already exists locally (dry-run mode, continuing)"
+            else
+              echo "[X] Error: Tag $NEXT_TAG already exists locally!"
+              exit 1
+            fi
+          fi
+          
+          # Check remote tag
+          if git ls-remote --tags origin "$NEXT_TAG" | grep -q "$NEXT_TAG"; then
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[!] Warning: Tag $NEXT_TAG already exists on remote (dry-run mode, continuing)"
+            else
+              echo "[X] Error: Tag $NEXT_TAG already exists on remote!"
+              exit 1
+            fi
+          fi
+          
+          if [ "$DRY_RUN" != "true" ]; then
+            echo "[OK] Tag $NEXT_TAG is available"
+          else
+            echo "[i] Tag $NEXT_TAG check completed (dry-run mode)"
           fi
 
-      - name: Install git-chglog
-        run: go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
-
-      - name: Generate Changelog
+      - name: Create and push tag
+        if: ${{ inputs.dry_run != 'true' }}
+        id: create-tag
         run: |
-          export PATH="$PATH:$(go env GOPATH)/bin"
-          git-chglog --output CHANGELOG.md
-
-      - name: Display Changelog (dry-run only)
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
-        run: |
-          echo "=== Generated Changelog ==="
-          cat CHANGELOG.md
-          echo "=== End of Changelog ==="
-
-      - name: Upload Changelog Artifact (dry-run only)
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: changelog-dry-run
-          path: CHANGELOG.md
-
-      - name: Commit Changelog
-        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true' }}
-        run: |
+          NEXT_TAG="${{ steps.next-version.outputs.tag }}"
+          RELEASE_TYPE="${{ inputs.release_type }}"
+          COMMIT_COUNT="${{ steps.commit-range.outputs.count }}"
+          LATEST_TAG="${{ steps.current-version.outputs.tag }}"
+          CURRENT_DATE=$(date +%Y-%m-%d)
+          
+          # Create tag message with proper newlines using printf
+          # Handle first release differently (no previous tag to reference)
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            # First release - no previous tag to reference
+            TAG_MESSAGE=$(printf "Release %s (%s) - %s\n\nAutomated release via GitHub Actions workflow.\nInitial release. Includes %s commits." "$NEXT_TAG" "$RELEASE_TYPE" "$CURRENT_DATE" "$COMMIT_COUNT")
+          else
+            # Subsequent release - reference previous tag
+            TAG_MESSAGE=$(printf "Release %s (%s) - %s\n\nAutomated release via GitHub Actions workflow.\nIncludes %s commits since %s." "$NEXT_TAG" "$RELEASE_TYPE" "$CURRENT_DATE" "$COMMIT_COUNT" "$LATEST_TAG")
+          fi
+          
+          # Validate tag message length (Git limit is ~64KB, use conservative 60KB)
+          TAG_MESSAGE_LENGTH=$(printf '%s' "$TAG_MESSAGE" | wc -c)
+          MAX_TAG_MESSAGE_LENGTH=61440  # 60KB in bytes
+          if [ "$TAG_MESSAGE_LENGTH" -gt "$MAX_TAG_MESSAGE_LENGTH" ]; then
+            echo "[X] Error: Tag message exceeds maximum length ($TAG_MESSAGE_LENGTH > $MAX_TAG_MESSAGE_LENGTH bytes)"
+            echo "   This may occur with extremely large commit counts. Consider splitting the release."
+            exit 1
+          fi
+          
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          git diff --staged --quiet || (git commit -m "chore: update CHANGELOG.md" && git push) || exit 0
+          
+          echo "Creating tag: $NEXT_TAG"
+          git tag -a "$NEXT_TAG" -m "$TAG_MESSAGE"
+          
+          echo "Pushing tag to remote..."
+          git push origin "$NEXT_TAG"
+          
+          # Verify tag push succeeded with retry logic to handle propagation delays
+          MAX_RETRIES=5
+          RETRY_DELAY=2
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if git ls-remote --tags origin "$NEXT_TAG" | grep -q "$NEXT_TAG"; then
+              echo "[OK] Tag $NEXT_TAG verified on remote"
+              break
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "[...] Tag not yet visible, retrying in ${RETRY_DELAY}s (attempt $RETRY_COUNT/$MAX_RETRIES)..."
+              sleep $RETRY_DELAY
+            fi
+          done
+          
+          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+            echo "[X] Error: Tag push verification failed after $MAX_RETRIES attempts. Tag may not exist on remote."
+            exit 1
+          fi
+          
+          echo "[OK] Tag $NEXT_TAG created and pushed successfully"
+
+      - name: Validate GoReleaser configuration
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          # Set up cleanup trap for temporary files
+          cleanup_goreleaser() {
+            if [ -f goreleaser.tar.gz ]; then
+              rm -f goreleaser.tar.gz
+            fi
+            if [ -f goreleaser ]; then
+              rm -f goreleaser
+            fi
+          }
+          trap cleanup_goreleaser EXIT
+          
+          # Install GoReleaser if not available (same version constraint as goreleaser-action: ~> v2)
+          if ! command -v goreleaser &> /dev/null; then
+            echo "Installing GoReleaser..."
+            ARCH=$(uname -m)
+            OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+            
+            # Map architecture names
+            case "$ARCH" in
+              x86_64) ARCH="amd64" ;;
+              aarch64|arm64) ARCH="arm64" ;;
+              *)
+                echo "[!] Warning: Unsupported architecture: $ARCH. Attempting to use as-is."
+                # Keep original architecture name for download attempt
+                ;;
+            esac
+            
+            # Download and install GoReleaser
+            GORELEASER_URL="https://github.com/goreleaser/goreleaser/releases/latest/download/goreleaser_${OS}_${ARCH}.tar.gz"
+            curl -L -o goreleaser.tar.gz "$GORELEASER_URL" || {
+              echo "[X] Error: Failed to download GoReleaser from $GORELEASER_URL"
+              exit 1
+            }
+            
+            # Verify download completed (basic size check)
+            if [ ! -s goreleaser.tar.gz ]; then
+              echo "[X] Error: Downloaded file is empty or missing"
+              rm -f goreleaser.tar.gz
+              exit 1
+            fi
+            
+            # Verify file is a valid tar archive
+            if ! tar -tzf goreleaser.tar.gz >/dev/null 2>&1; then
+              echo "[X] Error: Downloaded file is not a valid tar archive"
+              rm -f goreleaser.tar.gz
+              exit 1
+            fi
+            
+            tar -xzf goreleaser.tar.gz goreleaser || {
+              echo "[X] Error: Failed to extract GoReleaser from archive"
+              rm -f goreleaser.tar.gz
+              exit 1
+            }
+            
+            chmod +x goreleaser
+            sudo mv goreleaser /usr/local/bin/goreleaser || {
+              echo "[X] Error: Failed to install GoReleaser"
+              exit 1
+            }
+            
+            rm -f goreleaser.tar.gz
+            echo "[OK] GoReleaser installed successfully"
+          fi
+          
+          # Validate GoReleaser configuration
+          # Capture GoReleaser check output
+          GORELEASER_OUTPUT=$(goreleaser check 2>&1)
+          GORELEASER_EXIT=$?
+          
+          if [ $GORELEASER_EXIT -eq 0 ]; then
+            echo "[OK] GoReleaser configuration is valid"
+          else
+            echo "[X] Error: GoReleaser configuration validation failed"
+            echo ""
+            echo "GoReleaser output:"
+            echo "$GORELEASER_OUTPUT"
+            echo ""
+            echo "Please fix the configuration errors above before proceeding."
+            exit 1
+          fi
 
       - name: Set GoReleaser args
         id: goreleaser-args
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+          if [ "${{ inputs.dry_run }}" == "true" ]; then
             echo "args=--snapshot --clean" >> $GITHUB_OUTPUT
           else
             echo "args=release --clean" >> $GITHUB_OUTPUT
           fi
 
       - name: Run GoReleaser
+        id: goreleaser
         uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
@@ -87,4 +514,81 @@ jobs:
           args: ${{ steps.goreleaser-args.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
+      - name: Rollback tag on failure
+        if: ${{ inputs.dry_run != 'true' && steps.goreleaser.outcome == 'failure' }}
+        run: |
+          NEXT_TAG="${{ steps.next-version.outputs.tag }}"
+          
+          echo "[X] GoReleaser failed. Rolling back tag..."
+          
+          # Delete local tag
+          if git rev-parse --verify "$NEXT_TAG" >/dev/null 2>&1; then
+            git tag -d "$NEXT_TAG"
+            echo "[OK] Deleted local tag: $NEXT_TAG"
+          fi
+          
+          # Delete remote tag
+          if git ls-remote --tags origin "$NEXT_TAG" | grep -q "$NEXT_TAG"; then
+            if git push origin ":refs/tags/$NEXT_TAG" 2>&1; then
+              echo "[OK] Deleted remote tag: $NEXT_TAG"
+            else
+              echo "[!] Warning: Failed to delete remote tag: $NEXT_TAG"
+              echo "   Tag may still exist on remote. Manual cleanup may be required."
+              echo "   To delete manually, run: git push origin :refs/tags/$NEXT_TAG"
+            fi
+          fi
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "[<->] Tag rollback completed"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit 1
+
+      - name: Verify release was created
+        if: ${{ inputs.dry_run != 'true' && steps.goreleaser.outcome == 'success' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEXT_TAG="${{ steps.next-version.outputs.tag }}"
+          
+          # Check if GitHub CLI is available
+          if command -v gh &> /dev/null; then
+            echo "Verifying release using GitHub CLI..."
+            if gh release view "$NEXT_TAG" --json tagName,assets,body >/dev/null 2>&1; then
+              ASSET_COUNT=$(gh release view "$NEXT_TAG" --json assets --jq '.assets | length')
+              RELEASE_BODY=$(gh release view "$NEXT_TAG" --json body --jq '.body')
+              
+              echo "[OK] Release verified:"
+              echo "   Tag: $NEXT_TAG"
+              echo "   Assets: $ASSET_COUNT"
+              echo "   Has changelog: $([ -n "$RELEASE_BODY" ] && echo "yes" || echo "no")"
+            else
+              echo "[!] Could not verify release via GitHub CLI"
+            fi
+          else
+            # Fallback to API check
+            echo "Verifying release using GitHub API..."
+            API_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/$NEXT_TAG" || echo "")
+            
+            if [ -n "$API_RESPONSE" ] && echo "$API_RESPONSE" | grep -q '"tag_name"'; then
+              echo "[OK] Release verified via API"
+            else
+              echo "[!] Could not verify release via API (may still be processing)"
+            fi
+          fi
+
+      - name: Display release summary
+        if: ${{ inputs.dry_run != 'true' && steps.goreleaser.outcome == 'success' }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "[OK] RELEASE COMPLETED SUCCESSFULLY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Tag:     ${{ steps.next-version.outputs.tag }}"
+          echo "Version: ${{ steps.next-version.outputs.version }}"
+          echo "Commits: ${{ steps.commit-range.outputs.count }} commits included"
+          echo ""
+          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.next-version.outputs.tag }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
