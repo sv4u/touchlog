@@ -413,7 +413,6 @@ jobs:
           echo "[OK] Tag $NEXT_TAG created and pushed successfully"
 
       - name: Validate GoReleaser configuration
-        if: ${{ inputs.dry_run != 'true' }}
         run: |
           # Set up cleanup trap for temporary files
           cleanup_goreleaser() {
@@ -499,7 +498,11 @@ jobs:
       - name: Set GoReleaser args
         id: goreleaser-args
         run: |
-          if [ "${{ inputs.dry_run }}" == "true" ]; then
+          DRY_RUN_VALUE="${{ inputs.dry_run }}"
+          # Normalize: convert to lowercase and trim whitespace (using sed for portability)
+          # sed 's/^[[:space:]]*//;s/[[:space:]]*$//' trims leading/trailing whitespace
+          DRY_RUN_NORMALIZED=$(echo "$DRY_RUN_VALUE" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          if [ "$DRY_RUN_NORMALIZED" = "true" ]; then
             echo "args=--snapshot --clean" >> $GITHUB_OUTPUT
           else
             echo "args=release --clean" >> $GITHUB_OUTPUT
@@ -515,6 +518,39 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
+
+      - name: Display dry-run summary
+        if: ${{ inputs.dry_run == 'true' && steps.goreleaser.outcome == 'success' }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "[OK] DRY-RUN COMPLETED SUCCESSFULLY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Version:     ${{ steps.next-version.outputs.tag }}"
+          echo "Commits:     ${{ steps.commit-range.outputs.count }} commits would be included"
+          echo "Release Type: ${{ inputs.release_type }}"
+          echo ""
+          echo "[i] No tags or releases were created."
+          echo "[i] Artifacts were built in snapshot mode for validation."
+          echo "[i] GoReleaser configuration validated successfully."
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Display dry-run error summary
+        if: ${{ inputs.dry_run == 'true' && steps.goreleaser.outcome == 'failure' }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "[X] DRY-RUN FAILED"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Version:     ${{ steps.next-version.outputs.tag }}"
+          echo "Release Type: ${{ inputs.release_type }}"
+          echo ""
+          echo "[i] GoReleaser failed during dry-run. No tags or releases were created."
+          echo "[i] Review the GoReleaser step logs above for error details."
+          echo "[i] Fix the issues and retry the dry-run."
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Rollback tag on failure
         if: ${{ inputs.dry_run != 'true' && steps.goreleaser.outcome == 'failure' }}
