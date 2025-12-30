@@ -551,6 +551,7 @@ jobs:
           echo "[i] Fix the issues and retry the dry-run."
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit 1
 
       - name: Rollback tag on failure
         if: ${{ inputs.dry_run != 'true' && steps.goreleaser.outcome == 'failure' }}
