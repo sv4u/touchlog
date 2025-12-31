@@ -1,4 +1,4 @@
-# touchlog Gherkin Scenario Suite
+# `touchlog` Gherkin Scenario Suite
 
 This document is organized as **virtual feature files** that exactly match the intended on-disk layout under `features/`.
 Each section corresponds to a single `.feature` file and contains **exactly one** `Feature:` block (single responsibility).

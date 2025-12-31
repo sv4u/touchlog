@@ -1,4 +1,4 @@
-# touchlog Scenario Diagrams
+# `touchlog` Scenario Diagrams
 
 This document contains Mermaid diagrams visualizing the scenarios defined in `SCENARIOS.md`. The diagrams are organized by feature file, with overview diagrams for simpler features and detailed diagrams for complex scenarios.
 

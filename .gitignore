@@ -77,8 +77,5 @@ tmp/
 *.dSYM/
 __debug_bin
 
-# Cursor
-.cursor
-
 # GitHub Logs
 github-actions-logs/
