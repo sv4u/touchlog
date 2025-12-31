@@ -222,7 +222,7 @@ sequenceDiagram
                     CLI->>CLI: Use nano
                 else No editor found
                     CLI->>Filesystem: Write file anyway
-                    CLI->>User: Warn: no editor found; skipping edit
+                    CLI->>User: Warn: no editor found - skipping edit
                 end
             end
         end
@@ -311,10 +311,10 @@ stateDiagram-v2
     
     LaunchEditor --> ReviewScreen: Editor launched<br/>Return to review
     
-    ReviewScreen --> LaunchEditor: User selects "Open editor again"
-    ReviewScreen --> Confirm: User selects "Confirm" or ":wq" or ":wq!"
-    ReviewScreen --> Cancel: User selects "Cancel" or ":q"
-    ReviewScreen --> QuitKeepFile: User selects "Quit and keep file" or ":q!"
+    ReviewScreen --> LaunchEditor: User selects Open editor again
+    ReviewScreen --> Confirm: User selects Confirm or wq or wq!
+    ReviewScreen --> Cancel: User selects Cancel or q
+    ReviewScreen --> QuitKeepFile: User selects Quit and keep file or q!
     
     Confirm --> [*]: Exit code 0<br/>File saved
     Cancel --> [*]: Exit code 0<br/>File deleted
@@ -369,14 +369,14 @@ flowchart TD
     EditorLaunched -->|Success| ReviewScreen
     EditorLaunched -->|Failure| ReviewScreen
     
-    ReviewScreen --> ShowOptions[Show Options:<br/>1) Open editor again<br/>2) Confirm<br/>3) Cancel<br/>4) Quit and keep file<br/>Also: :wq, :wq!, :q, :q!]
+    ReviewScreen --> ShowOptions["Show Options<br/>1) Open editor again<br/>2) Confirm<br/>3) Cancel<br/>4) Quit and keep file<br/>Also wq, wq!, q, q!"]
     
     ShowOptions --> UserInput7{User input}
     
     UserInput7 -->|1 or Open editor| LaunchEditor
-    UserInput7 -->|2 or :wq or :wq!| Confirm[Confirm - Save & Exit]
-    UserInput7 -->|3 or :q| Cancel[Cancel - Delete & Exit]
-    UserInput7 -->|4 or :q!| QuitKeep[Quit - Keep File]
+    UserInput7 -->|2 or wq or wq!| Confirm[Confirm - Save & Exit]
+    UserInput7 -->|3 or q| Cancel[Cancel - Delete & Exit]
+    UserInput7 -->|4 or q!| QuitKeep[Quit - Keep File]
     
     Confirm --> Success[Exit code 0<br/>File saved]
     Cancel --> DeleteFile[Delete file]
