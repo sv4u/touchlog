@@ -176,7 +176,7 @@ flowchart TD
     AddSuffix --> ApplyTemplate
     
     ApplyTemplate --> WriteFile[Write log file]
-    WriteFile --> Success[Exit code 0<br/>stdout: Wrote log to {file path}]
+    WriteFile --> Success[Exit code 0<br/>stdout: Wrote log]
     
     MessageError --> End([End])
     UTF8Error --> End
