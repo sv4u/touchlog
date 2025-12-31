@@ -211,7 +211,8 @@ Feature: Creating log entries non-interactively (touchlog new)
   Scenario: Create a basic entry with message
     When I run "touchlog new --message 'Did code review for PR-123'"
     Then the exit code is 0
-    And stdout contains "Wrote log"
+    And stdout contains "Wrote log to"
+    And stdout contains the created log file path
     And exactly 1 log file exists in the output directory
     And the log file content contains "Did code review for PR-123"
     And the log file content contains "2025-12-31"
@@ -335,7 +336,7 @@ Feature: Editor integration and handoff semantics
     When I run "touchlog new --output ./logs --title 'X' --message 'Hello'"
     Then the exit code is 0
     And exactly 1 log file exists in "./logs"
-    And stdout contains "Created"
+    And stdout contains "Wrote log to"
     And stdout contains the created log file path
 
   Scenario: With --edit, touchlog launches editor and then exits without further lifecycle management
@@ -421,7 +422,7 @@ Feature: Interactive REPL wizard control flow and lifecycle
     And I input "Draft message"
     Then exactly 1 log file exists in "./logs"
     And the created filename matches the regex "2025-12-31_.*\.md"
-    And stdout contains "Created"
+    And stdout contains "Wrote log to"
     And stdout contains the created log file path
     And stdout contains "Open editor to edit the entry now?"
 
@@ -500,10 +501,10 @@ Feature: Interactive REPL wizard control flow and lifecycle
     And I input "Draft"
     Then stdout contains "Review summary"
     And stdout contains "Options:"
-    And stdout contains "1) Open editor"
-    And stdout contains "3) Confirm (save & exit)"
-    And stdout contains "4) Cancel (delete & exit)"
-    And stdout contains "5) Quit and keep file"
+    And stdout contains "1) Open editor again"
+    And stdout contains "2) Confirm (save & exit)"
+    And stdout contains "3) Cancel (delete & exit)"
+    And stdout contains "4) Quit and keep file"
     And stdout contains "You can also type: :wq, :wq!, :q, :q!"
 
   Scenario: :q deletes the created file at the review screen

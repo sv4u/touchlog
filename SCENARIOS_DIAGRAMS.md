@@ -176,7 +176,7 @@ flowchart TD
     AddSuffix --> ApplyTemplate
     
     ApplyTemplate --> WriteFile[Write log file]
-    WriteFile --> Success[Exit code 0<br/>stdout: Wrote log]
+    WriteFile --> Success[Exit code 0<br/>stdout: Wrote log to {file path}]
     
     MessageError --> End([End])
     UTF8Error --> End
@@ -200,29 +200,33 @@ sequenceDiagram
     participant Filesystem
     
     User->>CLI: touchlog new --edit
-    CLI->>Config: Check config.editor
-    Config-->>CLI: editor value or null
+    CLI->>CLI: Check for --editor flag
     
-    alt Config has editor
-        CLI->>CLI: Use config.editor
-    else CLI has --editor flag
+    alt CLI has --editor flag
         CLI->>CLI: Use --editor flag
-    else Check EDITOR env var
-        CLI->>Env: Get EDITOR environment variable
-        Env-->>CLI: EDITOR value or null
+    else Check config.editor
+        CLI->>Config: Check config.editor
+        Config-->>CLI: editor value or null
         
-        alt EDITOR is set
-            CLI->>CLI: Use EDITOR value
-        else Fallback to defaults
-            CLI->>CLI: Check for vi on PATH
-            alt vi exists
-                CLI->>CLI: Use vi
-            else Check nano
-                alt nano exists
-                    CLI->>CLI: Use nano
-                else No editor found
-                    CLI->>Filesystem: Write file anyway
-                    CLI->>User: Warn: no editor found - skipping edit
+        alt Config has editor
+            CLI->>CLI: Use config.editor
+        else Check EDITOR env var
+            CLI->>Env: Get EDITOR environment variable
+            Env-->>CLI: EDITOR value or null
+            
+            alt EDITOR is set
+                CLI->>CLI: Use EDITOR value
+            else Fallback to defaults
+                CLI->>CLI: Check for vi on PATH
+                alt vi exists
+                    CLI->>CLI: Use vi
+                else Check nano
+                    alt nano exists
+                        CLI->>CLI: Use nano
+                    else No editor found
+                        CLI->>Filesystem: Write file anyway
+                        CLI->>User: Warn: no editor found - skipping edit
+                    end
                 end
             end
         end
@@ -291,34 +295,34 @@ stateDiagram-v2
     SelectAction --> OutputDirPrompt: User selects "Create new entry"
     SelectAction --> [*]: User selects "Quit"
     
-    OutputDirPrompt --> TitlePrompt: User enters output dir<br/>(Back available)
+    OutputDirPrompt --> TitlePrompt: User enters output dir (Back available)
     OutputDirPrompt --> MainMenu: User selects "Back"
     
-    TitlePrompt --> TagsPrompt: User enters title<br/>(Back available)
+    TitlePrompt --> TagsPrompt: User enters title (Back available)
     TitlePrompt --> OutputDirPrompt: User selects "Back"
     
-    TagsPrompt --> MessagePrompt: User enters tags<br/>(Back available)
+    TagsPrompt --> MessagePrompt: User enters tags (Back available)
     TagsPrompt --> TitlePrompt: User selects "Back"
     
-    MessagePrompt --> CreateFile: User enters message<br/>(Back available)
+    MessagePrompt --> CreateFile: User enters message (Back available)
     MessagePrompt --> TagsPrompt: User selects "Back"
     
-    CreateFile --> FileCreated: Create log file<br/>(Back NOT available)
+    CreateFile --> FileCreated: Create log file (Back NOT available)
     
     FileCreated --> EditorPrompt: Show "Open editor?" prompt
     EditorPrompt --> ReviewScreen: User selects "No" or skips
     EditorPrompt --> LaunchEditor: User selects "Yes"
     
-    LaunchEditor --> ReviewScreen: Editor launched<br/>Return to review
+    LaunchEditor --> ReviewScreen: Editor launched, return to review
     
     ReviewScreen --> LaunchEditor: User selects Open editor again
     ReviewScreen --> Confirm: User selects Confirm or wq or wq!
     ReviewScreen --> Cancel: User selects Cancel or q
     ReviewScreen --> QuitKeepFile: User selects Quit and keep file or q!
     
-    Confirm --> [*]: Exit code 0<br/>File saved
-    Cancel --> [*]: Exit code 0<br/>File deleted
-    QuitKeepFile --> [*]: Exit code 0<br/>File remains
+    Confirm --> [*]: Exit code 0, file saved
+    Cancel --> [*]: Exit code 0, file deleted
+    QuitKeepFile --> [*]: Exit code 0, file remains
 ```
 
 ### REPL Wizard Detailed Flow
