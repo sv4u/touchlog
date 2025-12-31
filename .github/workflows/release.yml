@@ -199,26 +199,12 @@ jobs:
           fi
 
       - name: Validate GoReleaser configuration
-        run: |
-          if ! command -v goreleaser &> /dev/null; then
-            echo "Installing GoReleaser..."
-            ARCH=$(uname -m)
-            OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-            
-            case "$ARCH" in
-              x86_64) ARCH="amd64" ;;
-              aarch64|arm64) ARCH="arm64" ;;
-            esac
-            
-            GORELEASER_URL="https://github.com/goreleaser/goreleaser/releases/latest/download/goreleaser_${OS}_${ARCH}.tar.gz"
-            curl -L -o goreleaser.tar.gz "$GORELEASER_URL"
-            tar -xzf goreleaser.tar.gz goreleaser
-            chmod +x goreleaser
-            sudo mv goreleaser /usr/local/bin/
-            rm -f goreleaser.tar.gz
-          fi
-          
-          goreleaser check
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check
+        continue-on-error: false
 
       - name: Display release preview
         run: |
