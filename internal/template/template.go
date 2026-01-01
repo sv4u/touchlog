@@ -67,6 +67,20 @@ func ExtractVariables(content string) []string {
 // If cfg is nil, uses default behavior (all variables enabled with default formats)
 func GetDefaultVariables(cfg *config.Config) map[string]string {
 	now := time.Now()
+	
+	// Apply timezone conversion if configured
+	if cfg != nil {
+		tz := cfg.GetTimezone()
+		if tz != "" {
+			location, err := time.LoadLocation(tz)
+			if err == nil {
+				// Convert to the specified timezone
+				now = now.In(location)
+			}
+			// If timezone is invalid, fall back to system timezone (use now as-is)
+		}
+	}
+	
 	vars := make(map[string]string)
 
 	// Default formats
@@ -87,7 +101,8 @@ func GetDefaultVariables(cfg *config.Config) map[string]string {
 	dtVars := cfg.GetDateTimeVars()
 
 	// Date variable
-	if dtVars.Date.Enabled {
+	// Enabled is nil = not specified, default to true; otherwise use the value
+	if dtVars.Date.Enabled == nil || *dtVars.Date.Enabled {
 		format := dtVars.Date.Format
 		if format == "" {
 			format = defaultDateFormat
@@ -99,7 +114,7 @@ func GetDefaultVariables(cfg *config.Config) map[string]string {
 	}
 
 	// Time variable
-	if dtVars.Time.Enabled {
+	if dtVars.Time.Enabled == nil || *dtVars.Time.Enabled {
 		format := dtVars.Time.Format
 		if format == "" {
 			format = defaultTimeFormat
@@ -111,7 +126,7 @@ func GetDefaultVariables(cfg *config.Config) map[string]string {
 	}
 
 	// DateTime variable
-	if dtVars.DateTime.Enabled {
+	if dtVars.DateTime.Enabled == nil || *dtVars.DateTime.Enabled {
 		format := dtVars.DateTime.Format
 		if format == "" {
 			format = defaultDateTimeFormat

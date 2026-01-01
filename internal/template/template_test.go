@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sv4u/touchlog/internal/config"
 )
@@ -219,11 +220,12 @@ func TestGetDefaultVariables(t *testing.T) {
 	})
 
 	t.Run("config with all variables enabled", func(t *testing.T) {
+		enabledTrue := true
 		cfg := &config.Config{
 			DateTimeVars: config.DateTimeVarsConfig{
-				Date:     config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02"},
-				Time:     config.DateTimeVarConfig{Enabled: true, Format: "15:04:05"},
-				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02 15:04:05"},
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02"},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "15:04:05"},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02 15:04:05"},
 			},
 		}
 
@@ -245,11 +247,13 @@ func TestGetDefaultVariables(t *testing.T) {
 	})
 
 	t.Run("config with some variables disabled", func(t *testing.T) {
+		enabledTrue := true
+		enabledFalse := false
 		cfg := &config.Config{
 			DateTimeVars: config.DateTimeVarsConfig{
-				Date:     config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02"},
-				Time:     config.DateTimeVarConfig{Enabled: false, Format: ""},
-				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02 15:04:05"},
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02"},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledFalse, Format: ""},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02 15:04:05"},
 			},
 		}
 
@@ -271,11 +275,12 @@ func TestGetDefaultVariables(t *testing.T) {
 	})
 
 	t.Run("config with custom date/time formats", func(t *testing.T) {
+		enabledTrue := true
 		cfg := &config.Config{
 			DateTimeVars: config.DateTimeVarsConfig{
-				Date:     config.DateTimeVarConfig{Enabled: true, Format: "01/02/2006"},
-				Time:     config.DateTimeVarConfig{Enabled: true, Format: "03:04 PM"},
-				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "01/02/2006 03:04 PM"},
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "01/02/2006"},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "03:04 PM"},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "01/02/2006 03:04 PM"},
 			},
 		}
 
@@ -300,11 +305,12 @@ func TestGetDefaultVariables(t *testing.T) {
 	})
 
 	t.Run("config with invalid formats - should fallback to defaults", func(t *testing.T) {
+		enabledTrue := true
 		cfg := &config.Config{
 			DateTimeVars: config.DateTimeVarsConfig{
-				Date:     config.DateTimeVarConfig{Enabled: true, Format: "invalid-format"},
-				Time:     config.DateTimeVarConfig{Enabled: true, Format: "also-invalid"},
-				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "invalid-too"},
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "invalid-format"},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "also-invalid"},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "invalid-too"},
 			},
 		}
 
@@ -327,11 +333,12 @@ func TestGetDefaultVariables(t *testing.T) {
 	})
 
 	t.Run("config with empty format strings - should use defaults", func(t *testing.T) {
+		enabledTrue := true
 		cfg := &config.Config{
 			DateTimeVars: config.DateTimeVarsConfig{
-				Date:     config.DateTimeVarConfig{Enabled: true, Format: ""},
-				Time:     config.DateTimeVarConfig{Enabled: true, Format: ""},
-				DateTime: config.DateTimeVarConfig{Enabled: true, Format: ""},
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: ""},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: ""},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: ""},
 			},
 		}
 
@@ -354,11 +361,12 @@ func TestGetDefaultVariables(t *testing.T) {
 	})
 
 	t.Run("config with all variables disabled - should fallback to all enabled", func(t *testing.T) {
+		enabledFalse := false
 		cfg := &config.Config{
 			DateTimeVars: config.DateTimeVarsConfig{
-				Date:     config.DateTimeVarConfig{Enabled: false, Format: ""},
-				Time:     config.DateTimeVarConfig{Enabled: false, Format: ""},
-				DateTime: config.DateTimeVarConfig{Enabled: false, Format: ""},
+				Date:     config.DateTimeVarConfig{Enabled: &enabledFalse, Format: ""},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledFalse, Format: ""},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledFalse, Format: ""},
 			},
 		}
 
@@ -381,11 +389,12 @@ func TestGetDefaultVariables(t *testing.T) {
 	})
 
 	t.Run("custom variable merging", func(t *testing.T) {
+		enabledTrue := true
 		cfg := &config.Config{
 			DateTimeVars: config.DateTimeVarsConfig{
-				Date:     config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02"},
-				Time:     config.DateTimeVarConfig{Enabled: true, Format: "15:04:05"},
-				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02 15:04:05"},
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02"},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "15:04:05"},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02 15:04:05"},
 			},
 			Variables: map[string]string{
 				"author":  "Test Author",
@@ -420,11 +429,12 @@ func TestGetDefaultVariables(t *testing.T) {
 	})
 
 	t.Run("custom variables overriding default variables", func(t *testing.T) {
+		enabledTrue := true
 		cfg := &config.Config{
 			DateTimeVars: config.DateTimeVarsConfig{
-				Date:     config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02"},
-				Time:     config.DateTimeVarConfig{Enabled: true, Format: "15:04:05"},
-				DateTime: config.DateTimeVarConfig{Enabled: true, Format: "2006-01-02 15:04:05"},
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02"},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "15:04:05"},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02 15:04:05"},
 			},
 			Variables: map[string]string{
 				"date": "Custom Date Override",
@@ -444,6 +454,84 @@ func TestGetDefaultVariables(t *testing.T) {
 		}
 		if _, ok := vars["datetime"]; !ok {
 			t.Error("GetDefaultVariables() missing 'datetime' variable")
+		}
+	})
+
+	t.Run("timezone conversion applied when configured", func(t *testing.T) {
+		enabledTrue := true
+		// Use UTC timezone for predictable test results
+		cfg := &config.Config{
+			Timezone: "UTC",
+			DateTimeVars: config.DateTimeVarsConfig{
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02"},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "15:04:05"},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02 15:04:05"},
+			},
+		}
+
+		vars := GetDefaultVariables(cfg)
+
+		// Verify variables exist
+		if _, ok := vars["date"]; !ok {
+			t.Error("GetDefaultVariables() missing 'date' variable with timezone")
+		}
+		if _, ok := vars["time"]; !ok {
+			t.Error("GetDefaultVariables() missing 'time' variable with timezone")
+		}
+		if _, ok := vars["datetime"]; !ok {
+			t.Error("GetDefaultVariables() missing 'datetime' variable with timezone")
+		}
+
+		// Verify the timezone is actually applied by checking the time difference
+		// Get current time in UTC and in local timezone
+		utcNow := time.Now().UTC()
+		localNow := time.Now()
+
+		// Parse the datetime variable to verify it's in UTC
+		parsedTime, err := time.Parse("2006-01-02 15:04:05", vars["datetime"])
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() datetime format error: %v", err)
+		}
+
+		// The parsed time should be close to UTC time (within 1 minute to account for test execution time)
+		diff := parsedTime.Sub(utcNow)
+		if diff < 0 {
+			diff = -diff
+		}
+		if diff > time.Minute {
+			// If not close to UTC, check if it's close to local time (which would indicate timezone wasn't applied)
+			localDiff := parsedTime.Sub(localNow)
+			if localDiff < 0 {
+				localDiff = -localDiff
+			}
+			if localDiff < time.Minute {
+				t.Errorf("GetDefaultVariables() timezone not applied - datetime is in local timezone, not UTC")
+			}
+		}
+	})
+
+	t.Run("invalid timezone falls back to system timezone", func(t *testing.T) {
+		enabledTrue := true
+		cfg := &config.Config{
+			Timezone: "Invalid/Timezone",
+			DateTimeVars: config.DateTimeVarsConfig{
+				Date:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02"},
+				Time:     config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "15:04:05"},
+				DateTime: config.DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02 15:04:05"},
+			},
+		}
+
+		// Should not panic and should still return variables (using system timezone)
+		vars := GetDefaultVariables(cfg)
+
+		if _, ok := vars["date"]; !ok {
+			t.Error("GetDefaultVariables() missing 'date' variable with invalid timezone (should fallback)")
+		}
+		if _, ok := vars["time"]; !ok {
+			t.Error("GetDefaultVariables() missing 'time' variable with invalid timezone (should fallback)")
+		}
+		if _, ok := vars["datetime"]; !ok {
+			t.Error("GetDefaultVariables() missing 'datetime' variable with invalid timezone (should fallback)")
 		}
 	})
 }

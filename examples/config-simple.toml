@@ -1,0 +1,20 @@
+# touchlog Simple Configuration Example (TOML)
+#
+# This is a minimal TOML configuration file with just the essentials.
+# Note: TOML support is planned for Phase 2.2 (not yet implemented).
+#
+# Copy this to ~/.config/touchlog/config.toml (or $XDG_CONFIG_HOME/touchlog/config.toml)
+# and customize as needed.
+
+# Directory where notes will be saved
+notes_directory = "~/Documents/notes"
+
+# List of available templates (file-based)
+[[templates]]
+name = "Daily Note"
+file = "daily.md"
+
+[[templates]]
+name = "Journal"
+file = "journal.md"
+

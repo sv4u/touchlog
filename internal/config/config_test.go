@@ -216,7 +216,7 @@ vim_mode: true
 		}
 
 		// Check datetime_vars
-		if !cfg.DateTimeVars.Date.Enabled {
+		if cfg.DateTimeVars.Date.Enabled == nil || !*cfg.DateTimeVars.Date.Enabled {
 			t.Error("LoadConfig() date variable not enabled")
 		}
 		if cfg.DateTimeVars.Date.Format != "2006-01-02" {
@@ -326,21 +326,21 @@ datetime_vars:
 			t.Fatalf("yaml.Unmarshal() error = %v", err)
 		}
 
-		if cfg.DateTimeVars.Date.Enabled {
+		if cfg.DateTimeVars.Date.Enabled == nil || *cfg.DateTimeVars.Date.Enabled {
 			t.Error("LoadConfig() date enabled = true, want false")
 		}
 		if cfg.DateTimeVars.Date.Format != "01/02/2006" {
 			t.Errorf("LoadConfig() date format = %q, want %q", cfg.DateTimeVars.Date.Format, "01/02/2006")
 		}
 
-		if !cfg.DateTimeVars.Time.Enabled {
+		if cfg.DateTimeVars.Time.Enabled == nil || !*cfg.DateTimeVars.Time.Enabled {
 			t.Error("LoadConfig() time enabled = false, want true")
 		}
 		if cfg.DateTimeVars.Time.Format != "" {
 			t.Errorf("LoadConfig() time format = %q, want empty string", cfg.DateTimeVars.Time.Format)
 		}
 
-		if !cfg.DateTimeVars.DateTime.Enabled {
+		if cfg.DateTimeVars.DateTime.Enabled == nil || !*cfg.DateTimeVars.DateTime.Enabled {
 			t.Error("LoadConfig() datetime enabled = false, want true")
 		}
 		if cfg.DateTimeVars.DateTime.Format != "2006-01-02 15:04:05" {
@@ -432,13 +432,13 @@ func TestCreateDefaultConfig(t *testing.T) {
 
 	t.Run("has all date/time variables enabled", func(t *testing.T) {
 		cfg := CreateDefaultConfig()
-		if !cfg.DateTimeVars.Date.Enabled {
+		if cfg.DateTimeVars.Date.Enabled == nil || !*cfg.DateTimeVars.Date.Enabled {
 			t.Error("CreateDefaultConfig() date enabled = false, want true")
 		}
-		if !cfg.DateTimeVars.Time.Enabled {
+		if cfg.DateTimeVars.Time.Enabled == nil || !*cfg.DateTimeVars.Time.Enabled {
 			t.Error("CreateDefaultConfig() time enabled = false, want true")
 		}
-		if !cfg.DateTimeVars.DateTime.Enabled {
+		if cfg.DateTimeVars.DateTime.Enabled == nil || !*cfg.DateTimeVars.DateTime.Enabled {
 			t.Error("CreateDefaultConfig() datetime enabled = false, want true")
 		}
 	})
@@ -822,6 +822,472 @@ invalid yaml: [unclosed bracket
 		// Error should be from LoadConfig, not about creating default
 		if err != nil && strings.Contains(err.Error(), "failed to create default config") {
 			t.Error("LoadOrCreateConfig() should not try to create default when file exists but is unreadable")
+		}
+	})
+}
+
+func TestInlineTemplates(t *testing.T) {
+	t.Run("load config with inline templates", func(t *testing.T) {
+		yamlData := `
+inline_templates:
+  daily: |
+    # {{date}}
+    ## Title
+    {{title}}
+    ## Notes
+    {{message}}
+  meeting: |
+    # Meeting Notes - {{date}}
+    ## Attendees
+    {{message}}
+notes_directory: ~/notes
+`
+
+		var cfg Config
+		err := yaml.Unmarshal([]byte(yamlData), &cfg)
+		if err != nil {
+			t.Fatalf("yaml.Unmarshal() error = %v", err)
+		}
+
+		inlineTemplates := cfg.GetInlineTemplates()
+		if len(inlineTemplates) != 2 {
+			t.Errorf("GetInlineTemplates() length = %d, want 2", len(inlineTemplates))
+		}
+		if !strings.Contains(inlineTemplates["daily"], "{{date}}") {
+			t.Error("GetInlineTemplates() daily template missing {{date}}")
+		}
+		if !strings.Contains(inlineTemplates["meeting"], "Meeting Notes") {
+			t.Error("GetInlineTemplates() meeting template missing content")
+		}
+	})
+
+	t.Run("empty inline templates returns empty map", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		inlineTemplates := cfg.GetInlineTemplates()
+		if inlineTemplates == nil {
+			t.Error("GetInlineTemplates() returned nil, want empty map")
+		}
+		if len(inlineTemplates) != 0 {
+			t.Errorf("GetInlineTemplates() length = %d, want 0", len(inlineTemplates))
+		}
+	})
+}
+
+func TestDefaultTemplate(t *testing.T) {
+	t.Run("default_template field", func(t *testing.T) {
+		yamlData := `
+default_template: "daily"
+notes_directory: ~/notes
+`
+
+		var cfg Config
+		err := yaml.Unmarshal([]byte(yamlData), &cfg)
+		if err != nil {
+			t.Fatalf("yaml.Unmarshal() error = %v", err)
+		}
+
+		if cfg.GetDefaultTemplate() != "daily" {
+			t.Errorf("GetDefaultTemplate() = %q, want %q", cfg.GetDefaultTemplate(), "daily")
+		}
+	})
+
+	t.Run("template.name field (backward compatibility)", func(t *testing.T) {
+		yamlData := `
+template:
+  name: "meeting"
+notes_directory: ~/notes
+`
+
+		var cfg Config
+		err := yaml.Unmarshal([]byte(yamlData), &cfg)
+		if err != nil {
+			t.Fatalf("yaml.Unmarshal() error = %v", err)
+		}
+
+		if cfg.GetDefaultTemplate() != "meeting" {
+			t.Errorf("GetDefaultTemplate() = %q, want %q", cfg.GetDefaultTemplate(), "meeting")
+		}
+	})
+
+	t.Run("default_template takes precedence over template.name", func(t *testing.T) {
+		yamlData := `
+default_template: "daily"
+template:
+  name: "meeting"
+notes_directory: ~/notes
+`
+
+		var cfg Config
+		err := yaml.Unmarshal([]byte(yamlData), &cfg)
+		if err != nil {
+			t.Fatalf("yaml.Unmarshal() error = %v", err)
+		}
+
+		if cfg.GetDefaultTemplate() != "daily" {
+			t.Errorf("GetDefaultTemplate() = %q, want %q (default_template should take precedence)", cfg.GetDefaultTemplate(), "daily")
+		}
+	})
+}
+
+func TestTimezone(t *testing.T) {
+	t.Run("timezone configuration", func(t *testing.T) {
+		yamlData := `
+timezone: "America/Denver"
+notes_directory: ~/notes
+`
+
+		var cfg Config
+		err := yaml.Unmarshal([]byte(yamlData), &cfg)
+		if err != nil {
+			t.Fatalf("yaml.Unmarshal() error = %v", err)
+		}
+
+		if cfg.GetTimezone() != "America/Denver" {
+			t.Errorf("GetTimezone() = %q, want %q", cfg.GetTimezone(), "America/Denver")
+		}
+	})
+
+	t.Run("empty timezone returns empty string", func(t *testing.T) {
+		cfg := CreateDefaultConfig()
+		if cfg.GetTimezone() != "" {
+			t.Errorf("GetTimezone() = %q, want empty string", cfg.GetTimezone())
+		}
+	})
+}
+
+func TestLoadWithPrecedence(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	t.Run("CLI flags override config", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "config.yaml")
+		yamlData := `
+notes_directory: ~/config-notes
+default_template: "config-template"
+timezone: "UTC"
+`
+		if err := os.WriteFile(configPath, []byte(yamlData), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		cliFlags := &CLIFlags{
+			OutputDir: "~/cli-notes",
+			Template:  "cli-template",
+			Timezone:  "America/Denver",
+		}
+
+		cfg, err := LoadWithPrecedence(configPath, cliFlags)
+		if err != nil {
+			t.Fatalf("LoadWithPrecedence() error = %v", err)
+		}
+
+		// CLI flags should override config
+		if cfg.GetNotesDirectory() != "~/cli-notes" {
+			t.Errorf("GetNotesDirectory() = %q, want %q", cfg.GetNotesDirectory(), "~/cli-notes")
+		}
+		if cfg.GetDefaultTemplate() != "cli-template" {
+			t.Errorf("GetDefaultTemplate() = %q, want %q", cfg.GetDefaultTemplate(), "cli-template")
+		}
+		if cfg.GetTimezone() != "America/Denver" {
+			t.Errorf("GetTimezone() = %q, want %q", cfg.GetTimezone(), "America/Denver")
+		}
+	})
+
+	t.Run("config overrides defaults", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "config2.yaml")
+		yamlData := `
+notes_directory: ~/config-notes
+default_template: "config-template"
+timezone: "UTC"
+`
+		if err := os.WriteFile(configPath, []byte(yamlData), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		cfg, err := LoadWithPrecedence(configPath, nil)
+		if err != nil {
+			t.Fatalf("LoadWithPrecedence() error = %v", err)
+		}
+
+		// Config should override defaults
+		if cfg.GetNotesDirectory() != "~/config-notes" {
+			t.Errorf("GetNotesDirectory() = %q, want %q", cfg.GetNotesDirectory(), "~/config-notes")
+		}
+		if cfg.GetDefaultTemplate() != "config-template" {
+			t.Errorf("GetDefaultTemplate() = %q, want %q", cfg.GetDefaultTemplate(), "config-template")
+		}
+		if cfg.GetTimezone() != "UTC" {
+			t.Errorf("GetTimezone() = %q, want %q", cfg.GetTimezone(), "UTC")
+		}
+	})
+
+	t.Run("defaults used when no config or CLI flags", func(t *testing.T) {
+		cfg, err := LoadWithPrecedence("", nil)
+		if err != nil {
+			t.Fatalf("LoadWithPrecedence() error = %v", err)
+		}
+
+		// Should use defaults
+		if cfg.GetNotesDirectory() != "~/notes" {
+			t.Errorf("GetNotesDirectory() = %q, want %q (default)", cfg.GetNotesDirectory(), "~/notes")
+		}
+		if len(cfg.GetTemplates()) != 3 {
+			t.Errorf("GetTemplates() length = %d, want 3 (default)", len(cfg.GetTemplates()))
+		}
+	})
+
+	t.Run("DateTimeVars defaults preserved when not in config", func(t *testing.T) {
+		// Config file without datetime_vars section
+		configPath := filepath.Join(tmpDir, "config-no-datetime.yaml")
+		yamlData := `
+notes_directory: ~/config-notes
+default_template: "daily"
+`
+		if err := os.WriteFile(configPath, []byte(yamlData), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		cfg, err := LoadWithPrecedence(configPath, nil)
+		if err != nil {
+			t.Fatalf("LoadWithPrecedence() error = %v", err)
+		}
+
+		// DateTimeVars defaults should be preserved (not overwritten by zero values)
+		if cfg.DateTimeVars.Date.Enabled == nil || !*cfg.DateTimeVars.Date.Enabled {
+			t.Errorf("DateTimeVars.Date.Enabled = false, want true (default preserved)")
+		}
+		if cfg.DateTimeVars.Date.Format != "2006-01-02" {
+			t.Errorf("DateTimeVars.Date.Format = %q, want %q (default preserved)", cfg.DateTimeVars.Date.Format, "2006-01-02")
+		}
+		if cfg.DateTimeVars.Time.Enabled == nil || !*cfg.DateTimeVars.Time.Enabled {
+			t.Errorf("DateTimeVars.Time.Enabled = false, want true (default preserved)")
+		}
+		if cfg.DateTimeVars.Time.Format != "15:04:05" {
+			t.Errorf("DateTimeVars.Time.Format = %q, want %q (default preserved)", cfg.DateTimeVars.Time.Format, "15:04:05")
+		}
+		if cfg.DateTimeVars.DateTime.Enabled == nil || !*cfg.DateTimeVars.DateTime.Enabled {
+			t.Errorf("DateTimeVars.DateTime.Enabled = false, want true (default preserved)")
+		}
+		if cfg.DateTimeVars.DateTime.Format != "2006-01-02 15:04:05" {
+			t.Errorf("DateTimeVars.DateTime.Format = %q, want %q (default preserved)", cfg.DateTimeVars.DateTime.Format, "2006-01-02 15:04:05")
+		}
+	})
+
+	t.Run("DateTimeVars overridden when present in config", func(t *testing.T) {
+		// Config file with datetime_vars section
+		configPath := filepath.Join(tmpDir, "config-with-datetime.yaml")
+		yamlData := `
+notes_directory: ~/config-notes
+datetime_vars:
+  date:
+    enabled: true
+    format: "01/02/2006"
+  time:
+    enabled: false
+    format: "3:04 PM"
+`
+		if err := os.WriteFile(configPath, []byte(yamlData), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		cfg, err := LoadWithPrecedence(configPath, nil)
+		if err != nil {
+			t.Fatalf("LoadWithPrecedence() error = %v", err)
+		}
+
+		// Date should be overridden
+		if cfg.DateTimeVars.Date.Format != "01/02/2006" {
+			t.Errorf("DateTimeVars.Date.Format = %q, want %q", cfg.DateTimeVars.Date.Format, "01/02/2006")
+		}
+		if cfg.DateTimeVars.Date.Enabled == nil || !*cfg.DateTimeVars.Date.Enabled {
+			t.Errorf("DateTimeVars.Date.Enabled = false, want true")
+		}
+
+		// Time should be overridden
+		if cfg.DateTimeVars.Time.Format != "3:04 PM" {
+			t.Errorf("DateTimeVars.Time.Format = %q, want %q", cfg.DateTimeVars.Time.Format, "3:04 PM")
+		}
+		if cfg.DateTimeVars.Time.Enabled != nil && *cfg.DateTimeVars.Time.Enabled {
+			t.Errorf("DateTimeVars.Time.Enabled = true, want false")
+		}
+
+		// DateTime should keep defaults (not specified in config)
+		if cfg.DateTimeVars.DateTime.Format != "2006-01-02 15:04:05" {
+			t.Errorf("DateTimeVars.DateTime.Format = %q, want %q (default preserved)", cfg.DateTimeVars.DateTime.Format, "2006-01-02 15:04:05")
+		}
+		if cfg.DateTimeVars.DateTime.Enabled == nil || !*cfg.DateTimeVars.DateTime.Enabled {
+			t.Errorf("DateTimeVars.DateTime.Enabled = false, want true (default preserved)")
+		}
+	})
+
+	t.Run("DateTimeVars format only preserves enabled default", func(t *testing.T) {
+		// Config file with only format specified (no enabled field)
+		// This should preserve the default enabled=true
+		configPath := filepath.Join(tmpDir, "config-format-only.yaml")
+		yamlData := `
+notes_directory: ~/config-notes
+datetime_vars:
+  date:
+    format: "01/02/2006"
+  time:
+    format: "3:04 PM"
+`
+		if err := os.WriteFile(configPath, []byte(yamlData), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		cfg, err := LoadWithPrecedence(configPath, nil)
+		if err != nil {
+			t.Fatalf("LoadWithPrecedence() error = %v", err)
+		}
+
+		// Date format should be overridden, but enabled should remain true (default)
+		if cfg.DateTimeVars.Date.Format != "01/02/2006" {
+			t.Errorf("DateTimeVars.Date.Format = %q, want %q", cfg.DateTimeVars.Date.Format, "01/02/2006")
+		}
+		if cfg.DateTimeVars.Date.Enabled == nil || !*cfg.DateTimeVars.Date.Enabled {
+			t.Errorf("DateTimeVars.Date.Enabled = false, want true (default preserved when only format specified)")
+		}
+
+		// Time format should be overridden, but enabled should remain true (default)
+		if cfg.DateTimeVars.Time.Format != "3:04 PM" {
+			t.Errorf("DateTimeVars.Time.Format = %q, want %q", cfg.DateTimeVars.Time.Format, "3:04 PM")
+		}
+		if cfg.DateTimeVars.Time.Enabled == nil || !*cfg.DateTimeVars.Time.Enabled {
+			t.Errorf("DateTimeVars.Time.Enabled = false, want true (default preserved when only format specified)")
+		}
+	})
+
+	t.Run("DateTimeVars enabled false without format is ignored (Option B)", func(t *testing.T) {
+		// Config file with enabled: false but no format (Option B: should be ignored)
+		configPath := filepath.Join(tmpDir, "config-enabled-no-format.yaml")
+		yamlData := `
+notes_directory: ~/config-notes
+datetime_vars:
+  date:
+    enabled: false
+  time:
+    enabled: false
+`
+		if err := os.WriteFile(configPath, []byte(yamlData), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		cfg, err := LoadWithPrecedence(configPath, nil)
+		if err != nil {
+			t.Fatalf("LoadWithPrecedence() error = %v", err)
+		}
+
+		// Per Option B: enabled: false without format should be ignored
+		// Date should keep defaults (enabled: true, default format)
+		if cfg.DateTimeVars.Date.Enabled == nil || !*cfg.DateTimeVars.Date.Enabled {
+			t.Errorf("DateTimeVars.Date.Enabled = false, want true (enabled: false without format should be ignored per Option B)")
+		}
+		if cfg.DateTimeVars.Date.Format != "2006-01-02" {
+			t.Errorf("DateTimeVars.Date.Format = %q, want %q (default preserved)", cfg.DateTimeVars.Date.Format, "2006-01-02")
+		}
+
+		// Time should keep defaults (enabled: true, default format)
+		if cfg.DateTimeVars.Time.Enabled == nil || !*cfg.DateTimeVars.Time.Enabled {
+			t.Errorf("DateTimeVars.Time.Enabled = false, want true (enabled: false without format should be ignored per Option B)")
+		}
+		if cfg.DateTimeVars.Time.Format != "15:04:05" {
+			t.Errorf("DateTimeVars.Time.Format = %q, want %q (default preserved)", cfg.DateTimeVars.Time.Format, "15:04:05")
+		}
+	})
+
+	t.Run("DateTimeVars enabled false with format is respected (Option B)", func(t *testing.T) {
+		// Config file with enabled: false AND format (Option B: should be respected)
+		configPath := filepath.Join(tmpDir, "config-enabled-with-format.yaml")
+		yamlData := `
+notes_directory: ~/config-notes
+datetime_vars:
+  date:
+    enabled: false
+    format: "01/02/2006"
+  time:
+    enabled: false
+    format: "3:04 PM"
+`
+		if err := os.WriteFile(configPath, []byte(yamlData), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		cfg, err := LoadWithPrecedence(configPath, nil)
+		if err != nil {
+			t.Fatalf("LoadWithPrecedence() error = %v", err)
+		}
+
+		// Per Option B: enabled: false with format should be respected
+		// Date should be disabled with custom format
+		if cfg.DateTimeVars.Date.Enabled != nil && *cfg.DateTimeVars.Date.Enabled {
+			t.Errorf("DateTimeVars.Date.Enabled = true, want false (enabled: false with format should be respected per Option B)")
+		}
+		if cfg.DateTimeVars.Date.Format != "01/02/2006" {
+			t.Errorf("DateTimeVars.Date.Format = %q, want %q", cfg.DateTimeVars.Date.Format, "01/02/2006")
+		}
+
+		// Time should be disabled with custom format
+		if cfg.DateTimeVars.Time.Enabled != nil && *cfg.DateTimeVars.Time.Enabled {
+			t.Errorf("DateTimeVars.Time.Enabled = true, want false (enabled: false with format should be respected per Option B)")
+		}
+		if cfg.DateTimeVars.Time.Format != "3:04 PM" {
+			t.Errorf("DateTimeVars.Time.Format = %q, want %q", cfg.DateTimeVars.Time.Format, "3:04 PM")
+		}
+	})
+}
+
+func TestValidateStrict(t *testing.T) {
+	t.Run("valid config passes strict validation", func(t *testing.T) {
+		yamlData := `
+notes_directory: ~/notes
+default_template: "daily"
+timezone: "UTC"
+inline_templates:
+  daily: "# {{date}}"
+variables:
+  author: "Test"
+vim_mode: true
+`
+		err := ValidateStrictFromYAML([]byte(yamlData))
+		if err != nil {
+			t.Errorf("ValidateStrictFromYAML() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("unknown keys fail strict validation", func(t *testing.T) {
+		yamlData := `
+notes_directory: ~/notes
+unknown_key: "value"
+another_unknown: true
+`
+		err := ValidateStrictFromYAML([]byte(yamlData))
+		if err == nil {
+			t.Error("ValidateStrictFromYAML() expected error for unknown keys, got nil")
+		}
+		if !strings.Contains(err.Error(), "unknown config keys") {
+			t.Errorf("ValidateStrictFromYAML() error = %v, want error containing 'unknown config keys'", err)
+		}
+		if !strings.Contains(err.Error(), "unknown_key") {
+			t.Errorf("ValidateStrictFromYAML() error should mention unknown_key, got: %v", err)
+		}
+	})
+
+	t.Run("empty config passes strict validation", func(t *testing.T) {
+		yamlData := `{}`
+		err := ValidateStrictFromYAML([]byte(yamlData))
+		if err != nil {
+			t.Errorf("ValidateStrictFromYAML() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("invalid YAML returns error", func(t *testing.T) {
+		yamlData := `invalid yaml: [unclosed bracket`
+		err := ValidateStrictFromYAML([]byte(yamlData))
+		if err == nil {
+			t.Error("ValidateStrictFromYAML() expected error for invalid YAML, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to parse YAML") {
+			t.Errorf("ValidateStrictFromYAML() error = %v, want error containing 'failed to parse YAML'", err)
 		}
 	})
 }
