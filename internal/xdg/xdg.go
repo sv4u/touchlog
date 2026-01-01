@@ -40,6 +40,7 @@ func DataDir() (string, error) {
 }
 
 // ConfigFilePath returns the full path to the config file
+// This function creates the config directory if it doesn't exist
 func ConfigFilePath() (string, error) {
 	configDir, err := ConfigDir()
 	if err != nil {
@@ -47,6 +48,15 @@ func ConfigFilePath() (string, error) {
 	}
 	// filepath.Join safely joins path components
 	return filepath.Join(configDir, "config.yaml"), nil
+}
+
+// ConfigFilePathReadOnly returns the full path to the config file without creating directories
+// This is a read-only operation that should be used for searching/checking if a config file exists
+func ConfigFilePathReadOnly() string {
+	// xdg.ConfigHome returns something like ~/.config
+	// We append "touchlog" to get ~/.config/touchlog
+	configPath := filepath.Join(xdg.ConfigHome, "touchlog", "config.yaml")
+	return configPath
 }
 
 // TemplatesDir returns the templates directory path
