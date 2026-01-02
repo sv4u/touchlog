@@ -28,9 +28,9 @@ var (
 
 // Detect detects the current platform and returns the Platform type
 func Detect() (Platform, error) {
-	os := runtime.GOOS
+	goos := runtime.GOOS
 
-	switch os {
+	switch goos {
 	case "darwin":
 		return PlatformDarwin, nil
 	case "linux":
@@ -55,7 +55,13 @@ func IsSupported(p Platform) bool {
 
 // IsWSL detects if the current environment is WSL (Windows Subsystem for Linux)
 // It checks multiple methods to reliably detect WSL
+// Returns false immediately if not running on Linux (defensive check)
 func IsWSL() bool {
+	// Defensive check: WSL only exists on Linux
+	if runtime.GOOS != "linux" {
+		return false
+	}
+
 	// Method 1: Check WSL_DISTRO_NAME environment variable
 	if os.Getenv("WSL_DISTRO_NAME") != "" {
 		return true

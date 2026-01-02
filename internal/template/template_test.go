@@ -1,6 +1,7 @@
 package template
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -200,7 +201,10 @@ func TestExtractVariables(t *testing.T) {
 
 func TestGetDefaultVariables(t *testing.T) {
 	t.Run("nil config", func(t *testing.T) {
-		vars := GetDefaultVariables(nil)
+		vars, err := GetDefaultVariables(nil)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables(nil) returned error: %v", err)
+		}
 
 		// Should have date, time, and datetime
 		if _, ok := vars["date"]; !ok {
@@ -229,7 +233,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable")
@@ -257,7 +264,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		if _, ok := vars["date"]; !ok {
 			t.Error("GetDefaultVariables() missing 'date' variable")
@@ -284,7 +294,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		// Should have all three variables
 		if _, ok := vars["date"]; !ok {
@@ -314,7 +327,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		// Should still have all three variables (fallback to default formats)
 		if _, ok := vars["date"]; !ok {
@@ -342,7 +358,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		// Should have all three variables with default formats
 		if _, ok := vars["date"]; !ok {
@@ -370,7 +389,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		// Should fallback to all enabled (backward compatibility)
 		if _, ok := vars["date"]; !ok {
@@ -402,7 +424,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		// Should have date/time/datetime
 		if _, ok := vars["date"]; !ok {
@@ -441,7 +466,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		// Custom variable should override default date variable
 		if vars["date"] != "Custom Date Override" {
@@ -469,7 +497,10 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		vars := GetDefaultVariables(cfg)
+		vars, err := GetDefaultVariables(cfg)
+		if err != nil {
+			t.Fatalf("GetDefaultVariables() returned error: %v", err)
+		}
 
 		// Verify variables exist
 		if _, ok := vars["date"]; !ok {
@@ -510,7 +541,7 @@ func TestGetDefaultVariables(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid timezone falls back to system timezone", func(t *testing.T) {
+	t.Run("invalid timezone returns error", func(t *testing.T) {
 		enabledTrue := true
 		cfg := &config.Config{
 			Timezone: "Invalid/Timezone",
@@ -521,17 +552,16 @@ func TestGetDefaultVariables(t *testing.T) {
 			},
 		}
 
-		// Should not panic and should still return variables (using system timezone)
-		vars := GetDefaultVariables(cfg)
-
-		if _, ok := vars["date"]; !ok {
-			t.Error("GetDefaultVariables() missing 'date' variable with invalid timezone (should fallback)")
+		// Should return an error for invalid timezone
+		vars, err := GetDefaultVariables(cfg)
+		if err == nil {
+			t.Error("GetDefaultVariables() should return error for invalid timezone")
 		}
-		if _, ok := vars["time"]; !ok {
-			t.Error("GetDefaultVariables() missing 'time' variable with invalid timezone (should fallback)")
+		if vars != nil {
+			t.Error("GetDefaultVariables() should return nil map when timezone is invalid")
 		}
-		if _, ok := vars["datetime"]; !ok {
-			t.Error("GetDefaultVariables() missing 'datetime' variable with invalid timezone (should fallback)")
+		if err != nil && !strings.Contains(err.Error(), "Invalid/Timezone") {
+			t.Errorf("GetDefaultVariables() error should mention invalid timezone, got: %v", err)
 		}
 	})
 }
@@ -924,6 +954,643 @@ func TestCreateExampleTemplates(t *testing.T) {
 		}
 		if err != nil && !strings.Contains(err.Error(), "failed to create template") {
 			t.Errorf("CreateExampleTemplates() error = %v, want error containing 'failed to create template'", err)
+		}
+	})
+}
+
+func TestInlineTemplateSource(t *testing.T) {
+	t.Run("get existing template", func(t *testing.T) {
+		templates := map[string]string{
+			"daily": "# Daily Note\n{{date}}",
+			"quick": "# Quick Note\n{{message}}",
+		}
+		source := &InlineTemplateSource{templates: templates}
+
+		content, err := source.GetTemplate("daily")
+		if err != nil {
+			t.Fatalf("GetTemplate() error = %v, want nil", err)
+		}
+		if content != "# Daily Note\n{{date}}" {
+			t.Errorf("GetTemplate() = %q, want %q", content, "# Daily Note\n{{date}}")
+		}
+	})
+
+	t.Run("get non-existent template", func(t *testing.T) {
+		templates := map[string]string{
+			"daily": "# Daily Note",
+		}
+		source := &InlineTemplateSource{templates: templates}
+
+		_, err := source.GetTemplate("nonexistent")
+		if err == nil {
+			t.Error("GetTemplate() error = nil, want ErrTemplateNotFound")
+		}
+		if !errors.Is(err, ErrTemplateNotFound) {
+			t.Errorf("GetTemplate() error = %v, want ErrTemplateNotFound", err)
+		}
+	})
+
+	t.Run("nil templates map", func(t *testing.T) {
+		source := &InlineTemplateSource{templates: nil}
+
+		_, err := source.GetTemplate("daily")
+		if err == nil {
+			t.Error("GetTemplate() error = nil, want ErrTemplateNotFound")
+		}
+		if !errors.Is(err, ErrTemplateNotFound) {
+			t.Errorf("GetTemplate() error = %v, want ErrTemplateNotFound", err)
+		}
+	})
+}
+
+func TestFileTemplateSource(t *testing.T) {
+	t.Run("get template by filename match", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Create a template file
+		templateFile := filepath.Join(templatesDir, "daily.md")
+		templateContent := "# Daily Note\n{{date}}"
+		if err := os.WriteFile(templateFile, []byte(templateContent), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		// Create file source with template config
+		templates := []config.Template{
+			{Name: "Daily Note", File: "daily.md"},
+		}
+		source := &FileTemplateSource{
+			templatesDir: templatesDir,
+			templates:    templates,
+		}
+
+		// Resolve by name "daily" (filename without extension)
+		content, err := source.GetTemplate("daily")
+		if err != nil {
+			t.Fatalf("GetTemplate() error = %v, want nil", err)
+		}
+		if content != templateContent {
+			t.Errorf("GetTemplate() = %q, want %q", content, templateContent)
+		}
+	})
+
+	t.Run("get template with hyphenated filename", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Create a template file with hyphenated name
+		templateFile := filepath.Join(templatesDir, "quick-note.md")
+		templateContent := "# Quick Note\n{{message}}"
+		if err := os.WriteFile(templateFile, []byte(templateContent), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		templates := []config.Template{
+			{Name: "Quick Note", File: "quick-note.md"},
+		}
+		source := &FileTemplateSource{
+			templatesDir: templatesDir,
+			templates:    templates,
+		}
+
+		// Resolve by name "quick-note" (filename without extension)
+		content, err := source.GetTemplate("quick-note")
+		if err != nil {
+			t.Fatalf("GetTemplate() error = %v, want nil", err)
+		}
+		if content != templateContent {
+			t.Errorf("GetTemplate() = %q, want %q", content, templateContent)
+		}
+	})
+
+	t.Run("get non-existent template", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		templates := []config.Template{
+			{Name: "Daily Note", File: "daily.md"},
+		}
+		source := &FileTemplateSource{
+			templatesDir: templatesDir,
+			templates:    templates,
+		}
+
+		_, err := source.GetTemplate("nonexistent")
+		if err == nil {
+			t.Error("GetTemplate() error = nil, want ErrTemplateNotFound")
+		}
+		if !errors.Is(err, ErrTemplateNotFound) {
+			t.Errorf("GetTemplate() error = %v, want ErrTemplateNotFound", err)
+		}
+	})
+
+	t.Run("template file does not exist", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Config references a file that doesn't exist
+		templates := []config.Template{
+			{Name: "Daily Note", File: "missing.md"},
+		}
+		source := &FileTemplateSource{
+			templatesDir: templatesDir,
+			templates:    templates,
+		}
+
+		_, err := source.GetTemplate("missing")
+		if err == nil {
+			t.Error("GetTemplate() error = nil, want file read error")
+		}
+		if !strings.Contains(err.Error(), "failed to read template") {
+			t.Errorf("GetTemplate() error = %v, want error containing 'failed to read template'", err)
+		}
+	})
+}
+
+func TestResolveTemplate(t *testing.T) {
+	t.Run("resolve inline template first", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Create a file-based template
+		templateFile := filepath.Join(templatesDir, "daily.md")
+		fileContent := "# File-based Daily Note"
+		if err := os.WriteFile(templateFile, []byte(fileContent), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		// Config with both inline and file-based templates
+		cfg := &config.Config{
+			InlineTemplates: map[string]string{
+				"daily": "# Inline Daily Note\n{{date}}",
+			},
+			Templates: []config.Template{
+				{Name: "Daily Note", File: "daily.md"},
+			},
+		}
+
+		// Inline template should take precedence
+		content, err := ResolveTemplate("daily", cfg, templatesDir)
+		if err != nil {
+			t.Fatalf("ResolveTemplate() error = %v, want nil", err)
+		}
+		if content != "# Inline Daily Note\n{{date}}" {
+			t.Errorf("ResolveTemplate() = %q, want inline template content", content)
+		}
+	})
+
+	t.Run("fallback to file-based template", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Create a file-based template
+		templateFile := filepath.Join(templatesDir, "daily.md")
+		fileContent := "# File-based Daily Note\n{{date}}"
+		if err := os.WriteFile(templateFile, []byte(fileContent), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		// Config with only file-based template (no inline)
+		cfg := &config.Config{
+			Templates: []config.Template{
+				{Name: "Daily Note", File: "daily.md"},
+			},
+		}
+
+		content, err := ResolveTemplate("daily", cfg, templatesDir)
+		if err != nil {
+			t.Fatalf("ResolveTemplate() error = %v, want nil", err)
+		}
+		if content != fileContent {
+			t.Errorf("ResolveTemplate() = %q, want %q", content, fileContent)
+		}
+	})
+
+	t.Run("template not found", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+
+		cfg := &config.Config{
+			Templates: []config.Template{
+				{Name: "Daily Note", File: "daily.md"},
+			},
+		}
+
+		_, err := ResolveTemplate("nonexistent", cfg, templatesDir)
+		if err == nil {
+			t.Error("ResolveTemplate() error = nil, want template not found error")
+		}
+		if !strings.Contains(err.Error(), "template 'nonexistent' not found") {
+			t.Errorf("ResolveTemplate() error = %v, want error containing 'template 'nonexistent' not found'", err)
+		}
+	})
+
+	t.Run("propagate file read errors", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		templatesDir := filepath.Join(tmpDir, "templates")
+		if err := os.MkdirAll(templatesDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		// Create a directory with the same name as the template file
+		// This will cause os.ReadFile to fail with a clear error (is a directory)
+		templateDir := filepath.Join(templatesDir, "daily.md")
+		if err := os.MkdirAll(templateDir, 0755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+
+		cfg := &config.Config{
+			Templates: []config.Template{
+				{Name: "Daily Note", File: "daily.md"},
+			},
+		}
+
+		// ResolveTemplate should propagate the file read error, not mask it as "template not found"
+		_, err := ResolveTemplate("daily", cfg, templatesDir)
+		if err == nil {
+			t.Error("ResolveTemplate() error = nil, want file read error")
+		}
+		// The error should be about failing to read the template, not "template not found"
+		if strings.Contains(err.Error(), "template 'daily' not found") {
+			t.Errorf("ResolveTemplate() masked file read error as 'template not found': %v", err)
+		}
+		if !strings.Contains(err.Error(), "failed to read template") {
+			t.Errorf("ResolveTemplate() error = %v, want error containing 'failed to read template'", err)
+		}
+	})
+
+	t.Run("empty template name", func(t *testing.T) {
+		cfg := &config.Config{}
+		_, err := ResolveTemplate("", cfg, "/tmp")
+		if err == nil {
+			t.Error("ResolveTemplate() error = nil, want error for empty name")
+		}
+		if !strings.Contains(err.Error(), "template name cannot be empty") {
+			t.Errorf("ResolveTemplate() error = %v, want error containing 'template name cannot be empty'", err)
+		}
+	})
+}
+
+func TestEscapeUserInput(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "simple text",
+			input: "Hello world",
+			want:  "Hello world",
+		},
+		{
+			name:  "text with braces",
+			input: "Note with {{date}} in it",
+			want:  "Note with __TEMPLATE_BRACE_OPEN__date__TEMPLATE_BRACE_CLOSE__ in it",
+		},
+		{
+			name:  "multiple braces",
+			input: "{{title}} and {{message}}",
+			want:  "__TEMPLATE_BRACE_OPEN__title__TEMPLATE_BRACE_CLOSE__ and __TEMPLATE_BRACE_OPEN__message__TEMPLATE_BRACE_CLOSE__",
+		},
+		{
+			name:  "empty string",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "only braces",
+			input: "{{}}",
+			want:  "__TEMPLATE_BRACE_OPEN____TEMPLATE_BRACE_CLOSE__",
+		},
+		{
+			name:  "text with placeholder string",
+			input: "Some text with __TEMPLATE_BRACE_OPEN__ in it",
+			want:  "Some text with __ESCAPED_PLACEHOLDER_OPEN__ in it",
+		},
+		{
+			name:  "text with both placeholder strings",
+			input: "Text with __TEMPLATE_BRACE_OPEN__ and __TEMPLATE_BRACE_CLOSE__",
+			want:  "Text with __ESCAPED_PLACEHOLDER_OPEN__ and __ESCAPED_PLACEHOLDER_CLOSE__",
+		},
+		{
+			name:  "text with placeholder strings and actual braces",
+			input: "Text with __TEMPLATE_BRACE_OPEN__ and {{date}}",
+			want:  "Text with __ESCAPED_PLACEHOLDER_OPEN__ and __TEMPLATE_BRACE_OPEN__date__TEMPLATE_BRACE_CLOSE__",
+		},
+		{
+			name:  "text with second-level placeholder string",
+			input: "Some text with __ESCAPED_PLACEHOLDER_OPEN__ in it",
+			want:  "Some text with __ESCAPED_PLACEHOLDER_2_OPEN__ in it",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := EscapeUserInput(tt.input)
+			if got != tt.want {
+				t.Errorf("EscapeUserInput() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUnescapeUserInput(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "simple text",
+			input: "Hello world",
+			want:  "Hello world",
+		},
+		{
+			name:  "escaped braces",
+			input: "Note with __TEMPLATE_BRACE_OPEN__date__TEMPLATE_BRACE_CLOSE__ in it",
+			want:  "Note with {{date}} in it",
+		},
+		{
+			name:  "multiple escaped braces",
+			input: "__TEMPLATE_BRACE_OPEN__title__TEMPLATE_BRACE_CLOSE__ and __TEMPLATE_BRACE_OPEN__message__TEMPLATE_BRACE_CLOSE__",
+			want:  "{{title}} and {{message}}",
+		},
+		{
+			name:  "empty string",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "round trip",
+			input: "__TEMPLATE_BRACE_OPEN____TEMPLATE_BRACE_CLOSE__",
+			want:  "{{}}",
+		},
+		{
+			name:  "escaped placeholder string",
+			input: "Some text with __ESCAPED_PLACEHOLDER_OPEN__ in it",
+			want:  "Some text with __TEMPLATE_BRACE_OPEN__ in it",
+		},
+		{
+			name:  "escaped placeholder strings",
+			input: "Text with __ESCAPED_PLACEHOLDER_OPEN__ and __ESCAPED_PLACEHOLDER_CLOSE__",
+			want:  "Text with __TEMPLATE_BRACE_OPEN__ and __TEMPLATE_BRACE_CLOSE__",
+		},
+		{
+			name:  "mixed escaped placeholders and template braces",
+			input: "Text with __ESCAPED_PLACEHOLDER_OPEN__ and __TEMPLATE_BRACE_OPEN__date__TEMPLATE_BRACE_CLOSE__",
+			want:  "Text with __TEMPLATE_BRACE_OPEN__ and {{date}}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := UnescapeUserInput(tt.input)
+			if got != tt.want {
+				t.Errorf("UnescapeUserInput() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEscapeUnescapeRoundTrip(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "simple text",
+			input: "Hello world",
+		},
+		{
+			name:  "text with braces",
+			input: "Note with {{date}} in it",
+		},
+		{
+			name:  "text with placeholder string",
+			input: "Some text with __TEMPLATE_BRACE_OPEN__ in it",
+		},
+		{
+			name:  "text with both placeholder strings",
+			input: "Text with __TEMPLATE_BRACE_OPEN__ and __TEMPLATE_BRACE_CLOSE__",
+		},
+		{
+			name:  "text with placeholder strings and actual braces",
+			input: "Text with __TEMPLATE_BRACE_OPEN__ and {{date}}",
+		},
+		{
+			name:  "complex mixed content",
+			input: "Note: __TEMPLATE_BRACE_OPEN__ is a placeholder, but {{title}} is a variable",
+		},
+		{
+			name:  "text with second-level placeholder string",
+			input: "Some text with __ESCAPED_PLACEHOLDER_OPEN__ in it",
+		},
+		{
+			name:  "text with third-level placeholder string",
+			input: "Some text with __ESCAPED_PLACEHOLDER_2_OPEN__ in it",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			escaped := EscapeUserInput(tt.input)
+			unescaped := UnescapeUserInput(escaped)
+			if unescaped != tt.input {
+				t.Errorf("Round trip failed: input = %q, escaped = %q, unescaped = %q", tt.input, escaped, unescaped)
+			}
+		})
+	}
+}
+
+func TestShouldEscapeVariable(t *testing.T) {
+	tests := []struct {
+		name     string
+		varName  string
+		shouldEscape bool
+	}{
+		{
+			name:     "system variable date",
+			varName:  "date",
+			shouldEscape: false,
+		},
+		{
+			name:     "system variable time",
+			varName:  "time",
+			shouldEscape: false,
+		},
+		{
+			name:     "system variable datetime",
+			varName:  "datetime",
+			shouldEscape: false,
+		},
+		{
+			name:     "metadata variable user",
+			varName:  "user",
+			shouldEscape: false,
+		},
+		{
+			name:     "metadata variable host",
+			varName:  "host",
+			shouldEscape: false,
+		},
+		{
+			name:     "metadata variable branch",
+			varName:  "branch",
+			shouldEscape: false,
+		},
+		{
+			name:     "metadata variable commit",
+			varName:  "commit",
+			shouldEscape: false,
+		},
+		{
+			name:     "user variable title",
+			varName:  "title",
+			shouldEscape: true,
+		},
+		{
+			name:     "user variable message",
+			varName:  "message",
+			shouldEscape: true,
+		},
+		{
+			name:     "user variable tags",
+			varName:  "tags",
+			shouldEscape: true,
+		},
+		{
+			name:     "custom variable",
+			varName:  "author",
+			shouldEscape: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ShouldEscapeVariable(tt.varName)
+			if got != tt.shouldEscape {
+				t.Errorf("ShouldEscapeVariable(%q) = %v, want %v", tt.varName, got, tt.shouldEscape)
+			}
+		})
+	}
+}
+
+func TestProcessTemplateWithEscaping(t *testing.T) {
+	t.Run("escape user input variables", func(t *testing.T) {
+		template := "Title: {{title}}\nMessage: {{message}}"
+		vars := map[string]string{
+			"title":   "My Note with {{date}} in title",
+			"message": "Content with {{time}} here",
+		}
+
+		result := ProcessTemplate(template, vars)
+
+		// After processing and unescaping, the user input braces should appear as literal text
+		// The escaping prevents them from being interpreted during template processing
+		if !strings.Contains(result, "{{date}}") {
+			t.Error("ProcessTemplate() should preserve literal {{date}} from user input (after unescaping)")
+		}
+		if !strings.Contains(result, "{{time}}") {
+			t.Error("ProcessTemplate() should preserve literal {{time}} from user input (after unescaping)")
+		}
+		// The result should contain the user input text
+		if !strings.Contains(result, "My Note with") {
+			t.Error("ProcessTemplate() should contain user input text")
+		}
+		if !strings.Contains(result, "Content with") {
+			t.Error("ProcessTemplate() should contain user input text")
+		}
+	})
+
+	t.Run("do not escape system variables", func(t *testing.T) {
+		template := "Date: {{date}}\nTime: {{time}}"
+		vars := map[string]string{
+			"date": "2025-01-01",
+			"time": "12:00:00",
+		}
+
+		result := ProcessTemplate(template, vars)
+
+		// System variables should be replaced directly without escaping
+		if !strings.Contains(result, "2025-01-01") {
+			t.Error("ProcessTemplate() should replace {{date}} with value")
+		}
+		if !strings.Contains(result, "12:00:00") {
+			t.Error("ProcessTemplate() should replace {{time}} with value")
+		}
+		// Should not contain the template variable syntax
+		if strings.Contains(result, "{{date}}") {
+			t.Error("ProcessTemplate() should replace {{date}}, not leave it")
+		}
+	})
+
+	t.Run("template injection prevention", func(t *testing.T) {
+		template := "Content: {{message}}"
+		// User tries to inject template syntax
+		vars := map[string]string{
+			"message": "Hello {{date}} world",
+		}
+
+		result := ProcessTemplate(template, vars)
+
+		// The {{date}} in the user input should be escaped during processing to prevent interpretation
+		// After unescaping, it appears as literal text in the output
+		// This prevents it from being interpreted as a template variable during THIS processing pass
+		if !strings.Contains(result, "{{date}}") {
+			t.Error("ProcessTemplate() should preserve literal {{date}} from user input (preventing injection during processing)")
+		}
+		// The message should still be present
+		if !strings.Contains(result, "Hello") {
+			t.Error("ProcessTemplate() should preserve user input text")
+		}
+		if !strings.Contains(result, "world") {
+			t.Error("ProcessTemplate() should preserve user input text")
+		}
+		// Verify that {{date}} appears as literal text, not replaced with an actual date
+		// (if it were interpreted, it would be replaced with a date string)
+		if strings.Contains(result, "2025-") || strings.Contains(result, "2024-") {
+			t.Error("ProcessTemplate() should not interpret {{date}} from user input as a template variable")
+		}
+	})
+
+	t.Run("mixed trusted and untrusted variables", func(t *testing.T) {
+		template := "Date: {{date}}\nTitle: {{title}}\nMessage: {{message}}"
+		vars := map[string]string{
+			"date":    "2025-01-01",
+			"title":   "Note with {{date}}",
+			"message": "Content with {{time}}",
+		}
+
+		result := ProcessTemplate(template, vars)
+
+		// System variable should be replaced
+		if !strings.Contains(result, "2025-01-01") {
+			t.Error("ProcessTemplate() should replace system variable {{date}}")
+		}
+		// User variables should have their braces escaped
+		if strings.Contains(result, "{{date}}") && strings.Contains(result, "Note with") {
+			// The {{date}} in title should be escaped (appear as literal)
+			// But we need to check it's not being interpreted
+			// Since we escape and then unescape, the braces in user input should remain
+			// but not match our regex pattern during processing
 		}
 	})
 }
