@@ -18,5 +18,11 @@ func main() {
 	}
 
 	// Execute the root command
+	// TODO: When commands.Execute() is implemented, it should return an error
+	// that should be checked and handled here:
+	// if err := commands.Execute(); err != nil {
+	//     fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	//     os.Exit(1)
+	// }
 	commands.Execute()
 }

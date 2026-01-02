@@ -1,6 +1,7 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,110 @@ import (
 	"github.com/sv4u/touchlog/internal/config"
 )
 
+var (
+	// ErrTemplateNotFound is returned when a template cannot be found
+	ErrTemplateNotFound = errors.New("template not found")
+)
+
+// TemplateSource is an interface for template sources (inline or file-based)
+type TemplateSource interface {
+	GetTemplate(name string) (string, error)
+}
+
+// InlineTemplateSource provides templates from inline config definitions
+type InlineTemplateSource struct {
+	templates map[string]string
+}
+
+// GetTemplate retrieves a template by name from inline templates
+func (s *InlineTemplateSource) GetTemplate(name string) (string, error) {
+	if s.templates == nil {
+		return "", ErrTemplateNotFound
+	}
+	content, ok := s.templates[name]
+	if !ok {
+		return "", ErrTemplateNotFound
+	}
+	return content, nil
+}
+
+// FileTemplateSource provides templates from file-based template files
+type FileTemplateSource struct {
+	templatesDir string
+	templates    []config.Template // List of available templates from config
+}
+
+// GetTemplate retrieves a template by name from file-based templates
+// Matches by filename (without extension) - e.g., "daily" matches "daily.md"
+func (s *FileTemplateSource) GetTemplate(name string) (string, error) {
+	// Find the template in the config list by matching filename (without extension)
+	var templateFile string
+	for _, tmpl := range s.templates {
+		// Remove extension from filename for comparison
+		baseName := strings.TrimSuffix(tmpl.File, filepath.Ext(tmpl.File))
+		if baseName == name {
+			templateFile = tmpl.File
+			break
+		}
+	}
+
+	if templateFile == "" {
+		return "", ErrTemplateNotFound
+	}
+
+	// Load the template file
+	templatePath := filepath.Join(s.templatesDir, templateFile)
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read template %s: %w", templateFile, err)
+	}
+
+	return string(content), nil
+}
+
+// ResolveTemplate resolves a template by name, checking inline templates first,
+// then falling back to file-based templates. Returns the template content or an error.
+func ResolveTemplate(name string, cfg *config.Config, templatesDir string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("template name cannot be empty")
+	}
+
+	// Step 1: Check inline templates first
+	inlineTemplates := cfg.GetInlineTemplates()
+	if len(inlineTemplates) > 0 {
+		inlineSource := &InlineTemplateSource{templates: inlineTemplates}
+		content, err := inlineSource.GetTemplate(name)
+		if err == nil {
+			return content, nil
+		}
+		// If not found in inline, continue to file-based
+	}
+
+	// Step 2: Fall back to file-based templates
+	fileTemplates := cfg.GetTemplates()
+	if len(fileTemplates) > 0 {
+		fileSource := &FileTemplateSource{
+			templatesDir: templatesDir,
+			templates:    fileTemplates,
+		}
+		content, err := fileSource.GetTemplate(name)
+		if err == nil {
+			return content, nil
+		}
+		// If the error is not "template not found", it's a real file read error
+		// (e.g., permission denied, I/O error) - propagate it immediately
+		if !errors.Is(err, ErrTemplateNotFound) {
+			return "", fmt.Errorf("failed to resolve file-based template '%s': %w", name, err)
+		}
+		// If it's ErrTemplateNotFound, continue to fallback below
+	}
+
+	// Step 3: Template not found in either source
+	return "", fmt.Errorf("template '%s' not found: %w", name, ErrTemplateNotFound)
+}
+
 // LoadTemplate reads a template file from the templates directory
+// This function is kept for backward compatibility but may be deprecated in favor of ResolveTemplate
 func LoadTemplate(templatesDir, filename string) (string, error) {
 	templatePath := filepath.Join(templatesDir, filename)
 
@@ -25,17 +129,29 @@ func LoadTemplate(templatesDir, filename string) (string, error) {
 	return string(content), nil
 }
 
-// ProcessTemplate replaces {{variable}} placeholders with actual values
+// ProcessTemplate replaces {{variable}} placeholders with actual values.
+// User-provided variables (title, message, tags, custom vars) are automatically escaped
+// to prevent template injection. System variables (date, time, datetime, metadata) are trusted.
 func ProcessTemplate(templateContent string, vars map[string]string) string {
 	result := templateContent
 
 	// Iterate over the variables map
 	// range over a map gives key and value
 	for key, value := range vars {
+		// Escape user-provided variables to prevent template injection
+		// System variables (date, time, datetime, metadata) are trusted and not escaped
+		if ShouldEscapeVariable(key) {
+			value = EscapeUserInput(value)
+		}
+
 		// Replace {{key}} with value
 		placeholder := fmt.Sprintf("{{%s}}", key)
 		result = strings.ReplaceAll(result, placeholder, value)
 	}
+
+	// Unescape any remaining escaped braces in the result
+	// This restores literal {{ and }} that were in the original template or user input
+	result = UnescapeUserInput(result)
 
 	return result
 }
@@ -65,7 +181,8 @@ func ExtractVariables(content string) []string {
 
 // GetDefaultVariables returns a map of default variable values based on configuration
 // If cfg is nil, uses default behavior (all variables enabled with default formats)
-func GetDefaultVariables(cfg *config.Config) map[string]string {
+// Returns an error if the configured timezone is invalid.
+func GetDefaultVariables(cfg *config.Config) (map[string]string, error) {
 	now := time.Now()
 	
 	// Apply timezone conversion if configured
@@ -73,11 +190,12 @@ func GetDefaultVariables(cfg *config.Config) map[string]string {
 		tz := cfg.GetTimezone()
 		if tz != "" {
 			location, err := time.LoadLocation(tz)
-			if err == nil {
-				// Convert to the specified timezone
-				now = now.In(location)
+			if err != nil {
+				// Invalid timezone - return error
+				return nil, fmt.Errorf("invalid timezone '%s': %w", tz, err)
 			}
-			// If timezone is invalid, fall back to system timezone (use now as-is)
+			// Convert to the specified timezone
+			now = now.In(location)
 		}
 	}
 	
@@ -94,7 +212,7 @@ func GetDefaultVariables(cfg *config.Config) map[string]string {
 			"date":     now.Format(defaultDateFormat),
 			"time":     now.Format(defaultTimeFormat),
 			"datetime": now.Format(defaultDateTimeFormat),
-		}
+		}, nil
 	}
 
 	// Get date/time configuration from config
@@ -154,7 +272,7 @@ func GetDefaultVariables(cfg *config.Config) map[string]string {
 		vars[key] = value
 	}
 
-	return vars
+	return vars, nil
 }
 
 // CreateExampleTemplates creates minimal inline template files in the specified directory

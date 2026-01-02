@@ -58,6 +58,11 @@ func TestIsSupported(t *testing.T) {
 }
 
 func TestIsWSL(t *testing.T) {
+	// Skip test on non-Linux systems (WSL only exists on Linux)
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping WSL test on non-Linux system")
+	}
+
 	// Save original environment
 	originalWSLDistro := os.Getenv("WSL_DISTRO_NAME")
 	defer func() {
@@ -76,7 +81,6 @@ func TestIsWSL(t *testing.T) {
 
 	// Test without WSL_DISTRO_NAME
 	os.Unsetenv("WSL_DISTRO_NAME")
-	// On non-Linux systems, IsWSL should return false
 	// On Linux systems, it depends on /proc/version or /proc/sys/kernel/osrelease
 	// We can't reliably test this without mocking file reads, so we just verify it doesn't panic
 	_ = IsWSL()

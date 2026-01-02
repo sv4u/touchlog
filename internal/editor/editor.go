@@ -142,13 +142,19 @@ func NewModel(opts ...ModelOption) (tea.Model, error) {
 	ta.SetWidth(80)
 	ta.SetHeight(20)
 
+	// Get default variables (includes timezone validation)
+	defaultVars, err := template.GetDefaultVariables(configCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default variables: %w", err)
+	}
+
 	// Return initial model
 	return model{
 		state:             stateSelectTemplate,
 		config:            configCfg,
 		templateList:      l,
 		textarea:          ta,
-		variables:         template.GetDefaultVariables(configCfg),
+		variables:         defaultVars,
 		vimMode:           configCfg.GetVimMode(),
 		vimState:          vimNormal, // Start in normal mode when vim mode is enabled
 		outputDirOverride: cfg.outputDirectory,
