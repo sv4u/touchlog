@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -21,6 +22,57 @@ type DateTimeVarsConfig struct {
 	Date     DateTimeVarConfig `yaml:"date"`     // Date variable configuration
 	Time     DateTimeVarConfig `yaml:"time"`     // Time variable configuration
 	DateTime DateTimeVarConfig `yaml:"datetime"` // DateTime variable configuration
+}
+
+// EditorConfig represents editor configuration
+// Supports both simple string format (e.g., "vim" or "vim -f") and complex structure
+type EditorConfig struct {
+	// Command is the editor executable name or path
+	Command string `yaml:"command"`
+	// Args are additional arguments to pass to the editor
+	Args []string `yaml:"args"`
+	// rawString stores the simple string format for custom unmarshaling
+	rawString string
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling to support both string and object formats
+func (e *EditorConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try to unmarshal as string first
+	var str string
+	if err := unmarshal(&str); err == nil {
+		e.rawString = str
+		// Parse the string to extract command and args
+		parts := parseEditorString(str)
+		if len(parts) > 0 {
+			e.Command = parts[0]
+			if len(parts) > 1 {
+				e.Args = parts[1:]
+			}
+		}
+		return nil
+	}
+
+	// If string unmarshaling failed, try as object
+	var obj struct {
+		Command string   `yaml:"command"`
+		Args    []string `yaml:"args"`
+	}
+	if err := unmarshal(&obj); err != nil {
+		return err
+	}
+	e.Command = obj.Command
+	e.Args = obj.Args
+	return nil
+}
+
+// parseEditorString parses a string like "vim" or "vim -f" into command and args
+func parseEditorString(s string) []string {
+	if s == "" {
+		return nil
+	}
+	// Simple splitting on spaces (doesn't handle quoted strings, but sufficient for common cases)
+	parts := strings.Fields(s)
+	return parts
 }
 
 // Config represents the application configuration
@@ -41,6 +93,7 @@ type Config struct {
 	Variables      map[string]string  `yaml:"variables"`       // Custom static variables
 	VimMode        bool               `yaml:"vim_mode"`        // Enable vim keymap support
 	Timezone       string             `yaml:"timezone"`        // IANA timezone (e.g., "America/Denver", "UTC")
+	Editor         *EditorConfig      `yaml:"editor"`          // Editor configuration (Phase 5)
 }
 
 // Template represents a single template definition
@@ -133,6 +186,11 @@ func (c *Config) GetDefaultTemplate() string {
 // GetTimezone returns the configured timezone, or empty string if not set
 func (c *Config) GetTimezone() string {
 	return c.Timezone
+}
+
+// GetEditor returns the editor configuration, or nil if not set
+func (c *Config) GetEditor() *EditorConfig {
+	return c.Editor
 }
 
 // ValidateVariableName checks if a variable name conflicts with reserved names
@@ -302,6 +360,9 @@ func applyConfigOverrides(cfg, fileCfg *Config) {
 	if fileCfg.Timezone != "" {
 		cfg.Timezone = fileCfg.Timezone
 	}
+	if fileCfg.Editor != nil {
+		cfg.Editor = fileCfg.Editor
+	}
 	if len(fileCfg.Variables) > 0 {
 		if cfg.Variables == nil {
 			cfg.Variables = make(map[string]string)
@@ -383,6 +444,7 @@ var KnownConfigKeys = []string{
 	"variables",
 	"vim_mode",
 	"timezone",
+	"editor",
 }
 
 // ValidateStrict validates that the config file doesn't contain unknown keys
