@@ -541,11 +541,12 @@ func expandPath(path string) (string, error) {
 		if path == "~" {
 			return homeDir, nil
 		}
-		// Skip the leading ~ and the following /
+		// Validate that paths starting with ~ must be ~/ (not ~something)
+		if !strings.HasPrefix(path, "~/") {
+			return "", fmt.Errorf("invalid path: paths starting with ~ must be followed by / (e.g., ~/path), got: %s", path)
+		}
+		// Skip the leading ~/
 		remaining := path[2:]
-		// Strip leading / if present to avoid issues with filepath.Join
-		// This handles cases like "~~/path" where path[2:] would be "/path"
-		remaining = strings.TrimPrefix(remaining, "/")
 		return filepath.Join(homeDir, remaining), nil
 	}
 	return path, nil
