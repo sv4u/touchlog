@@ -182,8 +182,15 @@ func ExtractVariables(content string) []string {
 // GetDefaultVariables returns a map of default variable values based on configuration
 // If cfg is nil, uses default behavior (all variables enabled with default formats)
 // Returns an error if the configured timezone is invalid.
-func GetDefaultVariables(cfg *config.Config) (map[string]string, error) {
-	now := time.Now()
+// If a timestamp is provided, it will be used instead of time.Now() to ensure consistency
+// across filename generation and template variable substitution.
+func GetDefaultVariables(cfg *config.Config, timestamp ...time.Time) (map[string]string, error) {
+	var now time.Time
+	if len(timestamp) > 0 && !timestamp[0].IsZero() {
+		now = timestamp[0]
+	} else {
+		now = time.Now()
+	}
 	
 	// Apply timezone conversion if configured
 	if cfg != nil {
