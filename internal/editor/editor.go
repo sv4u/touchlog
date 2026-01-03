@@ -54,11 +54,15 @@ type model struct {
 	vimState          vimState          // Current vim state (normal/insert)
 	commandBuffer     string            // Buffer for vim commands (e.g., :w, :q)
 	outputDirOverride string            // Override for output directory (from CLI or API)
+	filePathOverride  string            // Override for exact file path (for editing existing files)
+	initialContent    string            // Initial content to use instead of template (for editing existing files)
 }
 
 // modelConfig holds configuration options for NewModel
 type modelConfig struct {
 	outputDirectory string
+	filePathOverride string // If set, save to this exact file path instead of generating a new one
+	initialContent   string // If set, use this content instead of loading template (for editing existing files)
 }
 
 // ModelOption is a function that configures a modelConfig
@@ -68,6 +72,21 @@ type ModelOption func(*modelConfig)
 func WithOutputDirectory(dir string) ModelOption {
 	return func(cfg *modelConfig) {
 		cfg.outputDirectory = dir
+	}
+}
+
+// WithFilePathOverride sets the file path override (for editing existing files)
+func WithFilePathOverride(filePath string) ModelOption {
+	return func(cfg *modelConfig) {
+		cfg.filePathOverride = filePath
+	}
+}
+
+// WithInitialContent sets the initial content to use instead of loading a template
+// This is used when editing an existing file
+func WithInitialContent(content string) ModelOption {
+	return func(cfg *modelConfig) {
+		cfg.initialContent = content
 	}
 }
 
@@ -148,6 +167,10 @@ func NewModel(opts ...ModelOption) (tea.Model, error) {
 		return nil, fmt.Errorf("failed to get default variables: %w", err)
 	}
 
+	// Always start with template selection (as per user requirement)
+	// When template is selected, loadTemplateCmd will check if filePathOverride
+	// is set and load the existing file content instead of the template
+
 	// Return initial model
 	return model{
 		state:             stateSelectTemplate,
@@ -158,6 +181,8 @@ func NewModel(opts ...ModelOption) (tea.Model, error) {
 		vimMode:           configCfg.GetVimMode(),
 		vimState:          vimNormal, // Start in normal mode when vim mode is enabled
 		outputDirOverride: cfg.outputDirectory,
+		filePathOverride:  cfg.filePathOverride,
+		initialContent:    cfg.initialContent, // Store for reference, but template selection is shown first
 	}, nil
 }
 
@@ -511,9 +536,21 @@ func (m model) View() string {
 
 // loadTemplateCmd returns a command that loads a template asynchronously
 // Commands in Bubble Tea are functions that return tea.Cmd
+// If filePathOverride is set and file exists, loads the file content instead of template
 func (m model) loadTemplateCmd() tea.Cmd {
 	return func() tea.Msg {
 		// This runs in a goroutine (async)
+		
+		// If filePathOverride is set and file exists, load the file content instead of template
+		if m.filePathOverride != "" {
+			if content, err := os.ReadFile(m.filePathOverride); err == nil {
+				// File exists, use its content directly
+				return templateLoadedMsg{content: string(content)}
+			}
+			// File doesn't exist, fall through to template loading
+		}
+
+		// Load template as normal
 		templatesDir, err := xdg.TemplatesDir()
 		if err != nil {
 			return errMsg{err}
@@ -555,27 +592,41 @@ func expandPath(path string) (string, error) {
 // saveNoteCmd returns a command that saves the note
 func (m model) saveNoteCmd() tea.Cmd {
 	return func() tea.Msg {
-		// Priority: CLI/API override > config file
-		var notesDir string
-		if m.outputDirOverride != "" {
-			notesDir = m.outputDirOverride
+		var fullPath string
+		var err error
+		var expandedDir string
+
+		// If filePathOverride is set, use it (for editing existing files)
+		if m.filePathOverride != "" {
+			fullPath, err = filepath.Abs(m.filePathOverride)
+			if err != nil {
+				return errMsg{fmt.Errorf("failed to resolve file path: %w", err)}
+			}
+			expandedDir = filepath.Dir(fullPath)
 		} else {
-			notesDir = m.config.GetNotesDirectory()
-		}
+			// Generate new filename (original behavior)
+			// Priority: CLI/API override > config file
+			var notesDir string
+			if m.outputDirOverride != "" {
+				notesDir = m.outputDirOverride
+			} else {
+				notesDir = m.config.GetNotesDirectory()
+			}
 
-		if notesDir == "" {
-			return errMsg{fmt.Errorf("notes directory not configured")}
-		}
+			if notesDir == "" {
+				return errMsg{fmt.Errorf("notes directory not configured")}
+			}
 
-		// Expand ~ in path if present
-		expandedDir, err := expandPath(notesDir)
-		if err != nil {
-			return errMsg{fmt.Errorf("failed to expand notes directory path: %w", err)}
-		}
+			// Expand ~ in path if present
+			expandedDir, err = expandPath(notesDir)
+			if err != nil {
+				return errMsg{fmt.Errorf("failed to expand notes directory path: %w", err)}
+			}
 
-		// Generate filename from timestamp
-		filename := fmt.Sprintf("%s.md", time.Now().Format("2006-01-02-150405"))
-		fullPath := filepath.Join(expandedDir, filename)
+			// Generate filename from timestamp
+			filename := fmt.Sprintf("%s.md", time.Now().Format("2006-01-02-150405"))
+			fullPath = filepath.Join(expandedDir, filename)
+		}
 
 		// Create directory if it doesn't exist
 		if _, err := os.Stat(expandedDir); os.IsNotExist(err) {
