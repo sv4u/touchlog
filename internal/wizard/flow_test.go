@@ -81,7 +81,7 @@ func TestGetAvailableTemplates(t *testing.T) {
 
 func TestWizard_ValidateOutputDir(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	// Create a temporary directory for testing
 	tmpDir := t.TempDir()
@@ -109,7 +109,7 @@ func TestWizard_ValidateOutputDir(t *testing.T) {
 
 func TestWizard_ValidateOutputDir_HomeExpansion(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -138,7 +138,7 @@ func TestWizard_CreateTempFile(t *testing.T) {
 		"daily": "# {{date}}\n\nTitle: {{title}}\n\n{{message}}\n\nTags: {{tags}}",
 	}
 	
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	// Set entry data
 	w.SetOutputDir(t.TempDir())
@@ -187,7 +187,7 @@ func TestWizard_Cancel(t *testing.T) {
 		"daily": "# {{date}}\n\n{{message}}",
 	}
 	
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	w.SetTitle("Test")
 	w.SetMessage("Test message")
 	
@@ -229,7 +229,7 @@ func TestWizard_Confirm(t *testing.T) {
 	}
 	
 	outputDir := t.TempDir()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	w.SetOutputDir(outputDir)
 	w.SetTitle("Test Entry")
@@ -280,7 +280,7 @@ func TestWizard_Confirm(t *testing.T) {
 
 func TestWizard_Confirm_NoTempFile(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	w.SetOutputDir(t.TempDir())
 	
 	// Try to confirm without creating temp file
@@ -296,7 +296,7 @@ func TestWizard_Confirm_NoOutputDir(t *testing.T) {
 		"daily": "# {{date}}\n\n{{message}}",
 	}
 	
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	w.SetTitle("Test")
 	w.SetMessage("Test message")
 	

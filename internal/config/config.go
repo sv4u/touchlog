@@ -94,6 +94,8 @@ type Config struct {
 	VimMode        bool               `yaml:"vim_mode"`        // Enable vim keymap support
 	Timezone       string             `yaml:"timezone"`        // IANA timezone (e.g., "America/Denver", "UTC")
 	Editor         *EditorConfig      `yaml:"editor"`          // Editor configuration (Phase 5)
+	IncludeUser    *bool              `yaml:"include_user"`   // Include user metadata (default: true, Phase 7)
+	IncludeHost    *bool              `yaml:"include_host"`    // Include host metadata (default: true, Phase 7)
 }
 
 // Template represents a single template definition
@@ -193,13 +195,33 @@ func (c *Config) GetEditor() *EditorConfig {
 	return c.Editor
 }
 
+// GetIncludeUser returns whether to include user metadata (default: true)
+func (c *Config) GetIncludeUser() bool {
+	if c.IncludeUser == nil {
+		return true // Default to true
+	}
+	return *c.IncludeUser
+}
+
+// GetIncludeHost returns whether to include host metadata (default: true)
+func (c *Config) GetIncludeHost() bool {
+	if c.IncludeHost == nil {
+		return true // Default to true
+	}
+	return *c.IncludeHost
+}
+
 // ValidateVariableName checks if a variable name conflicts with reserved names
-// Reserved names are: "date", "time", "datetime"
+// Reserved names are: "date", "time", "datetime", "user", "host", "branch", "commit"
 func ValidateVariableName(name string) error {
 	reserved := map[string]bool{
 		"date":     true,
 		"time":     true,
 		"datetime": true,
+		"user":     true,
+		"host":     true,
+		"branch":   true,
+		"commit":   true,
 	}
 	if reserved[name] {
 		return fmt.Errorf("variable name '%s' is reserved and cannot be used", name)

@@ -9,7 +9,7 @@ import (
 func TestNewWizard(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	
-	w, err := NewWizard(cfg)
+	w, err := NewWizard(cfg, false)
 	if err != nil {
 		t.Fatalf("NewWizard() error = %v, want nil", err)
 	}
@@ -28,7 +28,7 @@ func TestNewWizard(t *testing.T) {
 }
 
 func TestNewWizard_NilConfig(t *testing.T) {
-	_, err := NewWizard(nil)
+	_, err := NewWizard(nil, false)
 	if err == nil {
 		t.Error("NewWizard(nil) error = nil, want error")
 	}
@@ -36,7 +36,7 @@ func TestNewWizard_NilConfig(t *testing.T) {
 
 func TestWizard_TransitionTo(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	tests := []struct {
 		name    string
@@ -90,7 +90,7 @@ func TestWizard_TransitionTo(t *testing.T) {
 
 func TestWizard_CanGoBack(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	tests := []struct {
 		name    string
@@ -206,7 +206,7 @@ func TestWizard_CanGoBack(t *testing.T) {
 
 func TestWizard_GoBack(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	// Navigate forward
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
@@ -228,7 +228,7 @@ func TestWizard_GoBack(t *testing.T) {
 
 func TestWizard_GoBack_NotAllowed(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	// Try to go back from MainMenu (not allowed)
 	err := w.GoBack()
@@ -239,7 +239,7 @@ func TestWizard_GoBack_NotAllowed(t *testing.T) {
 
 func TestWizard_SettersAndGetters(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	// Test setters and getters
 	w.SetOutputDir("/tmp/notes")
@@ -271,7 +271,7 @@ func TestWizard_SettersAndGetters(t *testing.T) {
 
 func TestWizard_Reset(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	// Set some values
 	w.SetOutputDir("/tmp/notes")
@@ -303,7 +303,7 @@ func TestWizard_Reset(t *testing.T) {
 
 func TestWizard_ValidateState(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 	
 	// Navigate to OutputDir state
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {

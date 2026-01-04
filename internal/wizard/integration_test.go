@@ -19,7 +19,7 @@ func TestWizard_CompleteFlow(t *testing.T) {
 
 	outputDir := t.TempDir()
 
-	w, err := NewWizard(cfg)
+	w, err := NewWizard(cfg, false)
 	if err != nil {
 		t.Fatalf("NewWizard() error = %v", err)
 	}
@@ -148,7 +148,7 @@ func TestWizard_CompleteFlow(t *testing.T) {
 // TestWizard_FlowWithBackNavigation tests the wizard flow with back navigation
 func TestWizard_FlowWithBackNavigation(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 
 	// Navigate forward
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
@@ -195,7 +195,7 @@ func TestWizard_FlowWithCancel(t *testing.T) {
 	}
 	cfg.DefaultTemplate = "daily"
 
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 
 	// Navigate and create temp file
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
@@ -247,7 +247,7 @@ func TestWizard_FlowWithTemplateSelection(t *testing.T) {
 	}
 	cfg.DefaultTemplate = "template1"
 
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 
 	// Select a specific template
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
@@ -294,7 +294,7 @@ func TestWizard_FlowWithEmptyFields(t *testing.T) {
 	}
 	cfg.DefaultTemplate = "daily"
 
-	w, _ := NewWizard(cfg)
+	w, _ := NewWizard(cfg, false)
 
 	// Navigate through states with empty optional fields
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
