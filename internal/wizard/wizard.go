@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sv4u/touchlog/internal/config"
+	"github.com/sv4u/touchlog/internal/entry"
 )
 
 // Wizard represents the wizard state machine
@@ -31,20 +32,26 @@ type Wizard struct {
 
 	// Timestamp for entry creation
 	timestamp time.Time
+
+	// Metadata
+	metadata *entry.Metadata
+	includeGit bool
 }
 
 // NewWizard creates a new wizard instance
-func NewWizard(cfg *config.Config) (*Wizard, error) {
+func NewWizard(cfg *config.Config, includeGit bool) (*Wizard, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config cannot be nil")
 	}
 
 	return &Wizard{
-		state:     StateMainMenu,
-		prevState: -1,
-		history:   []State{StateMainMenu},
-		config:    cfg,
-		timestamp: time.Now(),
+		state:      StateMainMenu,
+		prevState:  -1,
+		history:    []State{StateMainMenu},
+		config:     cfg,
+		timestamp:  time.Now(),
+		metadata:   nil, // Will be collected when needed
+		includeGit: includeGit,
 	}, nil
 }
 
@@ -104,8 +111,10 @@ func (w *Wizard) GetConfig() *config.Config {
 }
 
 // SetOutputDir sets the output directory
+// Resets metadata so it will be recollected with the new directory
 func (w *Wizard) SetOutputDir(dir string) {
 	w.outputDir = dir
+	w.metadata = nil // Reset metadata so it will be recollected with new outputDir
 }
 
 // SetTemplateName sets the template name
@@ -217,5 +226,6 @@ func (w *Wizard) Reset() {
 	w.finalFilePath = ""
 	w.fileContent = ""
 	w.timestamp = time.Now()
+	w.metadata = nil // Reset metadata so it will be recollected with new outputDir
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/sv4u/touchlog/internal/config"
 	"github.com/sv4u/touchlog/internal/editor"
 	"github.com/sv4u/touchlog/internal/entry"
+	"github.com/sv4u/touchlog/internal/metadata"
 	"github.com/sv4u/touchlog/internal/template"
 	"github.com/sv4u/touchlog/internal/xdg"
 )
@@ -38,8 +39,34 @@ func (w *Wizard) CreateTempFile() error {
 		return fmt.Errorf("failed to resolve template '%s': %w", templateName, err)
 	}
 
-	// Get default variables (date, time, datetime, custom vars)
-	defaultVars, err := template.GetDefaultVariables(w.config, w.timestamp)
+	// Collect metadata if not already collected
+	var metaValues *template.MetadataValues
+	if w.metadata == nil {
+		meta, err := metadata.CollectMetadata(w.config, w.includeGit, w.outputDir)
+		if err != nil {
+			// If metadata collection fails, continue without it (don't fail)
+			w.metadata = nil
+		} else {
+			w.metadata = meta
+		}
+	}
+
+	// Convert entry.Metadata to template.MetadataValues
+	if w.metadata != nil {
+		metaValues = &template.MetadataValues{
+			User:   w.metadata.User,
+			Host:   w.metadata.Host,
+			Branch: "",
+			Commit: "",
+		}
+		if w.metadata.Git != nil {
+			metaValues.Branch = w.metadata.Git.Branch
+			metaValues.Commit = w.metadata.Git.Commit
+		}
+	}
+
+	// Get default variables (date, time, datetime, custom vars, metadata)
+	defaultVars, err := template.GetDefaultVariablesWithMetadata(w.config, metaValues, w.timestamp)
 	if err != nil {
 		return fmt.Errorf("failed to get default variables: %w", err)
 	}

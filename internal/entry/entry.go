@@ -109,9 +109,23 @@ func CreateEntry(entry *Entry, cfg *config.Config, outputDir string, overwrite b
 		return "", fmt.Errorf("failed to resolve template '%s': %w", templateName, err)
 	}
 
-	// Get default variables (date, time, datetime, custom vars)
+	// Get default variables (date, time, datetime, custom vars, metadata)
 	// Use entry.Date to ensure consistency between filename and template variables
-	defaultVars, err := template.GetDefaultVariables(cfg, entry.Date)
+	// Convert entry.Metadata to template.MetadataValues
+	var metaValues *template.MetadataValues
+	if entry.Metadata != nil {
+		metaValues = &template.MetadataValues{
+			User:   entry.Metadata.User,
+			Host:   entry.Metadata.Host,
+			Branch: "",
+			Commit: "",
+		}
+		if entry.Metadata.Git != nil {
+			metaValues.Branch = entry.Metadata.Git.Branch
+			metaValues.Commit = entry.Metadata.Git.Commit
+		}
+	}
+	defaultVars, err := template.GetDefaultVariablesWithMetadata(cfg, metaValues, entry.Date)
 	if err != nil {
 		return "", fmt.Errorf("failed to get default variables: %w", err)
 	}

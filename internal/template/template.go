@@ -185,6 +185,21 @@ func ExtractVariables(content string) []string {
 // If a timestamp is provided, it will be used instead of time.Now() to ensure consistency
 // across filename generation and template variable substitution.
 func GetDefaultVariables(cfg *config.Config, timestamp ...time.Time) (map[string]string, error) {
+	return GetDefaultVariablesWithMetadata(cfg, nil, timestamp...)
+}
+
+// MetadataValues represents metadata values for template processing
+// This avoids import cycle with entry package
+type MetadataValues struct {
+	User   string
+	Host   string
+	Branch string
+	Commit string
+}
+
+// GetDefaultVariablesWithMetadata returns a map of default variable values including metadata
+// Metadata can be nil or a *MetadataValues struct
+func GetDefaultVariablesWithMetadata(cfg *config.Config, metadata *MetadataValues, timestamp ...time.Time) (map[string]string, error) {
 	var now time.Time
 	if len(timestamp) > 0 && !timestamp[0].IsZero() {
 		now = timestamp[0]
@@ -215,68 +230,84 @@ func GetDefaultVariables(cfg *config.Config, timestamp ...time.Time) (map[string
 
 	// If config is nil, use default behavior (all enabled with default formats)
 	if cfg == nil {
-		return map[string]string{
-			"date":     now.Format(defaultDateFormat),
-			"time":     now.Format(defaultTimeFormat),
-			"datetime": now.Format(defaultDateTimeFormat),
-		}, nil
-	}
-
-	// Get date/time configuration from config
-	dtVars := cfg.GetDateTimeVars()
-
-	// Date variable
-	// Enabled is nil = not specified, default to true; otherwise use the value
-	if dtVars.Date.Enabled == nil || *dtVars.Date.Enabled {
-		format := dtVars.Date.Format
-		if format == "" {
-			format = defaultDateFormat
-		} else if !config.ValidateTimeFormat(format) {
-			// Fallback to default format if validation fails
-			format = defaultDateFormat
-		}
-		vars["date"] = now.Format(format)
-	}
-
-	// Time variable
-	if dtVars.Time.Enabled == nil || *dtVars.Time.Enabled {
-		format := dtVars.Time.Format
-		if format == "" {
-			format = defaultTimeFormat
-		} else if !config.ValidateTimeFormat(format) {
-			// Fallback to default format if validation fails
-			format = defaultTimeFormat
-		}
-		vars["time"] = now.Format(format)
-	}
-
-	// DateTime variable
-	if dtVars.DateTime.Enabled == nil || *dtVars.DateTime.Enabled {
-		format := dtVars.DateTime.Format
-		if format == "" {
-			format = defaultDateTimeFormat
-		} else if !config.ValidateTimeFormat(format) {
-			// Fallback to default format if validation fails
-			format = defaultDateTimeFormat
-		}
-		vars["datetime"] = now.Format(format)
-	}
-
-	// If no date/time variables are enabled, default to all enabled with default formats
-	// This maintains backward compatibility
-	if len(vars) == 0 {
 		vars = map[string]string{
 			"date":     now.Format(defaultDateFormat),
 			"time":     now.Format(defaultTimeFormat),
 			"datetime": now.Format(defaultDateTimeFormat),
 		}
+	} else {
+		// Get date/time configuration from config
+		dtVars := cfg.GetDateTimeVars()
+
+		// Date variable
+		// Enabled is nil = not specified, default to true; otherwise use the value
+		if dtVars.Date.Enabled == nil || *dtVars.Date.Enabled {
+			format := dtVars.Date.Format
+			if format == "" {
+				format = defaultDateFormat
+			} else if !config.ValidateTimeFormat(format) {
+				// Fallback to default format if validation fails
+				format = defaultDateFormat
+			}
+			vars["date"] = now.Format(format)
+		}
+
+		// Time variable
+		if dtVars.Time.Enabled == nil || *dtVars.Time.Enabled {
+			format := dtVars.Time.Format
+			if format == "" {
+				format = defaultTimeFormat
+			} else if !config.ValidateTimeFormat(format) {
+				// Fallback to default format if validation fails
+				format = defaultTimeFormat
+			}
+			vars["time"] = now.Format(format)
+		}
+
+		// DateTime variable
+		if dtVars.DateTime.Enabled == nil || *dtVars.DateTime.Enabled {
+			format := dtVars.DateTime.Format
+			if format == "" {
+				format = defaultDateTimeFormat
+			} else if !config.ValidateTimeFormat(format) {
+				// Fallback to default format if validation fails
+				format = defaultDateTimeFormat
+			}
+			vars["datetime"] = now.Format(format)
+		}
+
+		// If no date/time variables are enabled, default to all enabled with default formats
+		// This maintains backward compatibility
+		if len(vars) == 0 {
+			vars = map[string]string{
+				"date":     now.Format(defaultDateFormat),
+				"time":     now.Format(defaultTimeFormat),
+				"datetime": now.Format(defaultDateTimeFormat),
+			}
+		}
+
+		// Merge custom variables from config
+		customVars := cfg.GetVariables()
+		for key, value := range customVars {
+			// Custom variables can override default variables
+			vars[key] = value
+		}
 	}
 
-	// Merge custom variables from config
-	customVars := cfg.GetVariables()
-	for key, value := range customVars {
-		// Custom variables can override default variables
-		vars[key] = value
+	// Add metadata variables if provided
+	if metadata != nil {
+		if metadata.User != "" {
+			vars["user"] = metadata.User
+		}
+		if metadata.Host != "" {
+			vars["host"] = metadata.Host
+		}
+		if metadata.Branch != "" {
+			vars["branch"] = metadata.Branch
+		}
+		if metadata.Commit != "" {
+			vars["commit"] = metadata.Commit
+		}
 	}
 
 	return vars, nil

@@ -42,8 +42,8 @@ type WizardModel struct {
 }
 
 // NewWizardModel creates a new wizard model
-func NewWizardModel(cfg *config.Config) (*WizardModel, error) {
-	w, err := NewWizard(cfg)
+func NewWizardModel(cfg *config.Config, includeGit bool) (*WizardModel, error) {
+	w, err := NewWizard(cfg, includeGit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create wizard: %w", err)
 	}
