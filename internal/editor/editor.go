@@ -14,6 +14,7 @@ import (
 
 	"github.com/sv4u/touchlog/internal/config"
 	"github.com/sv4u/touchlog/internal/template"
+	"github.com/sv4u/touchlog/internal/validation"
 	"github.com/sv4u/touchlog/internal/xdg"
 )
 
@@ -568,26 +569,6 @@ func (m model) loadTemplateCmd() tea.Cmd {
 	}
 }
 
-// expandPath expands ~ to the user's home directory
-func expandPath(path string) (string, error) {
-	if strings.HasPrefix(path, "~") {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("failed to get home directory: %w", err)
-		}
-		if path == "~" {
-			return homeDir, nil
-		}
-		// Validate that paths starting with ~ must be ~/ (not ~something)
-		if !strings.HasPrefix(path, "~/") {
-			return "", fmt.Errorf("invalid path: paths starting with ~ must be followed by / (e.g., ~/path), got: %s", path)
-		}
-		// Skip the leading ~/
-		remaining := path[2:]
-		return filepath.Join(homeDir, remaining), nil
-	}
-	return path, nil
-}
 
 // saveNoteCmd returns a command that saves the note
 func (m model) saveNoteCmd() tea.Cmd {
@@ -617,8 +598,13 @@ func (m model) saveNoteCmd() tea.Cmd {
 				return errMsg{fmt.Errorf("notes directory not configured")}
 			}
 
-			// Expand ~ in path if present
-			expandedDir, err = expandPath(notesDir)
+			// Validate output directory early (before any operations)
+			if err := validation.ValidateOutputDir(notesDir); err != nil {
+				return errMsg{fmt.Errorf("invalid notes directory: %w", err)}
+			}
+
+					// Expand ~ and environment variables in path if present
+					expandedDir, err = validation.ExpandPath(notesDir)
 			if err != nil {
 				return errMsg{fmt.Errorf("failed to expand notes directory path: %w", err)}
 			}
@@ -628,7 +614,7 @@ func (m model) saveNoteCmd() tea.Cmd {
 			fullPath = filepath.Join(expandedDir, filename)
 		}
 
-		// Create directory if it doesn't exist
+		// Create directory if it doesn't exist (validation already checked it can be created)
 		if _, err := os.Stat(expandedDir); os.IsNotExist(err) {
 			// Directory doesn't exist, create it recursively
 			if err := os.MkdirAll(expandedDir, 0755); err != nil {

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/sv4u/touchlog/internal/validation"
 )
 
 // DateTimeVarConfig represents configuration for a date/time variable
@@ -107,6 +109,18 @@ type Template struct {
 // LoadConfig reads and parses the YAML configuration file
 // It returns a pointer to Config (*Config) and an error
 func LoadConfig(path string) (*Config, error) {
+	// Validate config file before reading (if path is provided and file exists)
+	// Note: We only validate if the file exists, since LoadOrCreateConfig may create it
+	if path != "" {
+		if _, err := os.Stat(path); err == nil {
+			// File exists, validate it
+			if err := validation.ValidateConfigFile(path); err != nil {
+				return nil, fmt.Errorf("config file validation failed: %w", err)
+			}
+		}
+		// If file doesn't exist, skip validation (caller may create it)
+	}
+
 	// Read the file
 	// os.ReadFile returns file contents as []byte and an error
 	data, err := os.ReadFile(path)

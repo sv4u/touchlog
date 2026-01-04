@@ -9,6 +9,7 @@ import (
 
 	"github.com/sv4u/touchlog/internal/config"
 	"github.com/sv4u/touchlog/internal/template"
+	"github.com/sv4u/touchlog/internal/validation"
 	"github.com/sv4u/touchlog/internal/xdg"
 )
 
@@ -39,13 +40,18 @@ type Entry struct {
 // It applies the template, generates the filename, and writes the file
 // Returns the path to the created file
 func CreateEntry(entry *Entry, cfg *config.Config, outputDir string, overwrite bool) (string, error) {
-	// Expand output directory (handle ~ and relative paths)
-	expandedDir, err := expandPath(outputDir)
+	// Validate output directory early (before any operations)
+	if err := validation.ValidateOutputDir(outputDir); err != nil {
+		return "", fmt.Errorf("invalid output directory: %w", err)
+	}
+
+	// Expand output directory (handle ~, environment variables, and relative paths)
+	expandedDir, err := validation.ExpandPath(outputDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to expand output directory: %w", err)
 	}
 
-	// Ensure output directory exists
+	// Ensure output directory exists (validation already checked it can be created)
 	if err := os.MkdirAll(expandedDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create output directory: %w", err)
 	}
@@ -167,32 +173,4 @@ func CreateEntry(entry *Entry, cfg *config.Config, outputDir string, overwrite b
 	return filename, nil
 }
 
-// expandPath expands a path, handling ~ and relative paths
-func expandPath(path string) (string, error) {
-	// Handle ~ expansion
-	if strings.HasPrefix(path, "~") {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("failed to get home directory: %w", err)
-		}
-		if path == "~" {
-			return homeDir, nil
-		}
-		// Validate that paths starting with ~ must be ~/ (not ~something)
-		if !strings.HasPrefix(path, "~/") {
-			return "", fmt.Errorf("invalid path: paths starting with ~ must be followed by / (e.g., ~/path), got: %s", path)
-		}
-		// Skip the leading ~/
-		remaining := path[2:]
-		path = filepath.Join(homeDir, remaining)
-	}
-
-	// Convert to absolute path
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert to absolute path: %w", err)
-	}
-
-	return absPath, nil
-}
 

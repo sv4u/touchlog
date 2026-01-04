@@ -12,6 +12,7 @@ import (
 	"github.com/sv4u/touchlog/internal/entry"
 	"github.com/sv4u/touchlog/internal/metadata"
 	"github.com/sv4u/touchlog/internal/template"
+	"github.com/sv4u/touchlog/internal/validation"
 	"github.com/sv4u/touchlog/internal/xdg"
 )
 
@@ -177,13 +178,18 @@ func (w *Wizard) Confirm() error {
 		return fmt.Errorf("output directory not set")
 	}
 
-	// Expand output directory (handle ~ and relative paths)
-	expandedDir, err := expandPath(w.outputDir)
+	// Validate output directory early (before any operations)
+	if err := validation.ValidateOutputDir(w.outputDir); err != nil {
+		return fmt.Errorf("invalid output directory: %w", err)
+	}
+
+	// Expand output directory (handle ~, environment variables, and relative paths)
+	expandedDir, err := validation.ExpandPath(w.outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to expand output directory: %w", err)
 	}
 
-	// Ensure output directory exists
+	// Ensure output directory exists (validation already checked it can be created)
 	if err := os.MkdirAll(expandedDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
@@ -252,52 +258,9 @@ func (w *Wizard) Cancel() error {
 	return nil
 }
 
-// ValidateOutputDir validates the output directory
+// ValidateOutputDir validates the output directory using the centralized validation function
 func (w *Wizard) ValidateOutputDir(dir string) error {
-	if dir == "" {
-		return fmt.Errorf("output directory cannot be empty")
-	}
-
-	// Expand path (handle ~ and relative paths)
-	expandedDir, err := expandPath(dir)
-	if err != nil {
-		return fmt.Errorf("invalid path: %w", err)
-	}
-
-	// Check if directory exists or can be created
-	info, err := os.Stat(expandedDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Directory doesn't exist - check if parent is writable
-			parentDir := filepath.Dir(expandedDir)
-			parentInfo, err := os.Stat(parentDir)
-			if err != nil {
-				return fmt.Errorf("parent directory does not exist: %w", err)
-			}
-			if !parentInfo.IsDir() {
-				return fmt.Errorf("parent path is not a directory")
-			}
-			// Check if we can create the directory (check parent write permissions)
-			// We can't actually test write permissions without trying, so we'll just validate the path
-			return nil // Path is valid, directory will be created later
-		}
-		return fmt.Errorf("failed to check directory: %w", err)
-	}
-
-	// Directory exists - check if it's actually a directory
-	if !info.IsDir() {
-		return fmt.Errorf("path exists but is not a directory")
-	}
-
-	// Check write permissions (try to create a test file)
-	testFile := filepath.Join(expandedDir, ".touchlog-write-test")
-	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
-		return fmt.Errorf("directory is not writable: %w", err)
-	}
-	// Clean up test file
-	_ = os.Remove(testFile)
-
-	return nil
+	return validation.ValidateOutputDir(dir)
 }
 
 // ParseTags parses a comma-separated tag string into a slice of tags
@@ -351,32 +314,4 @@ func GetAvailableTemplates(cfg *config.Config) []string {
 	return templates
 }
 
-// expandPath expands a path, handling ~ and relative paths
-func expandPath(path string) (string, error) {
-	// Handle ~ expansion
-	if strings.HasPrefix(path, "~") {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("failed to get home directory: %w", err)
-		}
-		if path == "~" {
-			return homeDir, nil
-		}
-		// Validate that paths starting with ~ must be ~/ (not ~something)
-		if !strings.HasPrefix(path, "~/") {
-			return "", fmt.Errorf("invalid path: paths starting with ~ must be followed by / (e.g., ~/path), got: %s", path)
-		}
-		// Skip the leading ~/
-		remaining := path[2:]
-		path = filepath.Join(homeDir, remaining)
-	}
-
-	// Convert to absolute path
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert to absolute path: %w", err)
-	}
-
-	return absPath, nil
-}
 
