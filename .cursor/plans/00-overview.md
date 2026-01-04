@@ -9,7 +9,7 @@
 
 This plan outlines the comprehensive refactoring of `touchlog` to align with the scenario-based architecture defined in `SCENARIOS.md` and `SCENARIOS_DIAGRAMS.md`. The refactoring transforms touchlog from a simple template-based TUI editor into a full-featured CLI tool with both interactive (REPL wizard) and non-interactive modes, platform detection, flexible configuration, and editor integration.
 
-The refactoring is organized into **9 phases**, each with its own detailed plan document. This overview provides the high-level context, architecture, and links to phase-specific plans.
+The refactoring is organized into **10 phases**, each with its own detailed plan document. This overview provides the high-level context, architecture, and links to phase-specific plans.
 
 ## Document Structure
 
@@ -23,6 +23,7 @@ The refactoring is organized into **9 phases**, each with its own detailed plan 
 - **[07-metadata.md](./07-metadata.md)** - Phase 7: Metadata Capture
 - **[08-errors.md](./08-errors.md)** - Phase 8: Error Handling & Validation
 - **[09-testing.md](./09-testing.md)** - Phase 9: Testing Strategy
+- **[10-go-dev-publishing.md](./10-go-dev-publishing.md)** - Phase 10: Go Module Publishing to go.dev
 - **[shared-concerns.md](./shared-concerns.md)** - Cross-cutting concerns (Dependencies, Security, Performance, etc.)
 
 ## Current State Analysis
@@ -233,6 +234,23 @@ touchlog
 **Duration**: Ongoing + 1-2 weeks comprehensive  
 **Complexity**: Medium  
 **Dependencies**: All phases (ongoing)
+
+---
+
+### [Phase 10: Go Module Publishing to go.dev](./10-go-dev-publishing.md)
+
+**Goal**: Ensure module is published and indexed on go.dev after releases
+
+**Key Deliverables**:
+
+- Pre-release module validation
+- Proactive indexing trigger via `go get`
+- Enhanced verification (proxy API + pkg.go.dev)
+- Robust error handling with retries
+
+**Duration**: 1-2 days  
+**Complexity**: Low-Medium  
+**Dependencies**: Phase 1 (Foundation), existing release workflow
 
 ---
 

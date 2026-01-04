@@ -1,7 +1,7 @@
 package template
 
 import (
-	"errors"
+	stderrors "errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/sv4u/touchlog/internal/config"
+	"github.com/sv4u/touchlog/internal/errors"
+	"github.com/sv4u/touchlog/internal/validation"
 )
 
-var (
-	// ErrTemplateNotFound is returned when a template cannot be found
-	ErrTemplateNotFound = errors.New("template not found")
-)
+// ErrTemplateNotFound is re-exported from the errors package for backward compatibility
+var ErrTemplateNotFound = errors.ErrTemplateNotFound
 
 // TemplateSource is an interface for template sources (inline or file-based)
 type TemplateSource interface {
@@ -86,6 +86,10 @@ func ResolveTemplate(name string, cfg *config.Config, templatesDir string) (stri
 		inlineSource := &InlineTemplateSource{templates: inlineTemplates}
 		content, err := inlineSource.GetTemplate(name)
 		if err == nil {
+			// Validate template syntax before returning
+			if err := validation.ValidateTemplateSyntax(content); err != nil {
+				return "", fmt.Errorf("invalid inline template syntax for '%s': %w", name, err)
+			}
 			return content, nil
 		}
 		// If not found in inline, continue to file-based
@@ -100,18 +104,22 @@ func ResolveTemplate(name string, cfg *config.Config, templatesDir string) (stri
 		}
 		content, err := fileSource.GetTemplate(name)
 		if err == nil {
+			// Validate template syntax before returning
+			if err := validation.ValidateTemplateSyntax(content); err != nil {
+				return "", fmt.Errorf("invalid file-based template syntax for '%s': %w", name, err)
+			}
 			return content, nil
 		}
 		// If the error is not "template not found", it's a real file read error
 		// (e.g., permission denied, I/O error) - propagate it immediately
-		if !errors.Is(err, ErrTemplateNotFound) {
+		if !stderrors.Is(err, errors.ErrTemplateNotFound) {
 			return "", fmt.Errorf("failed to resolve file-based template '%s': %w", name, err)
 		}
 		// If it's ErrTemplateNotFound, continue to fallback below
 	}
 
 	// Step 3: Template not found in either source
-	return "", fmt.Errorf("template '%s' not found: %w", name, ErrTemplateNotFound)
+	return "", fmt.Errorf("template '%s' not found: %w", name, errors.ErrTemplateNotFound)
 }
 
 // LoadTemplate reads a template file from the templates directory

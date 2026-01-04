@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sv4u/touchlog/internal/entry"
+	"github.com/sv4u/touchlog/internal/validation"
 )
 
 // GetGitContext detects git context (branch and commit) from the specified directory
@@ -25,7 +26,7 @@ func GetGitContext(directory string) (*entry.GitContext, error) {
 	}
 
 	// Expand path (handle ~ and relative paths)
-	expandedDir, err := expandPath(checkDir)
+	expandedDir, err := validation.ExpandPath(checkDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand directory path: %w", err)
 	}
@@ -110,31 +111,3 @@ func getGitCommit(gitRoot string) (string, error) {
 	return commit, nil
 }
 
-// expandPath expands a path, handling ~ and relative paths
-func expandPath(path string) (string, error) {
-	// Handle ~ expansion
-	if strings.HasPrefix(path, "~") {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("failed to get home directory: %w", err)
-		}
-		if path == "~" {
-			return homeDir, nil
-		}
-		// Validate that paths starting with ~ must be ~/ (not ~something)
-		if !strings.HasPrefix(path, "~/") {
-			return "", fmt.Errorf("invalid path: paths starting with ~ must be followed by / (e.g., ~/path), got: %s", path)
-		}
-		// Skip the leading ~/
-		remaining := path[2:]
-		path = filepath.Join(homeDir, remaining)
-	}
-
-	// Convert to absolute path
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert to absolute path: %w", err)
-	}
-
-	return absPath, nil
-}

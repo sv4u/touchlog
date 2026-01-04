@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/sv4u/touchlog/internal/config"
+	"github.com/sv4u/touchlog/internal/validation"
 )
 
 
@@ -50,7 +51,7 @@ func TestExpandPath(t *testing.T) {
 		{
 			name:    "empty path",
 			path:    "",
-			want:    "",
+			want:    "", // Empty path will be converted to current directory by filepath.Abs
 			wantErr: false,
 		},
 		{
@@ -62,7 +63,7 @@ func TestExpandPath(t *testing.T) {
 		{
 			name:    "relative path without ~",
 			path:    "notes/test",
-			want:    "notes/test",
+			want:    "", // Will be converted to absolute path, so we need to check differently
 			wantErr: false,
 		},
 		{
@@ -83,17 +84,34 @@ func TestExpandPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := expandPath(tt.path)
+			got, err := validation.ExpandPath(tt.path)
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("expandPath(%q) expected error, got nil", tt.path)
+					t.Errorf("ExpandPath(%q) expected error, got nil", tt.path)
 				}
 			} else {
 				if err != nil {
-					t.Errorf("expandPath(%q) unexpected error = %v", tt.path, err)
+					t.Errorf("ExpandPath(%q) unexpected error = %v", tt.path, err)
 				}
-				if got != tt.want {
-					t.Errorf("expandPath(%q) = %q, want %q", tt.path, got, tt.want)
+				// Special handling for empty path and relative paths
+				if tt.name == "empty path" {
+					// Empty path becomes current directory (absolute path)
+					if got == "" {
+						t.Errorf("ExpandPath(%q) = %q, want absolute path (current directory)", tt.path, got)
+					}
+					if !filepath.IsAbs(got) {
+						t.Errorf("ExpandPath(%q) = %q, want absolute path", tt.path, got)
+					}
+				} else if tt.name == "relative path without ~" {
+					// Relative paths are converted to absolute paths
+					if !filepath.IsAbs(got) {
+						t.Errorf("ExpandPath(%q) = %q, want absolute path", tt.path, got)
+					}
+					if !strings.Contains(got, "notes") || !strings.Contains(got, "test") {
+						t.Errorf("ExpandPath(%q) = %q, should contain 'notes' and 'test'", tt.path, got)
+					}
+				} else if got != tt.want {
+					t.Errorf("ExpandPath(%q) = %q, want %q", tt.path, got, tt.want)
 				}
 			}
 		})

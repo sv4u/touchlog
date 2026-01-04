@@ -1,10 +1,12 @@
 package platform
 
 import (
-	"errors"
+	stderrors "errors"
 	"os"
 	"runtime"
 	"strings"
+
+	"github.com/sv4u/touchlog/internal/errors"
 )
 
 // Platform represents the detected platform type
@@ -21,10 +23,8 @@ const (
 	PlatformWindows Platform = "windows"
 )
 
-var (
-	// ErrUnsupportedPlatform is returned when the platform is not supported
-	ErrUnsupportedPlatform = errors.New("unsupported platform: touchlog only supports macOS, Linux, and WSL")
-)
+// ErrUnsupportedPlatform is re-exported from the errors package for backward compatibility
+var ErrUnsupportedPlatform = errors.ErrPlatformUnsupported
 
 // Detect detects the current platform and returns the Platform type
 func Detect() (Platform, error) {
@@ -40,11 +40,11 @@ func Detect() (Platform, error) {
 		}
 		return PlatformLinux, nil
 	case "windows":
-		return PlatformWindows, ErrUnsupportedPlatform
+		return PlatformWindows, errors.ErrPlatformUnsupported
 	default:
 		// Unknown platform (FreeBSD, OpenBSD, NetBSD, Solaris, etc.)
 		// Return a generic error without platform-specific advice
-		return Platform(""), ErrUnsupportedPlatform
+		return Platform(""), errors.ErrPlatformUnsupported
 	}
 }
 
@@ -93,14 +93,14 @@ func CheckSupported() error {
 	if err != nil {
 		// Check if it's actually Windows (not just an unknown platform)
 		if runtime.GOOS == "windows" && platform == PlatformWindows {
-			return errors.New("unsupported platform: touchlog only supports macOS, Linux, and WSL. Windows native is not supported. Please use WSL")
+			return stderrors.New("unsupported platform: touchlog only supports macOS, Linux, and WSL. Windows native is not supported. Please use WSL")
 		}
 		// For unknown platforms, return the generic error
 		return err
 	}
 
 	if !IsSupported(platform) {
-		return ErrUnsupportedPlatform
+		return errors.ErrPlatformUnsupported
 	}
 
 	return nil
