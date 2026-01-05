@@ -688,18 +688,18 @@ func TestIntegration_NewCommand_ErrorHandling(t *testing.T) {
 func TestIntegration_Main_PlatformCheck(t *testing.T) {
 	// Test that main.go performs platform check
 	projectRoot := getProjectRoot(t)
-	
+
 	// This test verifies that the binary runs and performs platform check
 	// On supported platforms (macOS, Linux), it should succeed
 	// On unsupported platforms, it would fail, but we can't easily test that
 	cmd := exec.Command("go", "run", filepath.Join(projectRoot, "cmd", "touchlog"), "--help")
 	cmd.Dir = projectRoot
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 	}
-	
+
 	// Verify help output is shown (indicates platform check passed)
 	outputStr := string(output)
 	if !strings.Contains(outputStr, "touchlog") {
@@ -710,13 +710,13 @@ func TestIntegration_Main_PlatformCheck(t *testing.T) {
 func TestIntegration_NewCommand_WithInlineTemplates(t *testing.T) {
 	tmpDir, cleanup := setupTestEnv(t)
 	defer cleanup()
-	
+
 	// Create config file with inline templates
 	configDir := filepath.Join(tmpDir, ".config", "touchlog")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
-	
+
 	configPath := filepath.Join(configDir, "config.yaml")
 	configContent := `notes_directory: "` + filepath.Join(tmpDir, "notes") + `"
 default_template: "quick"
@@ -735,14 +735,14 @@ inline_templates:
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	outputDir := filepath.Join(tmpDir, "notes")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		t.Fatalf("Failed to create output dir: %v", err)
 	}
-	
+
 	projectRoot := getProjectRoot(t)
-	
+
 	// Run command using inline template
 	cmd := exec.Command("go", "run", filepath.Join(projectRoot, "cmd", "touchlog"), "new",
 		"--message", "Inline template test",
@@ -753,22 +753,22 @@ inline_templates:
 	cmd.Env = append(os.Environ(),
 		"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 	}
-	
+
 	// Verify file was created
 	files, err := os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
 	}
-	
+
 	if len(files) == 0 {
 		t.Error("No file was created")
 	}
-	
+
 	// Verify file uses inline template
 	if len(files) > 0 {
 		filePath := filepath.Join(outputDir, files[0].Name())
@@ -776,7 +776,7 @@ inline_templates:
 		if err != nil {
 			t.Fatalf("Failed to read created file: %v", err)
 		}
-		
+
 		contentStr := string(content)
 		if !strings.Contains(contentStr, "Quick Note") {
 			t.Errorf("File should use inline template, got: %s", contentStr)
@@ -790,13 +790,13 @@ inline_templates:
 func TestIntegration_NewCommand_WithMetadata(t *testing.T) {
 	tmpDir, cleanup := setupTestEnv(t)
 	defer cleanup()
-	
+
 	// Create config file
 	configDir := filepath.Join(tmpDir, ".config", "touchlog")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
-	
+
 	configPath := filepath.Join(configDir, "config.yaml")
 	configContent := `notes_directory: "` + filepath.Join(tmpDir, "notes") + `"
 default_template: "daily"
@@ -812,14 +812,14 @@ inline_templates:
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	outputDir := filepath.Join(tmpDir, "notes")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		t.Fatalf("Failed to create output dir: %v", err)
 	}
-	
+
 	projectRoot := getProjectRoot(t)
-	
+
 	// Run command with metadata enabled (default)
 	cmd := exec.Command("go", "run", filepath.Join(projectRoot, "cmd", "touchlog"), "new",
 		"--message", "Metadata test",
@@ -829,22 +829,22 @@ inline_templates:
 	cmd.Env = append(os.Environ(),
 		"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 	}
-	
+
 	// Verify file was created
 	files, err := os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
 	}
-	
+
 	if len(files) == 0 {
 		t.Error("No file was created")
 	}
-	
+
 	// Verify file contains metadata placeholders (they should be replaced)
 	if len(files) > 0 {
 		filePath := filepath.Join(outputDir, files[0].Name())
@@ -852,7 +852,7 @@ inline_templates:
 		if err != nil {
 			t.Fatalf("Failed to read created file: %v", err)
 		}
-		
+
 		contentStr := string(content)
 		// Metadata should be replaced (not show as {{user}} or {{host}})
 		if strings.Contains(contentStr, "{{user}}") || strings.Contains(contentStr, "{{host}}") {
@@ -868,13 +868,13 @@ inline_templates:
 func TestIntegration_NewCommand_WithCustomVariables(t *testing.T) {
 	tmpDir, cleanup := setupTestEnv(t)
 	defer cleanup()
-	
+
 	// Create config file with custom variables
 	configDir := filepath.Join(tmpDir, ".config", "touchlog")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
-	
+
 	configPath := filepath.Join(configDir, "config.yaml")
 	configContent := `notes_directory: "` + filepath.Join(tmpDir, "notes") + `"
 default_template: "custom"
@@ -893,14 +893,14 @@ variables:
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	outputDir := filepath.Join(tmpDir, "notes")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		t.Fatalf("Failed to create output dir: %v", err)
 	}
-	
+
 	projectRoot := getProjectRoot(t)
-	
+
 	// Run command
 	cmd := exec.Command("go", "run", filepath.Join(projectRoot, "cmd", "touchlog"), "new",
 		"--message", "Custom variables test",
@@ -910,22 +910,22 @@ variables:
 	cmd.Env = append(os.Environ(),
 		"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 	}
-	
+
 	// Verify file was created
 	files, err := os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
 	}
-	
+
 	if len(files) == 0 {
 		t.Error("No file was created")
 	}
-	
+
 	// Verify file contains custom variables
 	if len(files) > 0 {
 		filePath := filepath.Join(outputDir, files[0].Name())
@@ -933,7 +933,7 @@ variables:
 		if err != nil {
 			t.Fatalf("Failed to read created file: %v", err)
 		}
-		
+
 		contentStr := string(content)
 		if !strings.Contains(contentStr, "Touchlog") {
 			t.Errorf("File should contain custom variable 'project', got: %s", contentStr)
@@ -947,13 +947,13 @@ variables:
 func TestIntegration_NewCommand_WithTimezone(t *testing.T) {
 	tmpDir, cleanup := setupTestEnv(t)
 	defer cleanup()
-	
+
 	// Create config file with timezone
 	configDir := filepath.Join(tmpDir, ".config", "touchlog")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
-	
+
 	configPath := filepath.Join(configDir, "config.yaml")
 	configContent := `notes_directory: "` + filepath.Join(tmpDir, "notes") + `"
 default_template: "daily"
@@ -967,14 +967,14 @@ inline_templates:
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	outputDir := filepath.Join(tmpDir, "notes")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		t.Fatalf("Failed to create output dir: %v", err)
 	}
-	
+
 	projectRoot := getProjectRoot(t)
-	
+
 	// Run command
 	cmd := exec.Command("go", "run", filepath.Join(projectRoot, "cmd", "touchlog"), "new",
 		"--message", "Timezone test",
@@ -985,22 +985,22 @@ inline_templates:
 		"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"),
 		"TZ=America/Denver") // Set TZ env var to verify timezone handling
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 	}
-	
+
 	// Verify file was created
 	files, err := os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
 	}
-	
+
 	if len(files) == 0 {
 		t.Error("No file was created")
 	}
-	
+
 	// Verify file contains date/time (timezone should be applied)
 	if len(files) > 0 {
 		filePath := filepath.Join(outputDir, files[0].Name())
@@ -1008,7 +1008,7 @@ inline_templates:
 		if err != nil {
 			t.Fatalf("Failed to read created file: %v", err)
 		}
-		
+
 		contentStr := string(content)
 		// Should contain date and time
 		if !strings.Contains(contentStr, "Timezone Test") {
@@ -1024,13 +1024,13 @@ inline_templates:
 func TestIntegration_NewCommand_StdinTitleHeuristic(t *testing.T) {
 	tmpDir, cleanup := setupTestEnv(t)
 	defer cleanup()
-	
+
 	// Create config file
 	configDir := filepath.Join(tmpDir, ".config", "touchlog")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
-	
+
 	configPath := filepath.Join(configDir, "config.yaml")
 	configContent := `notes_directory: "` + filepath.Join(tmpDir, "notes") + `"
 default_template: "daily"
@@ -1043,14 +1043,14 @@ inline_templates:
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	outputDir := filepath.Join(tmpDir, "notes")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		t.Fatalf("Failed to create output dir: %v", err)
 	}
-	
+
 	projectRoot := getProjectRoot(t)
-	
+
 	// Run command with stdin where first line is short (should become title)
 	cmd := exec.Command("go", "run", filepath.Join(projectRoot, "cmd", "touchlog"), "new",
 		"--output", outputDir,
@@ -1060,22 +1060,22 @@ inline_templates:
 		"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
 	cmd.Stdin = strings.NewReader("Short Title\nThis is the message content\nWith multiple lines")
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 	}
-	
+
 	// Verify file was created
 	files, err := os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
 	}
-	
+
 	if len(files) == 0 {
 		t.Error("No file was created")
 	}
-	
+
 	// Verify file content
 	if len(files) > 0 {
 		filePath := filepath.Join(outputDir, files[0].Name())
@@ -1083,7 +1083,7 @@ inline_templates:
 		if err != nil {
 			t.Fatalf("Failed to read created file: %v", err)
 		}
-		
+
 		contentStr := string(content)
 		// Short first line should be used as title
 		if !strings.Contains(contentStr, "Short Title") {
@@ -1099,19 +1099,19 @@ inline_templates:
 func TestIntegration_ConfigCommand_NoConfigFile(t *testing.T) {
 	tmpDir, cleanup := setupTestEnv(t)
 	defer cleanup()
-	
+
 	projectRoot := getProjectRoot(t)
-	
+
 	// Run config command without config file
 	cmd := exec.Command("go", "run", filepath.Join(projectRoot, "cmd", "touchlog"), "config")
 	cmd.Dir = projectRoot
 	cmd.Env = append(os.Environ(), "XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"))
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 	}
-	
+
 	outputStr := string(output)
 	if !strings.Contains(outputStr, "No config file found") && !strings.Contains(outputStr, "Using defaults") {
 		t.Errorf("Output should indicate no config file, got: %s", outputStr)
@@ -1121,13 +1121,13 @@ func TestIntegration_ConfigCommand_NoConfigFile(t *testing.T) {
 func TestIntegration_NewCommand_EmptyMessageAndTitle(t *testing.T) {
 	tmpDir, cleanup := setupTestEnv(t)
 	defer cleanup()
-	
+
 	// Create config file
 	configDir := filepath.Join(tmpDir, ".config", "touchlog")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
-	
+
 	configPath := filepath.Join(configDir, "config.yaml")
 	configContent := `notes_directory: "` + filepath.Join(tmpDir, "notes") + `"
 default_template: "daily"
@@ -1140,14 +1140,14 @@ inline_templates:
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	outputDir := filepath.Join(tmpDir, "notes")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		t.Fatalf("Failed to create output dir: %v", err)
 	}
-	
+
 	projectRoot := getProjectRoot(t)
-	
+
 	// Run command with empty message and title
 	cmd := exec.Command("go", "run", filepath.Join(projectRoot, "cmd", "touchlog"), "new",
 		"--message", "",
@@ -1157,13 +1157,13 @@ inline_templates:
 	cmd.Env = append(os.Environ(),
 		"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
-	
+
 	output, err := cmd.CombinedOutput()
 	// Should succeed even with empty message/title (uses default slug)
 	if err != nil {
 		t.Logf("Command may fail with empty message/title, output: %s", output)
 	}
-	
+
 	// If it succeeds, verify file was created
 	if err == nil {
 		files, err := os.ReadDir(outputDir)
@@ -1179,13 +1179,13 @@ inline_templates:
 func TestIntegration_NewCommand_MultipleEntriesSameDay(t *testing.T) {
 	tmpDir, cleanup := setupTestEnv(t)
 	defer cleanup()
-	
+
 	// Create config file
 	configDir := filepath.Join(tmpDir, ".config", "touchlog")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
-	
+
 	configPath := filepath.Join(configDir, "config.yaml")
 	configContent := `notes_directory: "` + filepath.Join(tmpDir, "notes") + `"
 default_template: "daily"
@@ -1198,15 +1198,15 @@ inline_templates:
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	outputDir := filepath.Join(tmpDir, "notes")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		t.Fatalf("Failed to create output dir: %v", err)
 	}
-	
+
 	projectRoot := getProjectRoot(t)
 	cmdPath := filepath.Join(projectRoot, "cmd", "touchlog")
-	
+
 	// Create first entry
 	cmd1 := exec.Command("go", "run", cmdPath, "new",
 		"--message", "First entry",
@@ -1216,11 +1216,11 @@ inline_templates:
 	cmd1.Env = append(os.Environ(),
 		"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
-	
+
 	if err := cmd1.Run(); err != nil {
 		t.Fatalf("First command failed: %v", err)
 	}
-	
+
 	// Create second entry with same title (should get numeric suffix)
 	cmd2 := exec.Command("go", "run", cmdPath, "new",
 		"--message", "Second entry",
@@ -1230,19 +1230,19 @@ inline_templates:
 	cmd2.Env = append(os.Environ(),
 		"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
-	
+
 	output2, err := cmd2.CombinedOutput()
 	if err != nil {
 		// Second command should succeed - collision handling should create numbered file
 		t.Fatalf("Second command failed (collision handling should create numbered file): %v\nOutput: %s", err, output2)
 	}
-	
+
 	// Verify both files exist (collision handling should create a new file with numeric suffix)
 	files, err := os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
 	}
-	
+
 	// Filter to only markdown files
 	mdFiles := []os.DirEntry{}
 	for _, file := range files {
@@ -1250,17 +1250,17 @@ inline_templates:
 			mdFiles = append(mdFiles, file)
 		}
 	}
-	
+
 	if len(mdFiles) < 2 {
 		t.Fatalf("Expected at least 2 markdown files (collision handling should create numbered file), got %d", len(mdFiles))
 	}
-	
+
 	// Verify files have unique names (collision handling worked)
 	fileNames := make([]string, len(mdFiles))
 	for i, file := range mdFiles {
 		fileNames[i] = file.Name()
 	}
-	
+
 	uniqueNames := make(map[string]bool)
 	for _, name := range fileNames {
 		if uniqueNames[name] {
@@ -1269,7 +1269,7 @@ inline_templates:
 		}
 		uniqueNames[name] = true
 	}
-	
+
 	// Log file names for verification
 	t.Logf("Created %d unique files: %v", len(mdFiles), fileNames)
 }

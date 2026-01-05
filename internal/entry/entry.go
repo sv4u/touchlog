@@ -175,5 +175,3 @@ func CreateEntry(entry *Entry, cfg *config.Config, outputDir string, overwrite b
 
 	return filename, nil
 }
-
-

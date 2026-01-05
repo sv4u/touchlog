@@ -61,7 +61,7 @@ type model struct {
 
 // modelConfig holds configuration options for NewModel
 type modelConfig struct {
-	outputDirectory string
+	outputDirectory  string
 	filePathOverride string // If set, save to this exact file path instead of generating a new one
 	initialContent   string // If set, use this content instead of loading template (for editing existing files)
 }
@@ -541,7 +541,7 @@ func (m model) View() string {
 func (m model) loadTemplateCmd() tea.Cmd {
 	return func() tea.Msg {
 		// This runs in a goroutine (async)
-		
+
 		// If filePathOverride is set and file exists, load the file content instead of template
 		if m.filePathOverride != "" {
 			if content, err := os.ReadFile(m.filePathOverride); err == nil {
@@ -568,7 +568,6 @@ func (m model) loadTemplateCmd() tea.Cmd {
 		return templateLoadedMsg{content: processed}
 	}
 }
-
 
 // saveNoteCmd returns a command that saves the note
 func (m model) saveNoteCmd() tea.Cmd {
@@ -603,8 +602,8 @@ func (m model) saveNoteCmd() tea.Cmd {
 				return errMsg{fmt.Errorf("invalid notes directory: %w", err)}
 			}
 
-					// Expand ~ and environment variables in path if present
-					expandedDir, err = validation.ExpandPath(notesDir)
+			// Expand ~ and environment variables in path if present
+			expandedDir, err = validation.ExpandPath(notesDir)
 			if err != nil {
 				return errMsg{fmt.Errorf("failed to expand notes directory path: %w", err)}
 			}

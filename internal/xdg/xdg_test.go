@@ -297,4 +297,3 @@ func TestTemplatesDir_ErrorFromDataDir(t *testing.T) {
 		t.Errorf("TemplatesDir() did not create directory: %v", err)
 	}
 }
-

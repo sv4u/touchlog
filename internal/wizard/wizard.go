@@ -23,9 +23,9 @@ type Wizard struct {
 	message      string
 
 	// File management
-	tempFilePath   string
-	finalFilePath  string
-	fileContent    string
+	tempFilePath  string
+	finalFilePath string
+	fileContent   string
 
 	// Configuration
 	config *config.Config
@@ -34,7 +34,7 @@ type Wizard struct {
 	timestamp time.Time
 
 	// Metadata
-	metadata *entry.Metadata
+	metadata   *entry.Metadata
 	includeGit bool
 }
 
@@ -228,4 +228,3 @@ func (w *Wizard) Reset() {
 	w.timestamp = time.Now()
 	w.metadata = nil // Reset metadata so it will be recollected with new outputDir
 }
-

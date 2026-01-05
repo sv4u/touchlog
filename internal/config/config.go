@@ -16,7 +16,7 @@ import (
 // DateTimeVarConfig represents configuration for a date/time variable
 type DateTimeVarConfig struct {
 	Enabled *bool  `yaml:"enabled"` // Whether this variable is enabled (nil = not specified, use default)
-	Format  string `yaml:"format"`   // Go time format string
+	Format  string `yaml:"format"`  // Go time format string
 }
 
 // DateTimeVarsConfig represents configuration for date/time/datetime variables
@@ -96,7 +96,7 @@ type Config struct {
 	VimMode        bool               `yaml:"vim_mode"`        // Enable vim keymap support
 	Timezone       string             `yaml:"timezone"`        // IANA timezone (e.g., "America/Denver", "UTC")
 	Editor         *EditorConfig      `yaml:"editor"`          // Editor configuration (Phase 5)
-	IncludeUser    *bool              `yaml:"include_user"`   // Include user metadata (default: true, Phase 7)
+	IncludeUser    *bool              `yaml:"include_user"`    // Include user metadata (default: true, Phase 7)
 	IncludeHost    *bool              `yaml:"include_host"`    // Include host metadata (default: true, Phase 7)
 }
 

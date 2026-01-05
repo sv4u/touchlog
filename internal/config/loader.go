@@ -104,4 +104,3 @@ func LoadConfigFromPath(path string) (*Config, error) {
 		return nil, fmt.Errorf("unsupported config format: %s", format)
 	}
 }
-

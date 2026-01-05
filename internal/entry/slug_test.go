@@ -120,4 +120,3 @@ func TestGenerateSlugDeterministic(t *testing.T) {
 		t.Errorf("GenerateSlug() is not deterministic: got %q and %q", slug1, slug2)
 	}
 }
-

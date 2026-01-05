@@ -51,4 +51,3 @@ func (h *NavigationHistory) GetHistory() []State {
 func (h *NavigationHistory) CanNavigateBack() bool {
 	return len(h.states) > 1 // Need at least 2 states to go back
 }
-

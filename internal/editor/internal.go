@@ -74,4 +74,3 @@ func (e *InternalEditor) GetContent() string {
 	}
 	return string(content)
 }
-

@@ -87,7 +87,7 @@ func TestLaunchEditor_FileValidation(t *testing.T) {
 			// We use a nonexistent editor so it fails quickly without hanging
 			// The file validation happens before the editor launch attempt
 			err := LaunchEditor("nonexistent-editor-xyz123", []string{}, filePath)
-			
+
 			if tt.wantErr {
 				// File doesn't exist - should get file validation error
 				if err == nil {
@@ -112,4 +112,3 @@ func TestLaunchEditor_FileValidation(t *testing.T) {
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
-

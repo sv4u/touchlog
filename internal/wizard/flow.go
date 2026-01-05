@@ -313,5 +313,3 @@ func GetAvailableTemplates(cfg *config.Config) []string {
 
 	return templates
 }
-
-

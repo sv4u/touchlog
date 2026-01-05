@@ -55,4 +55,3 @@ func LaunchEditor(editor string, args []string, filePath string) error {
 
 	return nil
 }
-

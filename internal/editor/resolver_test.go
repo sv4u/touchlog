@@ -12,15 +12,15 @@ import (
 
 func TestEditorResolver_Resolve(t *testing.T) {
 	tests := []struct {
-		name                string
-		cliEditor           string
-		configEditor        *config.EditorConfig
-		envEditor           string
-		fallbackToInternal  bool
-		wantType            EditorType
-		wantCommand         string
-		wantUseInternal     bool
-		setupEnv            func() func() // setup function returns cleanup
+		name               string
+		cliEditor          string
+		configEditor       *config.EditorConfig
+		envEditor          string
+		fallbackToInternal bool
+		wantType           EditorType
+		wantCommand        string
+		wantUseInternal    bool
+		setupEnv           func() func() // setup function returns cleanup
 	}{
 		{
 			name:               "CLI editor takes precedence",
@@ -194,7 +194,7 @@ func TestFindEditorOnPath_AbsolutePath(t *testing.T) {
 	// Create a temporary executable file
 	tmpDir := t.TempDir()
 	editorPath := filepath.Join(tmpDir, "test-editor")
-	
+
 	// Create a simple executable (just a shell script)
 	content := "#!/bin/sh\necho 'test editor'\n"
 	if err := os.WriteFile(editorPath, []byte(content), 0755); err != nil {
@@ -230,7 +230,7 @@ func TestFindEditorOnPath_RelativePathWithSeparator(t *testing.T) {
 
 	editorName := "test-editor"
 	editorPath := filepath.Join(subDir, editorName)
-	
+
 	// Create a simple executable
 	content := "#!/bin/sh\necho 'test editor'\n"
 	if err := os.WriteFile(editorPath, []byte(content), 0755); err != nil {
@@ -262,7 +262,7 @@ func TestFindEditorOnPath_NonExecutable(t *testing.T) {
 	// Create a temporary file that's not executable
 	tmpDir := t.TempDir()
 	editorPath := filepath.Join(tmpDir, "test-editor")
-	
+
 	// Create a file without executable permissions
 	if err := os.WriteFile(editorPath, []byte("not executable"), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
@@ -290,11 +290,11 @@ func TestFindEditorOnPath_NonExecutable(t *testing.T) {
 
 func TestResolveExternal(t *testing.T) {
 	tests := []struct {
-		name                string
-		cliEditor           string
-		fallbackToInternal  bool
-		wantErr             bool
-		wantExternal        bool
+		name               string
+		cliEditor          string
+		fallbackToInternal bool
+		wantErr            bool
+		wantExternal       bool
 	}{
 		{
 			name:               "external editor available",
@@ -349,19 +349,19 @@ func TestResolveExternal(t *testing.T) {
 
 func TestShouldUseInternalEditor(t *testing.T) {
 	tests := []struct {
-		name    string
-		err     error
-		want    bool
+		name string
+		err  error
+		want bool
 	}{
 		{
-			name:    "error means use internal",
-			err:     fmt.Errorf("editor not found"),
-			want:    true,
+			name: "error means use internal",
+			err:  fmt.Errorf("editor not found"),
+			want: true,
 		},
 		{
-			name:    "no error means don't use internal",
-			err:     nil,
-			want:    false,
+			name: "no error means don't use internal",
+			err:  nil,
+			want: false,
 		},
 	}
 
@@ -377,13 +377,13 @@ func TestShouldUseInternalEditor(t *testing.T) {
 
 func TestEditorResolver_parseEditorString(t *testing.T) {
 	resolver := NewEditorResolver("", nil, true)
-	
+
 	tests := []struct {
-		name      string
-		input     string
-		wantCmd   string
-		wantArgs  []string
-		wantErr   bool
+		name     string
+		input    string
+		wantCmd  string
+		wantArgs []string
+		wantErr  bool
 	}{
 		{
 			name:     "simple editor name",
@@ -446,7 +446,7 @@ func TestEditorResolver_parseEditorString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd, args, err := resolver.parseEditorString(tt.input)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("parseEditorString() error = nil, want error")
@@ -471,4 +471,3 @@ func TestEditorResolver_parseEditorString(t *testing.T) {
 		})
 	}
 }
-

@@ -380,8 +380,8 @@ func TestCreateEntryWithTildeExpansion(t *testing.T) {
 
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		(len(s) > 0 && (s[:len(substr)] == substr || 
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && (s[:len(substr)] == substr ||
 			(len(s) > len(substr) && containsHelper(s, substr)))))
 }
 
@@ -415,4 +415,3 @@ func extractBaseName(name string) string {
 	}
 	return name
 }
-

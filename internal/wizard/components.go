@@ -38,4 +38,3 @@ var (
 			BorderForeground(lipgloss.Color("62")).
 			Padding(1, 2)
 )
-

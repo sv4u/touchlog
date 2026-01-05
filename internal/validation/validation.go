@@ -16,8 +16,8 @@ func ValidateOutputDir(path string) error {
 		return errors.ErrOutputDirRequired
 	}
 
-		// Expand path (handle ~ and environment variables)
-		expandedPath, err := ExpandPath(path)
+	// Expand path (handle ~ and environment variables)
+	expandedPath, err := ExpandPath(path)
 	if err != nil {
 		return fmt.Errorf("failed to expand path %q: %w", path, fmt.Errorf("%w: %w", errors.ErrPathExpansionFailed, err))
 	}

@@ -8,27 +8,27 @@ import (
 
 func TestEditorConfig_UnmarshalYAML_String(t *testing.T) {
 	tests := []struct {
-		name    string
-		yaml    string
-		wantCmd string
+		name     string
+		yaml     string
+		wantCmd  string
 		wantArgs []string
 	}{
 		{
-			name:    "simple editor name",
-			yaml:    `editor: "vim"`,
-			wantCmd: "vim",
+			name:     "simple editor name",
+			yaml:     `editor: "vim"`,
+			wantCmd:  "vim",
 			wantArgs: []string{},
 		},
 		{
-			name:    "editor with arguments",
-			yaml:    `editor: "vim -f"`,
-			wantCmd: "vim",
+			name:     "editor with arguments",
+			yaml:     `editor: "vim -f"`,
+			wantCmd:  "vim",
 			wantArgs: []string{"-f"},
 		},
 		{
-			name:    "editor with multiple arguments",
-			yaml:    `editor: "code --wait"`,
-			wantCmd: "code",
+			name:     "editor with multiple arguments",
+			yaml:     `editor: "code --wait"`,
+			wantCmd:  "code",
 			wantArgs: []string{"--wait"},
 		},
 	}
@@ -68,27 +68,27 @@ func TestEditorConfig_UnmarshalYAML_String(t *testing.T) {
 
 func TestEditorConfig_UnmarshalYAML_Object(t *testing.T) {
 	tests := []struct {
-		name    string
-		yaml    string
-		wantCmd string
+		name     string
+		yaml     string
+		wantCmd  string
 		wantArgs []string
 	}{
 		{
-			name:    "editor object with command only",
-			yaml:    "editor:\n  command: vim",
-			wantCmd: "vim",
+			name:     "editor object with command only",
+			yaml:     "editor:\n  command: vim",
+			wantCmd:  "vim",
 			wantArgs: []string{},
 		},
 		{
-			name:    "editor object with command and args",
-			yaml:    "editor:\n  command: vim\n  args:\n    - -f",
-			wantCmd: "vim",
+			name:     "editor object with command and args",
+			yaml:     "editor:\n  command: vim\n  args:\n    - -f",
+			wantCmd:  "vim",
 			wantArgs: []string{"-f"},
 		},
 		{
-			name:    "editor object with multiple args",
-			yaml:    "editor:\n  command: code\n  args:\n    - --wait\n    - -n",
-			wantCmd: "code",
+			name:     "editor object with multiple args",
+			yaml:     "editor:\n  command: code\n  args:\n    - --wait\n    - -n",
+			wantCmd:  "code",
 			wantArgs: []string{"--wait", "-n"},
 		},
 	}
@@ -170,4 +170,3 @@ func TestConfig_GetEditor(t *testing.T) {
 		})
 	}
 }
-

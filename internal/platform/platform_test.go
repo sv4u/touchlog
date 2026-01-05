@@ -308,7 +308,7 @@ func TestDetect_Windows(t *testing.T) {
 func TestCheckSupported_AllPaths(t *testing.T) {
 	// Test CheckSupported for all possible code paths
 	// This tests the error handling logic in CheckSupported
-	
+
 	// On supported platforms, should not error
 	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
 		err := CheckSupported()
@@ -487,18 +487,18 @@ func TestCheckSupported_ErrorPaths(t *testing.T) {
 func TestCheckSupported_UnsupportedPlatform(t *testing.T) {
 	// This tests the path in CheckSupported where Detect() succeeds but IsSupported() returns false
 	// This can happen if we somehow get an unsupported platform value
-	
+
 	// On supported platforms, this path shouldn't be hit
 	// But we can test the logic by checking that CheckSupported properly validates the platform
 	err := CheckSupported()
-	
+
 	// On supported platforms (darwin, linux, wsl), should not error
 	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
 		if err != nil {
 			t.Errorf("CheckSupported() error = %v, want nil on supported platform", err)
 		}
 	}
-	
+
 	// The unsupported platform path (line 102-104) is tested by:
 	// 1. Windows platform (which returns PlatformWindows but is not supported)
 	// 2. Unknown platforms (which return empty Platform and error)
@@ -530,12 +530,12 @@ func TestIsWSL_ProcFiles(t *testing.T) {
 	// 2. Returns a boolean value
 	// 3. On actual WSL systems, returns true
 	// 4. On non-WSL Linux systems, returns false
-	
+
 	result := IsWSL()
-	
+
 	// Verify it returns a boolean (doesn't panic)
 	_ = result
-	
+
 	// If we're actually in WSL (detected via /proc files), result should be true
 	// If not, result should be false
 	// The actual value depends on system state, but the function should work correctly
@@ -566,7 +566,7 @@ func TestIsWSL_AllDetectionMethods(t *testing.T) {
 	// Test Method 2 & 3: /proc/version and /proc/sys/kernel/osrelease
 	// Unset WSL_DISTRO_NAME to test file-based detection
 	os.Unsetenv("WSL_DISTRO_NAME")
-	
+
 	// The function will check /proc/version first, then /proc/sys/kernel/osrelease
 	// We can't mock these, but we verify the function executes without error
 	result := IsWSL()

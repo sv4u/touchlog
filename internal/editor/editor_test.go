@@ -10,7 +10,6 @@ import (
 	"github.com/sv4u/touchlog/internal/validation"
 )
 
-
 func TestExpandPath(t *testing.T) {
 	// Get the actual home directory for testing
 	homeDir, err := os.UserHomeDir()

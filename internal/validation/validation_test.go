@@ -24,7 +24,7 @@ func TestValidateOutputDir(t *testing.T) {
 	t.Run("non-existent directory with existing parent", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		newDir := filepath.Join(tmpDir, "new-dir")
-		
+
 		err := ValidateOutputDir(newDir)
 		if err != nil {
 			t.Errorf("ValidateOutputDir(%q) error = %v, want nil (parent exists, can create)", newDir, err)
@@ -36,7 +36,7 @@ func TestValidateOutputDir(t *testing.T) {
 		newDir := filepath.Join(tmpDir, "parent", "new-dir")
 		// Remove parent to make it non-existent
 		os.RemoveAll(filepath.Join(tmpDir, "parent"))
-		
+
 		err := ValidateOutputDir(newDir)
 		if err == nil {
 			t.Error("ValidateOutputDir() with non-existent parent error = nil, want error")
@@ -48,7 +48,7 @@ func TestValidateOutputDir(t *testing.T) {
 
 	t.Run("existing directory", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		
+
 		err := ValidateOutputDir(tmpDir)
 		if err != nil {
 			t.Errorf("ValidateOutputDir(%q) error = %v, want nil", tmpDir, err)
@@ -61,7 +61,7 @@ func TestValidateOutputDir(t *testing.T) {
 		if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
 			t.Fatalf("Failed to create test file: %v", err)
 		}
-		
+
 		err := ValidateOutputDir(testFile)
 		if err == nil {
 			t.Error("ValidateOutputDir() with file path error = nil, want error")
@@ -76,12 +76,12 @@ func TestValidateOutputDir(t *testing.T) {
 		// Skip if we can't create a non-writable directory
 		tmpDir := t.TempDir()
 		readOnlyDir := filepath.Join(tmpDir, "readonly")
-		
+
 		if err := os.Mkdir(readOnlyDir, 0555); err != nil {
 			t.Skipf("Skipping test: cannot create read-only directory: %v", err)
 		}
 		defer os.Chmod(readOnlyDir, 0755) // Restore permissions for cleanup
-		
+
 		err := ValidateOutputDir(readOnlyDir)
 		if err == nil {
 			// On some systems, we might still be able to write (e.g., as owner)
@@ -97,15 +97,15 @@ func TestValidateOutputDir(t *testing.T) {
 		if err != nil {
 			t.Skipf("Skipping test: cannot get home directory: %v", err)
 		}
-		
+
 		testDir := filepath.Join(homeDir, "touchlog-test-dir")
 		defer os.RemoveAll(testDir)
-		
+
 		// Create the directory
 		if err := os.MkdirAll(testDir, 0755); err != nil {
 			t.Fatalf("Failed to create test directory: %v", err)
 		}
-		
+
 		tildePath := "~/touchlog-test-dir"
 		err = ValidateOutputDir(tildePath)
 		if err != nil {
@@ -158,7 +158,7 @@ func TestValidateConfigFile(t *testing.T) {
 	t.Run("non-existent file", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		nonExistentFile := filepath.Join(tmpDir, "nonexistent.yaml")
-		
+
 		err := ValidateConfigFile(nonExistentFile)
 		if err == nil {
 			t.Error("ValidateConfigFile() with non-existent file error = nil, want error")
@@ -174,7 +174,7 @@ func TestValidateConfigFile(t *testing.T) {
 		if err := os.WriteFile(configFile, []byte("test: value"), 0644); err != nil {
 			t.Fatalf("Failed to create config file: %v", err)
 		}
-		
+
 		err := ValidateConfigFile(configFile)
 		if err != nil {
 			t.Errorf("ValidateConfigFile(%q) error = %v, want nil", configFile, err)
@@ -183,7 +183,7 @@ func TestValidateConfigFile(t *testing.T) {
 
 	t.Run("directory instead of file", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		
+
 		err := ValidateConfigFile(tmpDir)
 		if err == nil {
 			t.Error("ValidateConfigFile() with directory error = nil, want error")
@@ -201,7 +201,7 @@ func TestValidateConfigFile(t *testing.T) {
 			t.Skipf("Skipping test: cannot create non-readable file: %v", err)
 		}
 		defer os.Chmod(configFile, 0644) // Restore permissions for cleanup
-		
+
 		err := ValidateConfigFile(configFile)
 		if err == nil {
 			// On some systems, we might still be able to read (e.g., as owner)
@@ -305,7 +305,7 @@ func TestExpandPath(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to get working directory: %v", err)
 		}
-		
+
 		expanded, err := ExpandPath("test-relative")
 		if err != nil {
 			t.Errorf("ExpandPath(\"test-relative\") error = %v, want nil", err)
@@ -395,4 +395,3 @@ func TestExpandPath(t *testing.T) {
 		}
 	})
 }
-

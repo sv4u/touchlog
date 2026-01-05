@@ -66,4 +66,3 @@ func FindAvailableFilename(basePath string) (string, error) {
 	// If we've exhausted all reasonable suffixes, return an error
 	return "", fmt.Errorf("unable to find available filename after 9999 attempts")
 }
-

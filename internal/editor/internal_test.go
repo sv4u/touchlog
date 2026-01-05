@@ -13,46 +13,46 @@ func TestNewInternalEditor(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 
 	tests := []struct {
-		name          string
-		filePath      string
+		name           string
+		filePath       string
 		initialContent string
-		cfg           *config.Config
-		wantErr       bool
+		cfg            *config.Config
+		wantErr        bool
 	}{
 		{
-			name:          "valid file path",
-			filePath:      "/tmp/test.md",
+			name:           "valid file path",
+			filePath:       "/tmp/test.md",
 			initialContent: "# Test\n",
-			cfg:           cfg,
-			wantErr:       false,
+			cfg:            cfg,
+			wantErr:        false,
 		},
 		{
-			name:          "nil config",
-			filePath:      "/tmp/test.md",
+			name:           "nil config",
+			filePath:       "/tmp/test.md",
 			initialContent: "# Test\n",
-			cfg:           nil,
-			wantErr:       true,
+			cfg:            nil,
+			wantErr:        true,
 		},
 		{
-			name:          "relative file path",
-			filePath:      "test.md",
+			name:           "relative file path",
+			filePath:       "test.md",
 			initialContent: "# Test\n",
-			cfg:           cfg,
-			wantErr:       false, // filepath.Abs should resolve it
+			cfg:            cfg,
+			wantErr:        false, // filepath.Abs should resolve it
 		},
 		{
-			name:          "empty file path",
-			filePath:      "",
+			name:           "empty file path",
+			filePath:       "",
 			initialContent: "# Test\n",
-			cfg:           cfg,
-			wantErr:       false, // filepath.Abs("") returns current directory
+			cfg:            cfg,
+			wantErr:        false, // filepath.Abs("") returns current directory
 		},
 		{
-			name:          "empty initial content",
-			filePath:      "/tmp/test.md",
+			name:           "empty initial content",
+			filePath:       "/tmp/test.md",
 			initialContent: "",
-			cfg:           cfg,
-			wantErr:       false,
+			cfg:            cfg,
+			wantErr:        false,
 		},
 	}
 
@@ -242,5 +242,3 @@ func TestLaunchEditor_ArgsHandling(t *testing.T) {
 		t.Errorf("LaunchEditor() got file error but file exists: %v", err)
 	}
 }
-
-
