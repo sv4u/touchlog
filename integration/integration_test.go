@@ -448,7 +448,7 @@ func TestIntegration_NewCommand_WithOverwrite(t *testing.T) {
 		t.Fatalf("First command failed: %v", err)
 	}
 
-	// Try to create again without overwrite (should fail)
+	// Try to create again without overwrite (should create numbered file, not fail)
 	cmd2 := exec.Command("go", "run", cmdPath, "new",
 		"--message", "New message",
 		"--title", "Test Title",
@@ -460,11 +460,21 @@ func TestIntegration_NewCommand_WithOverwrite(t *testing.T) {
 		"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
 
 	err := cmd2.Run()
-	if err == nil {
-		t.Error("Command should fail when file exists and overwrite is not set")
+	if err != nil {
+		t.Fatalf("Command should create numbered file when collision occurs, got error: %v", err)
 	}
 
-	// Create again with overwrite (should succeed)
+	// Verify two files exist (base file and numbered file)
+	files, err := os.ReadDir(outputDir)
+	if err != nil {
+		t.Fatalf("Failed to read output dir: %v", err)
+	}
+
+	if len(files) != 2 {
+		t.Errorf("Expected 2 files (base and numbered), got %d", len(files))
+	}
+
+	// Create again with overwrite (should overwrite base file)
 	cmd3 := exec.Command("go", "run", cmdPath, "new",
 		"--message", "Updated message",
 		"--title", "Test Title",
@@ -480,14 +490,14 @@ func TestIntegration_NewCommand_WithOverwrite(t *testing.T) {
 		t.Fatalf("Command with overwrite failed: %v", err)
 	}
 
-	// Verify file was updated
-	files, err := os.ReadDir(outputDir)
+	// Verify still 2 files (base file overwritten, numbered file remains)
+	files, err = os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
 	}
 
-	if len(files) != 1 {
-		t.Errorf("Expected 1 file, got %d", len(files))
+	if len(files) != 2 {
+		t.Errorf("Expected 2 files after overwrite, got %d", len(files))
 	}
 
 	content, err := os.ReadFile(filepath.Join(outputDir, files[0].Name()))
@@ -1223,19 +1233,11 @@ inline_templates:
 	
 	output2, err := cmd2.CombinedOutput()
 	if err != nil {
-		// Check if it's a collision error (file already exists)
-		outputStr := string(output2)
-		if strings.Contains(outputStr, "already exists") || strings.Contains(outputStr, "file exists") {
-			// Collision handling should create a new file with suffix automatically
-			// But if it fails, the file might have been created anyway
-			t.Logf("Second command reported collision (may be expected), output: %s", outputStr)
-		} else {
-			// Unexpected error
-			t.Fatalf("Second command failed: %v\nOutput: %s", err, outputStr)
-		}
+		// Second command should succeed - collision handling should create numbered file
+		t.Fatalf("Second command failed (collision handling should create numbered file): %v\nOutput: %s", err, output2)
 	}
 	
-	// Verify both files exist (collision handling should create a new file)
+	// Verify both files exist (collision handling should create a new file with numeric suffix)
 	files, err := os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
@@ -1250,32 +1252,7 @@ inline_templates:
 	}
 	
 	if len(mdFiles) < 2 {
-		// If we don't have 2 files, collision handling may have prevented creation
-		// Try creating with a slightly different message to ensure we get 2 files
-		cmd3 := exec.Command("go", "run", cmdPath, "new",
-			"--message", "Third entry with different content",
-			"--title", "First", // Same title
-			"--output", outputDir)
-		cmd3.Dir = projectRoot
-		cmd3.Env = append(os.Environ(),
-			"XDG_CONFIG_HOME="+filepath.Join(tmpDir, ".config"),
-			"XDG_DATA_HOME="+filepath.Join(tmpDir, ".local", "share"))
-		cmd3.Run() // Try to create another, ignore errors
-		
-		// Re-read files
-		files, _ = os.ReadDir(outputDir)
-		mdFiles = []os.DirEntry{}
-		for _, file := range files {
-			if strings.HasSuffix(file.Name(), ".md") {
-				mdFiles = append(mdFiles, file)
-			}
-		}
-	}
-	
-	if len(mdFiles) < 2 {
-		t.Logf("Expected at least 2 markdown files, got %d. Collision handling may prevent overwriting without --overwrite flag.", len(mdFiles))
-		// This is acceptable behavior - the system prevents accidental overwrites
-		return
+		t.Fatalf("Expected at least 2 markdown files (collision handling should create numbered file), got %d", len(mdFiles))
 	}
 	
 	// Verify files have unique names (collision handling worked)

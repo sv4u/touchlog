@@ -174,48 +174,39 @@ func TestCreateEntryOverwrite(t *testing.T) {
 		t.Fatalf("Failed to create entry: %v", err)
 	}
 
-	// Try to create again without overwrite flag (should fail)
-	_, err = CreateEntry(entry, cfg, tmpDir, false)
-	if err == nil {
-		t.Error("CreateEntry() should fail when file exists and overwrite is false")
+	// Try to create again without overwrite flag (should create numbered file, not fail)
+	filePath2, err := CreateEntry(entry, cfg, tmpDir, false)
+	if err != nil {
+		t.Fatalf("CreateEntry() should create numbered file when collision occurs, got error: %v", err)
+	}
+
+	// Verify that a numbered file was created (filename should differ from base)
+	if filePath == filePath2 {
+		t.Error("CreateEntry() should create a different filename when collision occurs")
+	}
+
+	// Verify that the second file has a numeric suffix
+	baseName1 := filepath.Base(filePath)
+	baseName2 := filepath.Base(filePath2)
+	if !strings.Contains(baseName2, "_1") {
+		t.Errorf("Expected numbered file with _1 suffix, got: %s", baseName2)
 	}
 
 	// Try to create again with overwrite flag (should succeed)
 	entry.Message = "Updated message"
-	filePath2, err := CreateEntry(entry, cfg, tmpDir, true)
+	filePath3, err := CreateEntry(entry, cfg, tmpDir, true)
 	if err != nil {
 		t.Fatalf("CreateEntry() with overwrite=true failed: %v", err)
 	}
 
-	// With overwrite, it should use the same base filename (may have different suffix if collision)
-	// But the important thing is that it overwrites the content
-	baseName1 := filepath.Base(filePath)
-	baseName2 := filepath.Base(filePath2)
-	// Extract base without suffix for comparison
-	base1 := baseName1
-	base2 := baseName2
-	if len(base1) > 3 && base1[len(base1)-3:] == ".md" {
-		base1 = base1[:len(base1)-3]
+	// With overwrite, it should use the same base filename (overwrites the original base file)
+	// Verify it's the base filename (not numbered)
+	baseName3 := filepath.Base(filePath3)
+	if baseName3 != baseName1 {
+		t.Errorf("With overwrite, expected base filename %q, got %q", baseName1, baseName3)
 	}
-	if len(base2) > 3 && base2[len(base2)-3:] == ".md" {
-		base2 = base2[:len(base2)-3]
-	}
-	// Remove numeric suffix if present
-	if len(base1) > 2 && base1[len(base1)-2] == '_' {
-		// Check if last part is numeric
-		base1 = extractBaseName(base1)
-	}
-	if len(base2) > 2 && base2[len(base2)-2] == '_' {
-		base2 = extractBaseName(base2)
-	}
-	
-	// The base names should match (without suffix)
-	if base1 != base2 {
-		t.Logf("Note: Filenames differ but overwrite should still work: %q vs %q", base1, base2)
-	}
-
 	// Verify content was updated
-	content, err := os.ReadFile(filePath2)
+	content, err := os.ReadFile(filePath3)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
