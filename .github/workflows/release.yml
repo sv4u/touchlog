@@ -151,52 +151,7 @@ jobs:
           echo "Next version: $NEXT_VERSION"
 
       - name: Pre-release module validation
-        run: |
-          echo "Validating Go module before release..."
-          
-          # Check go.mod exists
-          if [ ! -f "go.mod" ]; then
-            echo "[X] Error: go.mod file not found"
-            exit 1
-          fi
-          
-          # Check go.sum exists
-          if [ ! -f "go.sum" ]; then
-            echo "[X] Error: go.sum file not found"
-            exit 1
-          fi
-          
-          # Validate module path matches repository
-          EXPECTED_MODULE="github.com/sv4u/touchlog"
-          ACTUAL_MODULE=$(grep -E '^module ' go.mod | sed 's/^module //' | tr -d '[:space:]')
-          
-          if [ "$ACTUAL_MODULE" != "$EXPECTED_MODULE" ]; then
-            echo "[X] Error: Module path mismatch"
-            echo "   Expected: $EXPECTED_MODULE"
-            echo "   Actual:   $ACTUAL_MODULE"
-            exit 1
-          fi
-          
-          # Verify module integrity
-          echo "Running go mod verify..."
-          if ! go mod verify; then
-            echo "[X] Error: go mod verify failed"
-            exit 1
-          fi
-          
-          # Check if go mod tidy would make changes (should be clean)
-          echo "Checking if go.mod is tidy..."
-          go mod tidy
-          if ! git diff --quiet go.mod go.sum; then
-            echo "[X] Error: go.mod or go.sum has uncommitted changes"
-            echo "   Please run 'go mod tidy' and commit the changes before releasing"
-            git diff go.mod go.sum
-            exit 1
-          fi
-          
-          echo "[OK] Module validation passed"
-          echo "   Module path: $ACTUAL_MODULE"
-          echo "   Module integrity: verified"
+        run: make validate-module
 
       - name: Check commit range
         id: commit-range

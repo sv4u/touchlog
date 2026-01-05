@@ -88,25 +88,17 @@ jobs:
         run: go mod verify
 
       - name: Build
-        run: |
-          GOOS=${{ matrix.platform }} GOARCH=${{ matrix.arch }} CGO_ENABLED=0 go build -v -o touchlog ./cmd/touchlog
+        run: make build-cross GOOS=${{ matrix.platform }} GOARCH=${{ matrix.arch }}
         env:
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 0
 
       - name: Run tests with coverage
-        run: go test ./... -v -coverprofile=coverage.out -covermode=atomic
+        run: make test-coverage
 
       - name: Check coverage threshold
-        run: |
-          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          threshold=20
-          if awk "BEGIN {if ($coverage < $threshold) exit 0; else exit 1}"; then
-            echo "Coverage $coverage% is below $threshold% threshold"
-            exit 1
-          fi
-          echo "Coverage: $coverage%"
+        run: make check-coverage THRESHOLD=20
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.arch == 'amd64'
@@ -150,13 +142,7 @@ jobs:
         run: go mod download
 
       - name: Check code formatting
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "Unformatted files:"
-            echo "$unformatted"
-            exit 1
-          fi
+        run: make fmt-check
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
@@ -164,12 +150,10 @@ jobs:
           version: v2.6.2
 
       - name: Run go vet
-        run: go vet ./...
+        run: make vet
 
       - name: Run staticcheck
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          staticcheck ./...
+        run: make staticcheck
 
   security-analysis:
     name: Security Analysis
