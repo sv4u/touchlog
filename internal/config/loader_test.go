@@ -314,6 +314,135 @@ func TestLoadConfigFromPath(t *testing.T) {
 			t.Errorf("LoadConfigFromPath() error = %v, want error containing 'TOML format not yet supported'", err)
 		}
 	})
+
+	t.Run("config with all overrides", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "override.yaml")
+		configYAML := `
+notes_directory: /custom/notes
+default_template: custom
+timezone: America/Denver
+templates:
+  - name: Custom Template
+    file: custom.md
+inline_templates:
+  custom: "# Custom\n{{message}}"
+variables:
+  author: Test Author
+  project: Test Project
+editor:
+  command: vim
+  args: ["-f"]
+`
+		if err := os.WriteFile(configPath, []byte(configYAML), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		loaded, err := LoadConfigFromPath(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfigFromPath() error = %v", err)
+		}
+
+		// Verify all overrides were applied
+		if loaded.NotesDirectory != "/custom/notes" {
+			t.Errorf("LoadConfigFromPath() NotesDirectory = %q, want %q", loaded.NotesDirectory, "/custom/notes")
+		}
+		if loaded.DefaultTemplate != "custom" {
+			t.Errorf("LoadConfigFromPath() DefaultTemplate = %q, want %q", loaded.DefaultTemplate, "custom")
+		}
+		if loaded.Timezone != "America/Denver" {
+			t.Errorf("LoadConfigFromPath() Timezone = %q, want %q", loaded.Timezone, "America/Denver")
+		}
+		if len(loaded.Templates) != 1 {
+			t.Errorf("LoadConfigFromPath() Templates length = %d, want 1", len(loaded.Templates))
+		}
+		if loaded.InlineTemplates == nil || loaded.InlineTemplates["custom"] == "" {
+			t.Error("LoadConfigFromPath() InlineTemplates not set correctly")
+		}
+		if loaded.Variables == nil || loaded.Variables["author"] != "Test Author" {
+			t.Error("LoadConfigFromPath() Variables not set correctly")
+		}
+		if loaded.Editor == nil || loaded.Editor.Command != "vim" {
+			t.Error("LoadConfigFromPath() Editor not set correctly")
+		}
+	})
+
+	t.Run("config with partial overrides", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "partial.yaml")
+		configYAML := `
+notes_directory: /partial/notes
+default_template: partial
+`
+		if err := os.WriteFile(configPath, []byte(configYAML), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		loaded, err := LoadConfigFromPath(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfigFromPath() error = %v", err)
+		}
+
+		// Verify overrides were applied
+		if loaded.NotesDirectory != "/partial/notes" {
+			t.Errorf("LoadConfigFromPath() NotesDirectory = %q, want %q", loaded.NotesDirectory, "/partial/notes")
+		}
+		if loaded.DefaultTemplate != "partial" {
+			t.Errorf("LoadConfigFromPath() DefaultTemplate = %q, want %q", loaded.DefaultTemplate, "partial")
+		}
+		// Templates may be empty if not specified in file (that's okay - defaults are applied)
+		// The key is that the overrides were applied correctly
+	})
+
+	t.Run("config with inline templates merge", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "merge.yaml")
+		configYAML := `
+inline_templates:
+  template1: "# Template 1\n{{message}}"
+  template2: "# Template 2\n{{title}}"
+`
+		if err := os.WriteFile(configPath, []byte(configYAML), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		loaded, err := LoadConfigFromPath(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfigFromPath() error = %v", err)
+		}
+
+		// Verify inline templates were merged
+		if loaded.InlineTemplates == nil {
+			t.Fatal("LoadConfigFromPath() InlineTemplates is nil")
+		}
+		if loaded.InlineTemplates["template1"] == "" {
+			t.Error("LoadConfigFromPath() template1 not found in InlineTemplates")
+		}
+		if loaded.InlineTemplates["template2"] == "" {
+			t.Error("LoadConfigFromPath() template2 not found in InlineTemplates")
+		}
+	})
+
+	t.Run("nonexistent file path", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "nonexistent.yaml")
+		_, err := LoadConfigFromPath(configPath)
+		if err == nil {
+			t.Error("LoadConfigFromPath() expected error for nonexistent file, got nil")
+		}
+	})
+
+	t.Run("invalid YAML", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "invalid.yaml")
+		invalidYAML := `
+notes_directory: /test
+invalid: [unclosed
+`
+		if err := os.WriteFile(configPath, []byte(invalidYAML), 0644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+
+		_, err := LoadConfigFromPath(configPath)
+		if err == nil {
+			t.Error("LoadConfigFromPath() expected error for invalid YAML, got nil")
+		}
+	})
 }
 
 

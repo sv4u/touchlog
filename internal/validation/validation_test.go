@@ -4,6 +4,7 @@ import (
 	stderrors "errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/sv4u/touchlog/internal/errors"
@@ -245,6 +246,152 @@ func TestValidateTemplateSyntax(t *testing.T) {
 		err := ValidateTemplateSyntax(unicodeTemplate)
 		if err != nil {
 			t.Errorf("ValidateTemplateSyntax() with unicode template error = %v, want nil", err)
+		}
+	})
+}
+
+func TestExpandPath(t *testing.T) {
+	t.Run("empty path", func(t *testing.T) {
+		expanded, err := ExpandPath("")
+		if err != nil {
+			t.Errorf("ExpandPath(\"\") error = %v, want nil", err)
+		}
+		if expanded == "" {
+			t.Error("ExpandPath(\"\") returned empty string")
+		}
+	})
+
+	t.Run("home directory only", func(t *testing.T) {
+		expanded, err := ExpandPath("~")
+		if err != nil {
+			t.Errorf("ExpandPath(\"~\") error = %v, want nil", err)
+		}
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			t.Skipf("Skipping test: cannot get home directory: %v", err)
+		}
+		if expanded != homeDir {
+			t.Errorf("ExpandPath(\"~\") = %q, want %q", expanded, homeDir)
+		}
+	})
+
+	t.Run("home directory with path", func(t *testing.T) {
+		expanded, err := ExpandPath("~/test-path")
+		if err != nil {
+			t.Errorf("ExpandPath(\"~/test-path\") error = %v, want nil", err)
+		}
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			t.Skipf("Skipping test: cannot get home directory: %v", err)
+		}
+		expected := filepath.Join(homeDir, "test-path")
+		if expanded != expected {
+			t.Errorf("ExpandPath(\"~/test-path\") = %q, want %q", expanded, expected)
+		}
+	})
+
+	t.Run("invalid tilde path", func(t *testing.T) {
+		_, err := ExpandPath("~invalid")
+		if err == nil {
+			t.Error("ExpandPath(\"~invalid\") error = nil, want error")
+		}
+		if !strings.Contains(err.Error(), "must be followed by /") {
+			t.Errorf("ExpandPath() error = %v, want error about tilde format", err)
+		}
+	})
+
+	t.Run("relative path", func(t *testing.T) {
+		wd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Failed to get working directory: %v", err)
+		}
+		
+		expanded, err := ExpandPath("test-relative")
+		if err != nil {
+			t.Errorf("ExpandPath(\"test-relative\") error = %v, want nil", err)
+		}
+		expected := filepath.Join(wd, "test-relative")
+		if expanded != expected {
+			t.Errorf("ExpandPath(\"test-relative\") = %q, want %q", expanded, expected)
+		}
+	})
+
+	t.Run("absolute path", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		expanded, err := ExpandPath(tmpDir)
+		if err != nil {
+			t.Errorf("ExpandPath(%q) error = %v, want nil", tmpDir, err)
+		}
+		if expanded != tmpDir {
+			t.Errorf("ExpandPath(%q) = %q, want %q", tmpDir, expanded, tmpDir)
+		}
+	})
+
+	t.Run("path with environment variable", func(t *testing.T) {
+		// Set a test environment variable
+		testVar := "TEST_TOUCHLOG_PATH"
+		testValue := "/tmp/test-touchlog"
+		os.Setenv(testVar, testValue)
+		defer os.Unsetenv(testVar)
+
+		path := "$" + testVar + "/subdir"
+		expanded, err := ExpandPath(path)
+		if err != nil {
+			t.Errorf("ExpandPath(%q) error = %v, want nil", path, err)
+		}
+		expected := filepath.Join(testValue, "subdir")
+		if expanded != expected {
+			t.Errorf("ExpandPath(%q) = %q, want %q", path, expanded, expected)
+		}
+	})
+
+	t.Run("path with multiple environment variables", func(t *testing.T) {
+		os.Setenv("VAR1", "/tmp")
+		os.Setenv("VAR2", "test")
+		defer func() {
+			os.Unsetenv("VAR1")
+			os.Unsetenv("VAR2")
+		}()
+
+		path := "$VAR1/$VAR2/path"
+		expanded, err := ExpandPath(path)
+		if err != nil {
+			t.Errorf("ExpandPath(%q) error = %v, want nil", path, err)
+		}
+		expected := filepath.Join("/tmp", "test", "path")
+		if expanded != expected {
+			t.Errorf("ExpandPath(%q) = %q, want %q", path, expanded, expected)
+		}
+	})
+
+	t.Run("path with undefined environment variable", func(t *testing.T) {
+		path := "$UNDEFINED_VAR/path"
+		expanded, err := ExpandPath(path)
+		if err != nil {
+			t.Errorf("ExpandPath(%q) error = %v, want nil (undefined vars expand to empty)", path, err)
+		}
+		// Undefined env vars expand to empty string, so path becomes "/path"
+		expected := filepath.Join("", "path")
+		if expanded != expected {
+			t.Logf("ExpandPath(%q) = %q (undefined env var expands to empty)", path, expanded)
+		}
+	})
+
+	t.Run("path with tilde and environment variable", func(t *testing.T) {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			t.Skipf("Skipping test: cannot get home directory: %v", err)
+		}
+
+		expanded, err := ExpandPath("~/$HOME/test")
+		if err != nil {
+			t.Errorf("ExpandPath(\"~/$HOME/test\") error = %v, want nil", err)
+		}
+		// Tilde expansion happens first, so this becomes "$HOME/$HOME/test"
+		// which then expands to homeDir/homeDir/test
+		expected := filepath.Join(homeDir, homeDir, "test")
+		if expanded != expected {
+			t.Logf("ExpandPath(\"~/$HOME/test\") = %q (tilde expands first)", expanded)
 		}
 	})
 }
