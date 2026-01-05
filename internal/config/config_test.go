@@ -1280,14 +1280,245 @@ another_unknown: true
 		}
 	})
 
-	t.Run("invalid YAML returns error", func(t *testing.T) {
-		yamlData := `invalid yaml: [unclosed bracket`
-		err := ValidateStrictFromYAML([]byte(yamlData))
-		if err == nil {
-			t.Error("ValidateStrictFromYAML() expected error for invalid YAML, got nil")
+		t.Run("invalid YAML returns error", func(t *testing.T) {
+			yamlData := `invalid yaml: [unclosed bracket`
+			err := ValidateStrictFromYAML([]byte(yamlData))
+			if err == nil {
+				t.Error("ValidateStrictFromYAML() expected error for invalid YAML, got nil")
+			}
+			if !strings.Contains(err.Error(), "failed to parse YAML") {
+				t.Errorf("ValidateStrictFromYAML() error = %v, want error containing 'failed to parse YAML'", err)
+			}
+		})
+	}
+
+func TestConfigGetters(t *testing.T) {
+	t.Run("GetTimezone", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			timezone string
+			want     string
+		}{
+			{"with timezone", "America/Denver", "America/Denver"},
+			{"empty timezone", "", ""},
+			{"UTC timezone", "UTC", "UTC"},
 		}
-		if !strings.Contains(err.Error(), "failed to parse YAML") {
-			t.Errorf("ValidateStrictFromYAML() error = %v, want error containing 'failed to parse YAML'", err)
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				cfg := &Config{Timezone: tt.timezone}
+				got := cfg.GetTimezone()
+				if got != tt.want {
+					t.Errorf("GetTimezone() = %q, want %q", got, tt.want)
+				}
+			})
 		}
 	})
+
+	t.Run("GetEditor", func(t *testing.T) {
+		t.Run("with editor config", func(t *testing.T) {
+			editorCfg := &EditorConfig{Command: "vim", Args: []string{"-f"}}
+			cfg := &Config{Editor: editorCfg}
+			got := cfg.GetEditor()
+			if got == nil {
+				t.Error("GetEditor() = nil, want non-nil")
+			}
+			if got.Command != "vim" {
+				t.Errorf("GetEditor().Command = %q, want %q", got.Command, "vim")
+			}
+		})
+
+		t.Run("without editor config", func(t *testing.T) {
+			cfg := &Config{Editor: nil}
+			got := cfg.GetEditor()
+			if got != nil {
+				t.Errorf("GetEditor() = %v, want nil", got)
+			}
+		})
+	})
+
+	t.Run("GetIncludeUser", func(t *testing.T) {
+		t.Run("with explicit true", func(t *testing.T) {
+			enabled := true
+			cfg := &Config{IncludeUser: &enabled}
+			got := cfg.GetIncludeUser()
+			if !got {
+				t.Error("GetIncludeUser() = false, want true")
+			}
+		})
+
+		t.Run("with explicit false", func(t *testing.T) {
+			enabled := false
+			cfg := &Config{IncludeUser: &enabled}
+			got := cfg.GetIncludeUser()
+			if got {
+				t.Error("GetIncludeUser() = true, want false")
+			}
+		})
+
+		t.Run("with nil (default true)", func(t *testing.T) {
+			cfg := &Config{IncludeUser: nil}
+			got := cfg.GetIncludeUser()
+			if !got {
+				t.Error("GetIncludeUser() = false, want true (default)")
+			}
+		})
+	})
+
+	t.Run("GetIncludeHost", func(t *testing.T) {
+		t.Run("with explicit true", func(t *testing.T) {
+			enabled := true
+			cfg := &Config{IncludeHost: &enabled}
+			got := cfg.GetIncludeHost()
+			if !got {
+				t.Error("GetIncludeHost() = false, want true")
+			}
+		})
+
+		t.Run("with explicit false", func(t *testing.T) {
+			enabled := false
+			cfg := &Config{IncludeHost: &enabled}
+			got := cfg.GetIncludeHost()
+			if got {
+				t.Error("GetIncludeHost() = true, want false")
+			}
+		})
+
+		t.Run("with nil (default true)", func(t *testing.T) {
+			cfg := &Config{IncludeHost: nil}
+			got := cfg.GetIncludeHost()
+			if !got {
+				t.Error("GetIncludeHost() = false, want true (default)")
+			}
+		})
+	})
+
+	t.Run("GetVimMode", func(t *testing.T) {
+		t.Run("with explicit true", func(t *testing.T) {
+			cfg := &Config{VimMode: true}
+			got := cfg.GetVimMode()
+			if !got {
+				t.Error("GetVimMode() = false, want true")
+			}
+		})
+
+		t.Run("with explicit false", func(t *testing.T) {
+			cfg := &Config{VimMode: false}
+			got := cfg.GetVimMode()
+			if got {
+				t.Error("GetVimMode() = true, want false")
+			}
+		})
+	})
+
+	t.Run("GetVariables", func(t *testing.T) {
+		t.Run("with variables", func(t *testing.T) {
+			cfg := &Config{
+				Variables: map[string]string{
+					"author":  "Test Author",
+					"project": "Test Project",
+				},
+			}
+			got := cfg.GetVariables()
+			if len(got) != 2 {
+				t.Errorf("GetVariables() length = %d, want 2", len(got))
+			}
+			if got["author"] != "Test Author" {
+				t.Errorf("GetVariables()['author'] = %q, want %q", got["author"], "Test Author")
+			}
+		})
+
+		t.Run("without variables", func(t *testing.T) {
+			cfg := &Config{Variables: nil}
+			got := cfg.GetVariables()
+			if got == nil {
+				t.Error("GetVariables() = nil, want empty map")
+			}
+			if len(got) != 0 {
+				t.Errorf("GetVariables() length = %d, want 0", len(got))
+			}
+		})
+	})
+
+	t.Run("GetDateTimeVars", func(t *testing.T) {
+		enabledTrue := true
+		cfg := &Config{
+			DateTimeVars: DateTimeVarsConfig{
+				Date:     DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02"},
+				Time:     DateTimeVarConfig{Enabled: &enabledTrue, Format: "15:04:05"},
+				DateTime: DateTimeVarConfig{Enabled: &enabledTrue, Format: "2006-01-02 15:04:05"},
+			},
+		}
+		got := cfg.GetDateTimeVars()
+		if got.Date.Format != "2006-01-02" {
+			t.Errorf("GetDateTimeVars().Date.Format = %q, want %q", got.Date.Format, "2006-01-02")
+		}
+		if got.Time.Format != "15:04:05" {
+			t.Errorf("GetDateTimeVars().Time.Format = %q, want %q", got.Time.Format, "15:04:05")
+		}
+	})
+}
+
+
+func TestParseEditorString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantArgs []string
+	}{
+		{
+			name:     "simple command",
+			input:    "vim",
+			wantArgs: []string{"vim"},
+		},
+		{
+			name:     "command with single arg",
+			input:    "vim -f",
+			wantArgs: []string{"vim", "-f"},
+		},
+		{
+			name:     "command with multiple args",
+			input:    "vim -f --noplugin",
+			wantArgs: []string{"vim", "-f", "--noplugin"},
+		},
+		{
+			name:     "command with quoted args",
+			input:    "code --wait",
+			wantArgs: []string{"code", "--wait"},
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			wantArgs: nil,
+		},
+		{
+			name:     "command with spaces in args",
+			input:    "editor --option value",
+			wantArgs: []string{"editor", "--option", "value"},
+		},
+		{
+			name:     "multiple spaces",
+			input:    "vim   -f",
+			wantArgs: []string{"vim", "-f"},
+		},
+		{
+			name:     "leading and trailing spaces",
+			input:    "  vim -f  ",
+			wantArgs: []string{"vim", "-f"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := parseEditorString(tt.input)
+			if len(args) != len(tt.wantArgs) {
+				t.Errorf("parseEditorString(%q) length = %d, want %d", tt.input, len(args), len(tt.wantArgs))
+			}
+			for i, want := range tt.wantArgs {
+				if i < len(args) && args[i] != want {
+					t.Errorf("parseEditorString(%q) args[%d] = %q, want %q", tt.input, i, args[i], want)
+				}
+			}
+		})
+	}
 }
