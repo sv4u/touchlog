@@ -150,6 +150,54 @@ jobs:
           echo "Next tag: $NEXT_TAG"
           echo "Next version: $NEXT_VERSION"
 
+      - name: Pre-release module validation
+        run: |
+          echo "Validating Go module before release..."
+          
+          # Check go.mod exists
+          if [ ! -f "go.mod" ]; then
+            echo "[X] Error: go.mod file not found"
+            exit 1
+          fi
+          
+          # Check go.sum exists
+          if [ ! -f "go.sum" ]; then
+            echo "[X] Error: go.sum file not found"
+            exit 1
+          fi
+          
+          # Validate module path matches repository
+          EXPECTED_MODULE="github.com/sv4u/touchlog"
+          ACTUAL_MODULE=$(grep -E '^module ' go.mod | sed 's/^module //' | tr -d '[:space:]')
+          
+          if [ "$ACTUAL_MODULE" != "$EXPECTED_MODULE" ]; then
+            echo "[X] Error: Module path mismatch"
+            echo "   Expected: $EXPECTED_MODULE"
+            echo "   Actual:   $ACTUAL_MODULE"
+            exit 1
+          fi
+          
+          # Verify module integrity
+          echo "Running go mod verify..."
+          if ! go mod verify; then
+            echo "[X] Error: go mod verify failed"
+            exit 1
+          fi
+          
+          # Check if go mod tidy would make changes (should be clean)
+          echo "Checking if go.mod is tidy..."
+          go mod tidy
+          if ! git diff --quiet go.mod go.sum; then
+            echo "[X] Error: go.mod or go.sum has uncommitted changes"
+            echo "   Please run 'go mod tidy' and commit the changes before releasing"
+            git diff go.mod go.sum
+            exit 1
+          fi
+          
+          echo "[OK] Module validation passed"
+          echo "   Module path: $ACTUAL_MODULE"
+          echo "   Module integrity: verified"
+
       - name: Check commit range
         id: commit-range
         run: |
@@ -272,6 +320,66 @@ jobs:
             exit 1
           fi
 
+      - name: Trigger Go module indexing
+        if: ${{ inputs.dry_run != 'true' }}
+        continue-on-error: true
+        run: |
+          NEXT_TAG="${{ steps.version.outputs.tag }}"
+          MODULE_PATH="github.com/sv4u/touchlog"
+          
+          echo "Triggering Go module indexing for $MODULE_PATH@${NEXT_TAG}..."
+          echo "Using GOPROXY=direct to force fetch from source"
+          
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          SUCCESS=false
+          
+          # Exponential backoff delays: 2s, 4s, 8s, 16s, 32s, 60s, 60s, 60s, 60s, 60s
+          # Cap at 60 seconds per retry
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            
+            # Calculate delay (exponential backoff, capped at 60s)
+            if [ $RETRY_COUNT -eq 1 ]; then
+              DELAY=2
+            elif [ $RETRY_COUNT -eq 2 ]; then
+              DELAY=4
+            elif [ $RETRY_COUNT -eq 3 ]; then
+              DELAY=8
+            elif [ $RETRY_COUNT -eq 4 ]; then
+              DELAY=16
+            elif [ $RETRY_COUNT -eq 5 ]; then
+              DELAY=32
+            else
+              DELAY=60
+            fi
+            
+            echo "[...] Attempt $RETRY_COUNT/$MAX_RETRIES: Triggering module fetch..."
+            
+            # Try to fetch the module with GOPROXY=direct
+            if GOPROXY=direct go get "${MODULE_PATH}@${NEXT_TAG}" 2>&1; then
+              echo "[OK] Module fetch successful on attempt $RETRY_COUNT"
+              SUCCESS=true
+              break
+            else
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "[!] Module fetch failed (attempt $RETRY_COUNT/$MAX_RETRIES)"
+                echo "    Retrying in ${DELAY}s (tag may not be fully propagated yet)..."
+                sleep $DELAY
+              else
+                echo "[!] Module fetch failed after $MAX_RETRIES attempts"
+              fi
+            fi
+          done
+          
+          if [ "$SUCCESS" = "false" ]; then
+            echo "[!] Warning: Failed to trigger module indexing after $MAX_RETRIES attempts"
+            echo "    This is non-blocking. The module will be indexed automatically when"
+            echo "    someone runs 'go get' for this version, or it may take some time"
+            echo "    for the proxy to discover the new tag."
+            echo "    Manual check: https://pkg.go.dev/${MODULE_PATH}@${NEXT_TAG}"
+          fi
+
       - name: Set GoReleaser args
         id: goreleaser-args
         run: |
@@ -359,29 +467,118 @@ jobs:
           path: ${{ steps.sbom.outputs.file }}
           if-no-files-found: ignore
 
-      - name: Verify pkg.go.dev indexing
+      - name: Verify Go module indexing
         if: steps.goreleaser.outcome == 'success' && inputs.dry_run != 'true'
+        continue-on-error: true
         run: |
           NEXT_TAG="${{ steps.version.outputs.tag }}"
           NEXT_VERSION="${{ steps.version.outputs.version }}"
+          MODULE_PATH="github.com/sv4u/touchlog"
           
-          echo "Waiting 30 seconds for tag propagation..."
-          sleep 30
+          echo "Verifying Go module indexing for ${MODULE_PATH}@${NEXT_TAG}..."
+          echo "This may take several minutes as indexing is asynchronous."
           
-          PKG_URL="https://pkg.go.dev/github.com/sv4u/touchlog@${NEXT_TAG}"
-          echo "Checking pkg.go.dev: $PKG_URL"
+          # Wait a bit for initial propagation
+          echo "Waiting 10 seconds for initial tag propagation..."
+          sleep 10
           
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$PKG_URL" || echo "000")
+          MAX_RETRIES=5
+          PROXY_SUCCESS=false
+          PKG_SUCCESS=false
           
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "[OK] Module is already indexed on pkg.go.dev"
-          elif [ "$HTTP_CODE" = "404" ]; then
-            echo "[i] Module not yet indexed (this is normal, indexing can take minutes to hours)"
-            echo "    Check later at: $PKG_URL"
+          # Retry intervals: 10s, 30s, 60s, 120s, 120s
+          DELAYS=(10 30 60 120 120)
+          
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Verification attempt $i/$MAX_RETRIES"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            # Check 1: Proxy API endpoint
+            if [ "$PROXY_SUCCESS" = "false" ]; then
+              PROXY_URL="https://proxy.golang.org/${MODULE_PATH}/@v/${NEXT_TAG}.info"
+              echo "Checking proxy API: $PROXY_URL"
+              
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$PROXY_URL" 2>&1 || echo "000")
+              
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "[OK] Module found in Go proxy"
+                PROXY_SUCCESS=true
+              elif [ "$HTTP_CODE" = "404" ]; then
+                echo "[...] Module not yet in proxy (HTTP 404)"
+              else
+                echo "[!] Unexpected proxy response (HTTP $HTTP_CODE)"
+              fi
+            else
+              echo "[OK] Proxy check already passed (skipping)"
+            fi
+            
+            # Check 2: pkg.go.dev endpoint (sequential, only if proxy succeeded or on last attempt)
+            if [ "$PROXY_SUCCESS" = "true" ] || [ $i -eq $MAX_RETRIES ]; then
+              PKG_URL="https://pkg.go.dev/${MODULE_PATH}@${NEXT_TAG}"
+              echo "Checking pkg.go.dev: $PKG_URL"
+              
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$PKG_URL" 2>&1 || echo "000")
+              
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "[OK] Module indexed on pkg.go.dev"
+                PKG_SUCCESS=true
+              elif [ "$HTTP_CODE" = "404" ]; then
+                echo "[...] Module not yet on pkg.go.dev (HTTP 404)"
+              else
+                echo "[!] Unexpected pkg.go.dev response (HTTP $HTTP_CODE)"
+              fi
+            fi
+            
+            # If both checks succeeded, we're done
+            if [ "$PROXY_SUCCESS" = "true" ] && [ "$PKG_SUCCESS" = "true" ]; then
+              echo ""
+              echo "[OK] Module indexing verification complete!"
+              echo "   Proxy API: ✓"
+              echo "   pkg.go.dev: ✓"
+              exit 0
+            fi
+            
+            # Wait before next attempt (except on last attempt)
+            if [ $i -lt $MAX_RETRIES ]; then
+              DELAY=${DELAYS[$((i-1))]}
+              echo ""
+              echo "[...] Waiting ${DELAY}s before next attempt..."
+              sleep $DELAY
+            fi
+          done
+          
+          # Final status report
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Verification Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          if [ "$PROXY_SUCCESS" = "true" ]; then
+            echo "[OK] Proxy API: Module found"
           else
-            echo "[!] Warning: Unexpected response from pkg.go.dev (HTTP $HTTP_CODE)"
-            echo "    This is informational only and does not block the release"
+            echo "[!] Proxy API: Module not yet indexed"
           fi
+          
+          if [ "$PKG_SUCCESS" = "true" ]; then
+            echo "[OK] pkg.go.dev: Module indexed"
+          else
+            echo "[!] pkg.go.dev: Module not yet indexed"
+          fi
+          
+          echo ""
+          echo "[!] Warning: Module indexing verification incomplete after $MAX_RETRIES attempts"
+          echo "    This is normal - Go module indexing is asynchronous and can take"
+          echo "    minutes to hours. The release was successful."
+          echo ""
+          echo "    Manual verification links:"
+          echo "    - Proxy API: https://proxy.golang.org/${MODULE_PATH}/@v/${NEXT_TAG}.info"
+          echo "    - pkg.go.dev: https://pkg.go.dev/${MODULE_PATH}@${NEXT_TAG}"
+          echo ""
+          echo "    The module will be automatically indexed when:"
+          echo "    - Someone runs 'go get ${MODULE_PATH}@${NEXT_TAG}'"
+          echo "    - The Go proxy discovers the new tag (usually within hours)"
 
       - name: Rollback tag on failure
         if: ${{ inputs.dry_run != 'true' && steps.goreleaser.outcome == 'failure' }}
@@ -412,6 +609,7 @@ jobs:
           NEXT_TAG="${{ steps.version.outputs.tag }}"
           NEXT_VERSION="${{ steps.version.outputs.version }}"
           DRY_RUN="${{ inputs.dry_run }}"
+          MODULE_PATH="github.com/sv4u/touchlog"
           
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           if [ "$DRY_RUN" = "true" ]; then
@@ -430,6 +628,14 @@ jobs:
           else
             echo ""
             echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/$NEXT_TAG"
-            echo "pkg.go.dev:  https://pkg.go.dev/github.com/sv4u/touchlog@${NEXT_TAG}"
+            echo ""
+            echo "Go Module Links:"
+            echo "  pkg.go.dev:     https://pkg.go.dev/${MODULE_PATH}@${NEXT_TAG}"
+            echo "  Proxy API:      https://proxy.golang.org/${MODULE_PATH}/@v/${NEXT_TAG}.info"
+            echo ""
+            echo "[i] Note: Module indexing on go.dev is asynchronous and may take"
+            echo "    minutes to hours. If the module is not yet indexed, it will"
+            echo "    be automatically indexed when someone runs 'go get' for this"
+            echo "    version, or when the Go proxy discovers the new tag."
           fi
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
