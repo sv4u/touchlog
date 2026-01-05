@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sv4u/touchlog/internal/config"
+	"github.com/sv4u/touchlog/internal/debug"
 	"github.com/sv4u/touchlog/internal/template"
 	"github.com/sv4u/touchlog/internal/validation"
 	"github.com/sv4u/touchlog/internal/xdg"
@@ -72,26 +73,28 @@ func CreateEntry(entry *Entry, cfg *config.Config, outputDir string, overwrite b
 		tz = time.Now().Location() // Use system timezone
 	}
 
-	// Generate base filename (without collision handling)
+	// Always generate filename with collision handling first
+	// This ensures we get an available filename (handles numbered suffixes automatically)
+	filename, err := GenerateFilename(expandedDir, entry.Title, entry.Message, entry.Date, tz)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate filename: %w", err)
+	}
+
+	// Generate base filename for comparison and overwrite logic
 	baseFilename := FormatDate(entry.Date, tz) + "_" + GenerateSlug(entry.Title, entry.Message) + ".md"
 	basePath := filepath.Join(expandedDir, baseFilename)
 
-	// Check if base file exists and handle overwrite
-	if !overwrite {
-		// Check if base file exists
-		if _, err := os.Stat(basePath); err == nil {
-			return "", fmt.Errorf("file already exists: %s (use --overwrite to overwrite)", basePath)
-		}
-		// If base doesn't exist, generate filename with collision handling
-		filename, err := GenerateFilename(expandedDir, entry.Title, entry.Message, entry.Date, tz)
-		if err != nil {
-			return "", fmt.Errorf("failed to generate filename: %w", err)
-		}
-		basePath = filename
-	}
+	// Check if collision handling occurred (filename differs from base)
+	collisionDetected := filename != basePath
 
-	// Use base path for overwrite, or generated path for new file
-	filename := basePath
+	// If overwrite is true, use the base filename instead (overwrites existing base file)
+	if overwrite {
+		filename = basePath
+		collisionDetected = false // No collision message when overwriting
+	} else if collisionDetected {
+		// Log collision details in debug mode
+		debug.LogCollision(basePath, "file already exists", filename)
+	}
 
 	// Get template name (use default if not specified)
 	templateName := ""
