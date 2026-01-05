@@ -35,4 +35,3 @@ func LogCollision(originalPath, reason, resolvedPath string) {
 		fmt.Fprintf(os.Stderr, "  Resolved filename: %s\n", resolvedPath)
 	}
 }
-

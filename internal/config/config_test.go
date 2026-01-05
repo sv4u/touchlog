@@ -1280,17 +1280,17 @@ another_unknown: true
 		}
 	})
 
-		t.Run("invalid YAML returns error", func(t *testing.T) {
-			yamlData := `invalid yaml: [unclosed bracket`
-			err := ValidateStrictFromYAML([]byte(yamlData))
-			if err == nil {
-				t.Error("ValidateStrictFromYAML() expected error for invalid YAML, got nil")
-			}
-			if !strings.Contains(err.Error(), "failed to parse YAML") {
-				t.Errorf("ValidateStrictFromYAML() error = %v, want error containing 'failed to parse YAML'", err)
-			}
-		})
-	}
+	t.Run("invalid YAML returns error", func(t *testing.T) {
+		yamlData := `invalid yaml: [unclosed bracket`
+		err := ValidateStrictFromYAML([]byte(yamlData))
+		if err == nil {
+			t.Error("ValidateStrictFromYAML() expected error for invalid YAML, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to parse YAML") {
+			t.Errorf("ValidateStrictFromYAML() error = %v, want error containing 'failed to parse YAML'", err)
+		}
+	})
+}
 
 func TestConfigGetters(t *testing.T) {
 	t.Run("GetTimezone", func(t *testing.T) {
@@ -1458,7 +1458,6 @@ func TestConfigGetters(t *testing.T) {
 		}
 	})
 }
-
 
 func TestParseEditorString(t *testing.T) {
 	tests := []struct {

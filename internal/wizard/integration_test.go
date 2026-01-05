@@ -356,4 +356,3 @@ func TestWizard_FlowWithEmptyFields(t *testing.T) {
 		t.Logf("Filename with empty title: %s (may use message or untitled)", filename)
 	}
 }
-

@@ -9,20 +9,20 @@ import (
 
 func TestNewWizard(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	
+
 	w, err := NewWizard(cfg, false)
 	if err != nil {
 		t.Fatalf("NewWizard() error = %v, want nil", err)
 	}
-	
+
 	if w == nil {
 		t.Fatal("NewWizard() returned nil wizard")
 	}
-	
+
 	if w.GetState() != StateMainMenu {
 		t.Errorf("NewWizard() initial state = %v, want %v", w.GetState(), StateMainMenu)
 	}
-	
+
 	if w.GetConfig() != cfg {
 		t.Errorf("NewWizard() config = %v, want %v", w.GetConfig(), cfg)
 	}
@@ -38,12 +38,12 @@ func TestNewWizard_NilConfig(t *testing.T) {
 func TestWizard_TransitionTo(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	tests := []struct {
-		name    string
-		setup   func(*Wizard) error
+		name     string
+		setup    func(*Wizard) error
 		newState State
-		wantErr bool
+		wantErr  bool
 	}{
 		{
 			"Valid: MainMenu to TemplateSelection",
@@ -64,22 +64,22 @@ func TestWizard_TransitionTo(t *testing.T) {
 			true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset to MainMenu for each test
 			w.Reset()
-			
+
 			// Setup: navigate to starting state
 			if err := tt.setup(w); err != nil {
 				t.Fatalf("Setup failed: %v", err)
 			}
-			
+
 			err := w.TransitionTo(tt.newState)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Wizard.TransitionTo(%v) error = %v, wantErr %v", tt.newState, err, tt.wantErr)
 			}
-			
+
 			if !tt.wantErr {
 				if w.GetState() != tt.newState {
 					t.Errorf("Wizard.TransitionTo() state = %v, want %v", w.GetState(), tt.newState)
@@ -92,12 +92,12 @@ func TestWizard_TransitionTo(t *testing.T) {
 func TestWizard_CanGoBack(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	tests := []struct {
-		name    string
-		setup   func(*Wizard) error
-		state   State
-		want    bool
+		name  string
+		setup func(*Wizard) error
+		state State
+		want  bool
 	}{
 		{"TemplateSelection", func(w *Wizard) error { return w.TransitionTo(StateTemplateSelection) }, StateTemplateSelection, true},
 		{"OutputDir", func(w *Wizard) error {
@@ -186,18 +186,18 @@ func TestWizard_CanGoBack(t *testing.T) {
 			return w.TransitionTo(StateReviewScreen)
 		}, StateReviewScreen, false},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w.Reset()
 			if err := tt.setup(w); err != nil {
 				t.Fatalf("Failed to setup state %v: %v", tt.state, err)
 			}
-			
+
 			if w.GetState() != tt.state {
 				t.Fatalf("Setup did not reach state %v, got %v", tt.state, w.GetState())
 			}
-			
+
 			if got := w.CanGoBack(); got != tt.want {
 				t.Errorf("Wizard.CanGoBack() = %v, want %v", got, tt.want)
 			}
@@ -208,7 +208,7 @@ func TestWizard_CanGoBack(t *testing.T) {
 func TestWizard_GoBack(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Navigate forward
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
@@ -216,12 +216,12 @@ func TestWizard_GoBack(t *testing.T) {
 	if err := w.TransitionTo(StateOutputDir); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
 	}
-	
+
 	// Go back
 	if err := w.GoBack(); err != nil {
 		t.Fatalf("Wizard.GoBack() error = %v, want nil", err)
 	}
-	
+
 	if w.GetState() != StateTemplateSelection {
 		t.Errorf("Wizard.GoBack() state = %v, want %v", w.GetState(), StateTemplateSelection)
 	}
@@ -230,7 +230,7 @@ func TestWizard_GoBack(t *testing.T) {
 func TestWizard_GoBack_NotAllowed(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Try to go back from MainMenu (not allowed)
 	err := w.GoBack()
 	if err == nil {
@@ -241,29 +241,29 @@ func TestWizard_GoBack_NotAllowed(t *testing.T) {
 func TestWizard_SettersAndGetters(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Test setters and getters
 	w.SetOutputDir("/tmp/notes")
 	if w.GetOutputDir() != "/tmp/notes" {
 		t.Errorf("GetOutputDir() = %v, want /tmp/notes", w.GetOutputDir())
 	}
-	
+
 	w.SetTemplateName("daily")
 	if w.GetTemplateName() != "daily" {
 		t.Errorf("GetTemplateName() = %v, want daily", w.GetTemplateName())
 	}
-	
+
 	w.SetTitle("Test Title")
 	if w.GetTitle() != "Test Title" {
 		t.Errorf("GetTitle() = %v, want Test Title", w.GetTitle())
 	}
-	
+
 	w.SetTags([]string{"work", "meeting"})
 	tags := w.GetTags()
 	if len(tags) != 2 || tags[0] != "work" || tags[1] != "meeting" {
 		t.Errorf("GetTags() = %v, want [work, meeting]", tags)
 	}
-	
+
 	w.SetMessage("Test message")
 	if w.GetMessage() != "Test message" {
 		t.Errorf("GetMessage() = %v, want Test message", w.GetMessage())
@@ -273,20 +273,20 @@ func TestWizard_SettersAndGetters(t *testing.T) {
 func TestWizard_Reset(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Set some values
 	w.SetOutputDir("/tmp/notes")
 	w.SetTitle("Test")
 	w.SetTags([]string{"tag1"})
-	
+
 	// Navigate to a different state
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
 	}
-	
+
 	// Reset
 	w.Reset()
-	
+
 	// Check that everything is reset
 	if w.GetState() != StateMainMenu {
 		t.Errorf("Reset() state = %v, want %v", w.GetState(), StateMainMenu)
@@ -305,7 +305,7 @@ func TestWizard_Reset(t *testing.T) {
 func TestWizard_ValidateState(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Navigate to OutputDir state
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
@@ -313,15 +313,15 @@ func TestWizard_ValidateState(t *testing.T) {
 	if err := w.TransitionTo(StateOutputDir); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
 	}
-	
+
 	// Should fail validation (output dir is empty)
 	if err := w.ValidateState(); err == nil {
 		t.Error("ValidateState() with empty outputDir error = nil, want error")
 	}
-	
+
 	// Set output dir
 	w.SetOutputDir("/tmp/notes")
-	
+
 	// Validation should pass (actual path validation is done in flow.go)
 	// ValidateState only checks if required fields are set
 	if err := w.ValidateState(); err != nil {
@@ -332,19 +332,19 @@ func TestWizard_ValidateState(t *testing.T) {
 func TestWizard_FilePathSettersAndGetters(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Test temp file path
 	w.SetTempFilePath("/tmp/temp.md")
 	if w.GetTempFilePath() != "/tmp/temp.md" {
 		t.Errorf("GetTempFilePath() = %v, want /tmp/temp.md", w.GetTempFilePath())
 	}
-	
+
 	// Test final file path
 	w.SetFinalFilePath("/tmp/final.md")
 	if w.GetFinalFilePath() != "/tmp/final.md" {
 		t.Errorf("GetFinalFilePath() = %v, want /tmp/final.md", w.GetFinalFilePath())
 	}
-	
+
 	// Test file content
 	content := "# Test\n\nContent here"
 	w.SetFileContent(content)
@@ -356,13 +356,13 @@ func TestWizard_FilePathSettersAndGetters(t *testing.T) {
 func TestWizard_Timestamp(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Timestamp should be set on creation
 	timestamp := w.GetTimestamp()
 	if timestamp.IsZero() {
 		t.Error("GetTimestamp() returned zero time")
 	}
-	
+
 	// Timestamp should be recent (within last second)
 	now := time.Now()
 	diff := now.Sub(timestamp)
@@ -377,7 +377,7 @@ func TestWizard_Timestamp(t *testing.T) {
 func TestWizard_ValidateState_AllStates(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Test validation for all states
 	states := []State{
 		StateMainMenu,
@@ -390,11 +390,11 @@ func TestWizard_ValidateState_AllStates(t *testing.T) {
 		StateEditorLaunch,
 		StateReviewScreen,
 	}
-	
+
 	for _, state := range states {
 		t.Run(state.String(), func(t *testing.T) {
 			w.Reset()
-			
+
 			// Navigate to state (if possible)
 			// For states that require navigation, we'll try to get there
 			// For MainMenu, we're already there
@@ -402,7 +402,7 @@ func TestWizard_ValidateState_AllStates(t *testing.T) {
 				// Try to navigate - may fail for some states, that's okay
 				_ = w.TransitionTo(state)
 			}
-			
+
 			// ValidateState should not panic
 			// Some states may return errors (like OutputDir with empty dir)
 			// but that's expected behavior
@@ -415,7 +415,7 @@ func TestWizard_ValidateState_AllStates(t *testing.T) {
 func TestWizard_Reset_AllFields(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Set all fields
 	w.SetOutputDir("/tmp/notes")
 	w.SetTemplateName("daily")
@@ -425,7 +425,7 @@ func TestWizard_Reset_AllFields(t *testing.T) {
 	w.SetTempFilePath("/tmp/temp.md")
 	w.SetFinalFilePath("/tmp/final.md")
 	w.SetFileContent("# Content")
-	
+
 	// Navigate to a different state
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
@@ -433,10 +433,10 @@ func TestWizard_Reset_AllFields(t *testing.T) {
 	if err := w.TransitionTo(StateOutputDir); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
 	}
-	
+
 	// Reset
 	w.Reset()
-	
+
 	// Verify all fields are reset
 	if w.GetState() != StateMainMenu {
 		t.Errorf("Reset() state = %v, want %v", w.GetState(), StateMainMenu)
@@ -465,7 +465,7 @@ func TestWizard_Reset_AllFields(t *testing.T) {
 	if w.GetFileContent() != "" {
 		t.Errorf("Reset() fileContent = %v, want empty", w.GetFileContent())
 	}
-	
+
 	// Timestamp should be updated (recent)
 	timestamp := w.GetTimestamp()
 	now := time.Now()
@@ -480,7 +480,7 @@ func TestWizard_Reset_AllFields(t *testing.T) {
 
 func TestWizard_NewWizard_IncludeGit(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
-	
+
 	// Test with includeGit = true
 	w1, err := NewWizard(cfg, true)
 	if err != nil {
@@ -491,7 +491,7 @@ func TestWizard_NewWizard_IncludeGit(t *testing.T) {
 	if w1 == nil {
 		t.Fatal("NewWizard() returned nil wizard")
 	}
-	
+
 	// Test with includeGit = false
 	w2, err := NewWizard(cfg, false)
 	if err != nil {
@@ -505,27 +505,27 @@ func TestWizard_NewWizard_IncludeGit(t *testing.T) {
 func TestWizard_TransitionTo_HistoryTracking(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Initial state should be in history
 	if w.GetState() != StateMainMenu {
 		t.Fatalf("Initial state = %v, want %v", w.GetState(), StateMainMenu)
 	}
-	
+
 	// Transition to TemplateSelection
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
 	}
-	
+
 	// State should be updated
 	if w.GetState() != StateTemplateSelection {
 		t.Errorf("State after transition = %v, want %v", w.GetState(), StateTemplateSelection)
 	}
-	
+
 	// Transition to OutputDir
 	if err := w.TransitionTo(StateOutputDir); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
 	}
-	
+
 	// State should be updated
 	if w.GetState() != StateOutputDir {
 		t.Errorf("State after transition = %v, want %v", w.GetState(), StateOutputDir)
@@ -535,7 +535,7 @@ func TestWizard_TransitionTo_HistoryTracking(t *testing.T) {
 func TestWizard_GoBack_MultipleSteps(t *testing.T) {
 	cfg := config.CreateDefaultConfig()
 	w, _ := NewWizard(cfg, false)
-	
+
 	// Navigate forward multiple steps
 	if err := w.TransitionTo(StateTemplateSelection); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
@@ -546,7 +546,7 @@ func TestWizard_GoBack_MultipleSteps(t *testing.T) {
 	if err := w.TransitionTo(StateTitle); err != nil {
 		t.Fatalf("Failed to transition: %v", err)
 	}
-	
+
 	// Go back once
 	if err := w.GoBack(); err != nil {
 		t.Fatalf("Wizard.GoBack() error = %v, want nil", err)
@@ -554,7 +554,7 @@ func TestWizard_GoBack_MultipleSteps(t *testing.T) {
 	if w.GetState() != StateOutputDir {
 		t.Errorf("State after GoBack() = %v, want %v", w.GetState(), StateOutputDir)
 	}
-	
+
 	// Go back again
 	if err := w.GoBack(); err != nil {
 		t.Fatalf("Wizard.GoBack() error = %v, want nil", err)
@@ -563,4 +563,3 @@ func TestWizard_GoBack_MultipleSteps(t *testing.T) {
 		t.Errorf("State after second GoBack() = %v, want %v", w.GetState(), StateTemplateSelection)
 	}
 }
-

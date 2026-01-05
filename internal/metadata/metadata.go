@@ -77,4 +77,3 @@ func GetHostname() (string, error) {
 	}
 	return hostname, nil
 }
-

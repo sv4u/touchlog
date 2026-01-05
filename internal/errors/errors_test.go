@@ -135,4 +135,3 @@ func TestErrorIs(t *testing.T) {
 		t.Error("errors.Is() should return true for error type")
 	}
 }
-

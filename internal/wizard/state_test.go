@@ -32,10 +32,10 @@ func TestStateString(t *testing.T) {
 
 func TestCanTransitionTo(t *testing.T) {
 	tests := []struct {
-		name     string
-		current  State
-		new      State
-		want     bool
+		name    string
+		current State
+		new     State
+		want    bool
 	}{
 		// Valid transitions
 		{"MainMenu to TemplateSelection", StateMainMenu, StateTemplateSelection, true},
@@ -73,9 +73,9 @@ func TestCanTransitionTo(t *testing.T) {
 
 func TestCanGoBack(t *testing.T) {
 	tests := []struct {
-		name    string
-		state   State
-		want    bool
+		name  string
+		state State
+		want  bool
 	}{
 		{"MainMenu", StateMainMenu, false},
 		{"TemplateSelection", StateTemplateSelection, true},
@@ -127,4 +127,3 @@ func TestGetPreviousState(t *testing.T) {
 		})
 	}
 }
-

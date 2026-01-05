@@ -106,4 +106,3 @@ func GetPreviousState(s State) State {
 		return -1 // Invalid state for back navigation
 	}
 }
-

@@ -64,18 +64,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Verify dependencies
-        run: go mod verify
-
       - name: Check dependencies
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           go mod tidy
           git diff --exit-code go.mod go.sum || (echo "go.mod or go.sum are out of sync. Run 'go mod tidy' and commit the changes." && exit 1)
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify dependencies
+        run: go mod verify
 
       - name: Build
         run: |

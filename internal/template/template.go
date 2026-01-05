@@ -214,7 +214,7 @@ func GetDefaultVariablesWithMetadata(cfg *config.Config, metadata *MetadataValue
 	} else {
 		now = time.Now()
 	}
-	
+
 	// Apply timezone conversion if configured
 	if cfg != nil {
 		tz := cfg.GetTimezone()
@@ -228,7 +228,7 @@ func GetDefaultVariablesWithMetadata(cfg *config.Config, metadata *MetadataValue
 			now = now.In(location)
 		}
 	}
-	
+
 	vars := make(map[string]string)
 
 	// Default formats

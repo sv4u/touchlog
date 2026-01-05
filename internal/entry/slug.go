@@ -69,4 +69,3 @@ func GenerateSlug(title string, message string) string {
 
 	return source
 }
-

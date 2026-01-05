@@ -9,7 +9,7 @@ import (
 func TestMain(m *testing.M) {
 	// Run all tests
 	code := m.Run()
-	
+
 	// Exit with the test result code
 	os.Exit(code)
 }
@@ -85,13 +85,13 @@ func TestRun_NilOptions(t *testing.T) {
 	// We can't easily test the full execution without running the TUI,
 	// but we can verify the function signature and that it accepts nil
 	var opts *Options = nil
-	
+
 	// This test verifies that nil options are accepted by the function signature
 	// The actual execution would create a TUI, which we skip in unit tests
 	// The nil handling logic is: if opts != nil { outputDirOverride = opts.OutputDirectory }
 	// So with nil, outputDirOverride should be empty string
 	_ = opts // Verify nil is acceptable
-	
+
 	// The actual Run() call would execute the TUI, which we avoid in unit tests
 	// The initialization logic (nil handling) is tested here conceptually
 }

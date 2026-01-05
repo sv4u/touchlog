@@ -195,11 +195,11 @@ func TestFindConfigFile(t *testing.T) {
 
 func TestDetectConfigFormat(t *testing.T) {
 	tests := []struct {
-		name     string
-		path     string
-		want     ConfigFormat
-		wantErr  bool
-		errMsg   string
+		name    string
+		path    string
+		want    ConfigFormat
+		wantErr bool
+		errMsg  string
 	}{
 		{
 			name:    "yaml extension",
@@ -444,5 +444,3 @@ invalid: [unclosed
 		}
 	})
 }
-
-

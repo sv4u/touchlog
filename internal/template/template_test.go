@@ -1846,63 +1846,63 @@ func TestEscapeUnescapeRoundTrip(t *testing.T) {
 
 func TestShouldEscapeVariable(t *testing.T) {
 	tests := []struct {
-		name     string
-		varName  string
+		name         string
+		varName      string
 		shouldEscape bool
 	}{
 		{
-			name:     "system variable date",
-			varName:  "date",
+			name:         "system variable date",
+			varName:      "date",
 			shouldEscape: false,
 		},
 		{
-			name:     "system variable time",
-			varName:  "time",
+			name:         "system variable time",
+			varName:      "time",
 			shouldEscape: false,
 		},
 		{
-			name:     "system variable datetime",
-			varName:  "datetime",
+			name:         "system variable datetime",
+			varName:      "datetime",
 			shouldEscape: false,
 		},
 		{
-			name:     "metadata variable user",
-			varName:  "user",
+			name:         "metadata variable user",
+			varName:      "user",
 			shouldEscape: false,
 		},
 		{
-			name:     "metadata variable host",
-			varName:  "host",
+			name:         "metadata variable host",
+			varName:      "host",
 			shouldEscape: false,
 		},
 		{
-			name:     "metadata variable branch",
-			varName:  "branch",
+			name:         "metadata variable branch",
+			varName:      "branch",
 			shouldEscape: false,
 		},
 		{
-			name:     "metadata variable commit",
-			varName:  "commit",
+			name:         "metadata variable commit",
+			varName:      "commit",
 			shouldEscape: false,
 		},
 		{
-			name:     "user variable title",
-			varName:  "title",
+			name:         "user variable title",
+			varName:      "title",
 			shouldEscape: true,
 		},
 		{
-			name:     "user variable message",
-			varName:  "message",
+			name:         "user variable message",
+			varName:      "message",
 			shouldEscape: true,
 		},
 		{
-			name:     "user variable tags",
-			varName:  "tags",
+			name:         "user variable tags",
+			varName:      "tags",
 			shouldEscape: true,
 		},
 		{
-			name:     "custom variable",
-			varName:  "author",
+			name:         "custom variable",
+			varName:      "author",
 			shouldEscape: true,
 		},
 	}

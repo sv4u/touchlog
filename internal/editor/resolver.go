@@ -22,17 +22,17 @@ const (
 
 // EditorInfo contains information about the resolved editor
 type EditorInfo struct {
-	Type     EditorType
-	Command  string
-	Args     []string
+	Type        EditorType
+	Command     string
+	Args        []string
 	UseInternal bool
 }
 
 // EditorResolver handles editor resolution with precedence chain
 type EditorResolver struct {
-	cliEditor         string
-	configEditor      *config.EditorConfig
-	envEditor         string
+	cliEditor          string
+	configEditor       *config.EditorConfig
+	envEditor          string
 	fallbackToInternal bool
 }
 
@@ -217,4 +217,3 @@ func ShouldUseInternalEditor(externalErr error) bool {
 	// If external editor resolution failed, we can fallback to internal
 	return externalErr != nil
 }
-

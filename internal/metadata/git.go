@@ -110,4 +110,3 @@ func getGitCommit(gitRoot string) (string, error) {
 	commit := strings.TrimSpace(string(output))
 	return commit, nil
 }
-

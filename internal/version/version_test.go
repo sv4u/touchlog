@@ -170,4 +170,3 @@ func TestPrintVersion(t *testing.T) {
 		}
 	})
 }
-
