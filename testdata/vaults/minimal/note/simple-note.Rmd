@@ -1,0 +1,12 @@
+---
+id: note-001
+type: note
+key: simple-note
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+title: Simple Note
+tags: []
+state: draft
+---
+
+This is a simple note with no links.

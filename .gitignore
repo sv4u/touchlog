@@ -79,3 +79,6 @@ __debug_bin
 
 # GitHub Logs
 github-actions-logs/
+
+# Cursor IDE
+.cursor/

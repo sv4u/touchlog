@@ -1,0 +1,16 @@
+---
+id: link-004
+type: note
+key: multiple-links
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+title: Multiple Links
+tags: []
+state: draft
+---
+
+This note has multiple links:
+- [[note:first-target]]
+- [[second-target]]
+- [[log:third-target|related-to]]
+- [[note:fourth-target|depends-on]]

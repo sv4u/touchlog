@@ -1,0 +1,12 @@
+---
+id: note-003
+type: note
+key: third-note
+created: 2024-01-03T00:00:00Z
+updated: 2024-01-03T00:00:00Z
+title: Third Note
+tags: []
+state: draft
+---
+
+This is the third note in the minimal vault.

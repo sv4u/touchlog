@@ -1,0 +1,12 @@
+---
+id: link-002
+type: note
+key: unqualified-link
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+title: Unqualified Link
+tags: []
+state: draft
+---
+
+This note links to [[target-key]] without a type.

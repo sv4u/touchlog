@@ -1,0 +1,8 @@
+---
+id: invalid-001
+type: note
+key: invalid-yaml
+invalid: [unclosed bracket
+missing: quote
+---
+This note has invalid YAML frontmatter.

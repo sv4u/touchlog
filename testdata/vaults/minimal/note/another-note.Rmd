@@ -1,0 +1,14 @@
+---
+id: note-002
+type: note
+key: another-note
+created: 2024-01-02T00:00:00Z
+updated: 2024-01-02T00:00:00Z
+title: Another Note
+tags:
+  - example
+  - test
+state: published
+---
+
+This is another simple note with some tags.
