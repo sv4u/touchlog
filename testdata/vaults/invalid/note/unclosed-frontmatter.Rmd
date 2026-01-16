@@ -1,0 +1,10 @@
+---
+id: invalid-003
+type: note
+key: unclosed-frontmatter
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+title: Unclosed Frontmatter
+tags: []
+state: draft
+This note has unclosed frontmatter (missing closing ---).

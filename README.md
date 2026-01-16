@@ -2,27 +2,29 @@
 
 [![CI](https://github.com/sv4u/touchlog/workflows/CI/badge.svg)](https://github.com/sv4u/touchlog/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sv4u/touchlog)](https://goreportcard.com/report/github.com/sv4u/touchlog)
-[![codecov](https://codecov.io/gh/sv4u/touchlog/branch/master/graph/badge.svg?token=IOT1S6CPGY)](https://codecov.io/gh/sv4u/touchlog)
+[![codecov](https://codecov.io/gh/sv4u/touchlog/branch/master/graph/badge.svg?token=IOT1S6CPGY)](https://codecov.io/gh/sv4u/touchlog/branch/master)
 [![License](https://img.shields.io/github/license/sv4u/touchlog.svg)](https://github.com/sv4u/touchlog/blob/main/LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/sv4u/touchlog)](https://github.com/sv4u/touchlog/blob/main/go.mod)
 [![GitHub release](https://img.shields.io/github/release/sv4u/touchlog.svg)](https://github.com/sv4u/touchlog/releases)
 
-A terminal-based note editor with template support, designed for Zettelkasten note-taking methodology. Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea), touchlog provides an interactive TUI for quickly creating structured notes from customizable Markdown templates.
+A knowledge graph note-taking system built with Go. touchlog provides a powerful CLI for managing structured notes with automatic link resolution, graph queries, and real-time indexing.
 
 ## Features
 
-- **Template-based note creation**: Select from configured templates to start new notes
-- **Variable substitution**: Templates support `{{variable}}` syntax with automatic substitution
-- **Default variables**: Pre-populated variables including `{{date}}`, `{{time}}`, and `{{datetime}}`
-- **Interactive TUI**: Clean terminal interface built with Bubble Tea
-- **XDG-compliant**: Follows XDG Base Directory Specification for configuration and data storage
-- **Markdown output**: Saves notes as `.md` files with timestamp-based filenames
+- **Vault-based organization**: Organize notes in type-specific directories with structured frontmatter
+- **Automatic indexing**: SQLite-based index with automatic link resolution and incremental updates
+- **Graph queries**: Find backlinks, neighbors, and paths between notes using graph traversal
+- **Graph visualization**: Export knowledge graphs to Graphviz DOT format
+- **Real-time updates**: Daemon mode with filesystem watching for automatic index updates
+- **Structured notes**: YAML frontmatter with validation and diagnostics
+- **Wiki-style links**: Support for `[[note:key]]`, `[[key]]`, and edge-type annotations
+- **Deterministic exports**: Stable, diffable JSON and DOT exports
 
 ## Installation
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.22 or later
 
 ### Build from Source
 
@@ -40,303 +42,329 @@ The binary will be created in the current directory as `touchlog`.
 go install github.com/sv4u/touchlog/cmd/touchlog@latest
 ```
 
-## Configuration
+## Quick Start
 
-touchlog uses XDG Base Directory Specification for storing configuration and templates:
+1. **Initialize a vault**:
 
-- **Configuration**: `~/.config/touchlog/config.yaml` (or `$XDG_CONFIG_HOME/touchlog/config.yaml`)
-- **Templates**: `~/.local/share/touchlog/templates/` (or `$XDG_DATA_HOME/touchlog/templates/`)
+   ```bash
+   touchlog init
+   ```
 
-### Configuration File
+   This creates a `.touchlog` directory with a default configuration file.
 
-**Automatic Configuration Creation**: On first run, touchlog automatically creates a default configuration file at `~/.config/touchlog/config.yaml` (or `$XDG_CONFIG_HOME/touchlog/config.yaml`) if it doesn't exist. The default configuration includes:
+2. **Create a note**:
 
-- Three common templates: Daily Note, Meeting Notes, and Journal
-- Default notes directory: `~/notes`
-- All date/time variables enabled with standard formats
-- Vim mode disabled
+   ```bash
+   touchlog new
+   ```
 
-You can customize the configuration file at any time. If the templates directory is empty, touchlog will also create minimal example template files (`daily.md`, `meeting.md`, `journal.md`) to get you started.
+   Follow the interactive prompts to create a new note with frontmatter.
 
-**Manual Configuration** (optional):
+3. **Build the index**:
 
-If you prefer to create the configuration file manually, create `~/.config/touchlog/config.yaml`:
+   ```bash
+   touchlog index rebuild
+   ```
 
-```yaml
-templates:
-  - name: "Daily Note"
-    file: "daily.md"
-  - name: "Meeting Notes"
-    file: "meeting.md"
-  - name: "Book Note"
-    file: "book-note.md"
-notes_directory: "/path/to/your/notes"
+   This scans all `.Rmd` files in your vault and builds the index.
 
-# Optional: Configure date/time/datetime variable formats
-datetime_vars:
-  date:
-    enabled: true
-    format: "2006-01-02"  # Go time format (YYYY-MM-DD)
-  time:
-    enabled: true
-    format: "15:04:05"    # Go time format (HH:MM:SS)
-  datetime:
-    enabled: true
-    format: "2006-01-02 15:04:05"  # Go time format (YYYY-MM-DD HH:MM:SS)
+4. **Query your notes**:
 
-# Optional: Define custom static variables
-variables:
-  author: "Your Name"
-  project: "My Project"
+   ```bash
+   touchlog query search --type note
+   touchlog query backlinks --target note:my-note
+   touchlog query neighbors --root note:my-note --max-depth 2
+   touchlog query paths --source note:start --destination note:end --max-depth 5
+   ```
 
-# Optional: Enable vim keymap support
-vim_mode: false
+5. **Export the graph**:
+
+   ```bash
+   touchlog graph export dot --out graph.dot
+   dot -Tpng graph.dot -o graph.png
+   ```
+
+## Vault Structure
+
+A touchlog vault is a directory containing:
+
+```
+vault/
+├── .touchlog/
+│   ├── config.yaml          # Vault configuration
+│   └── index.db             # SQLite index (auto-generated)
+├── note/                    # Type-specific directories
+│   ├── my-note.Rmd
+│   └── another-note.Rmd
+├── article/
+│   └── my-article.Rmd
+└── ...
 ```
 
-### Template Files
+### Note Files
 
-Template files are stored in `~/.local/share/touchlog/templates/` (or `$XDG_DATA_HOME/touchlog/templates/`). Templates support variable substitution using `{{variable}}` syntax.
-
-**Automatic Template Creation**: If the templates directory is empty on first run, touchlog will automatically create minimal example templates (`daily.md`, `meeting.md`, `journal.md`) that match the default configuration. These templates are simple but functional and can be customized as needed.
-
-**Manual Template Creation** (optional):
-
-Create template files in `~/.local/share/touchlog/templates/`:
-
-**Example template** (`daily.md`):
+Notes are stored as `.Rmd` files with YAML frontmatter:
 
 ```markdown
-# Daily Note - {{date}}
+---
+id: note-001
+type: note
+key: my-note
+title: My Note
+state: draft
+tags: [important, todo]
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+---
+# My Note
 
-## Events
-- 
+This note links to [[note:another-note]] and [[article:my-article]].
 
-## Thoughts
-- 
-
-## Tasks
-- 
+You can also use unqualified links: [[another-note]] if the key is unique.
 ```
 
-**Available default variables**:
+### Configuration
 
-- `{{date}}` - Current date (default format: `YYYY-MM-DD`)
-- `{{time}}` - Current time (default format: `HH:MM:SS`)
-- `{{datetime}}` - Current date and time (default format: `YYYY-MM-DD HH:MM:SS`)
+The vault configuration file (`.touchlog/config.yaml`) defines:
 
-**Customizing date/time formats**:
+- **Types**: Note types with validation rules (key patterns, default states)
+- **Tags**: Tag configuration and preferred tags
+- **Edges**: Edge type definitions for relationships
+- **Templates**: Template configuration (future)
 
-You can customize the format of date, time, and datetime variables in your configuration file using Go's time format syntax. The format uses Go's reference time: `Mon Jan 2 15:04:05 MST 2006` (which is `01/02 03:04:05PM '06 -0700`).
-
-**Example formats**:
+Example configuration:
 
 ```yaml
-datetime_vars:
-  date:
-    enabled: true
-    format: "January 2, 2006"      # "January 15, 2024"
-  time:
-    enabled: true
-    format: "3:04 PM"              # "2:30 PM"
-  datetime:
-    enabled: true
-    format: "2006-01-02T15:04:05"  # "2024-01-15T14:30:22"
+version: 1
+types:
+  note:
+    description: A note
+    default_state: draft
+    key_pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+    key_max_len: 64
+  article:
+    description: An article
+    default_state: draft
+    key_pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+    key_max_len: 64
+tags:
+  preferred: [important, todo, reference]
+edges:
+  related-to:
+    description: General relationship
+  references:
+    description: Reference relationship
+templates:
+  root: templates
 ```
 
-You can also disable specific variables by setting `enabled: false`. If `datetime_vars` is not specified in the config, all variables are enabled with default formats.
+## Commands
 
-**Custom variables**:
+### Vault Management
 
-You can define custom static variables in your configuration file that will be available in all templates:
+- `touchlog init` - Initialize a new vault in the current directory
+- `touchlog new` - Create a new note interactively
 
-```yaml
-variables:
-  author: "John Doe"
-  project: "My Project"
-  location: "Home Office"
-```
+### Index Management
 
-These variables can then be used in templates using `{{author}}`, `{{project}}`, `{{location}}`, etc. Custom variables can override default date/time/datetime variables, but it's recommended to avoid using reserved names (`date`, `time`, `datetime`) for custom variables.
+- `touchlog index rebuild` - Rebuild the entire index from scratch
+- `touchlog index export --out <file>` - Export the index to JSON
 
-**Vim keymap support**:
+### Querying
 
-You can enable vim-style keybindings by setting `vim_mode: true` in your configuration:
+- `touchlog query search [options]` - Search notes with filters
+  - `--type <types>` - Filter by types (comma-separated)
+  - `--state <states>` - Filter by states (comma-separated)
+  - `--tag <tags>` - Filter by tags (comma-separated)
+  - `--match-any-tag` - Match any tag (default: match all)
+  - `--limit <n>` - Limit results
+  - `--format table|json` - Output format
 
-```yaml
-vim_mode: true
-```
+- `touchlog query backlinks --target <node> [options]` - Find backlinks to a node
+  - `--direction in|out|both` - Link direction (default: in)
+  - `--edge-type <types>` - Filter by edge types
+  - `--format table|json` - Output format
 
-When vim mode is enabled:
+- `touchlog query neighbors --root <node> --max-depth <n> [options]` - Find neighbors
+  - `--direction in|out|both` - Link direction (default: both)
+  - `--edge-type <types>` - Filter by edge types
+  - `--format table|json` - Output format
 
-- **Template selection**: Use `j`/`k` to navigate, `Enter` to select, `q` to quit
-- **Note editing**:
-  - Press `i` or `a` to enter insert mode
-  - Press `Esc` to exit insert mode (normal mode)
-  - In normal mode: `h`/`j`/`k`/`l` for movement, `dd` to delete line, `:w` to save, `:q` to quit
-  - `Ctrl+S` works in both modes to save
+- `touchlog query paths --source <node> --destination <node> [--destination <node> ...] --max-depth <n> [options]` - Find paths
+  - `--max-paths <n>` - Maximum paths per destination (default: 10)
+  - `--direction in|out|both` - Link direction (default: both)
+  - `--edge-type <types>` - Filter by edge types
+  - `--format table|json` - Output format
 
-## Usage
+### Graph Operations
 
-1. **Start the application**:
+- `touchlog graph export dot --out <file> [options]` - Export graph to DOT format
+  - `--root <node> [--root <node> ...]` - Root nodes (can specify multiple)
+  - `--type <types>` - Filter by types
+  - `--state <states>` - Filter by states
+  - `--tag <tags>` - Filter by tags
+  - `--edge-type <types>` - Filter by edge types
+  - `--depth <n>` - Maximum depth (default: 10)
+  - `--force` - Overwrite existing file
 
-   ```bash
-   touchlog
-   ```
+### Daemon
 
-   Or with a custom output directory:
-
-   ```bash
-   touchlog -output-dir ~/my-notes
-   # or using the shorthand
-   touchlog -o ~/my-notes
-   ```
-
-2. **Select a template**: Use arrow keys to navigate and press `Enter` to select
-
-3. **Edit your note**: The template will be loaded with variables substituted. Edit as needed.
-
-4. **Save the note**: Press `Ctrl+S` to save. The note will be saved as a Markdown file with a timestamp-based filename (e.g., `2024-01-15-143022.md`) in your configured notes directory. The directory will be created automatically if it doesn't exist.
-
-5. **Quit**: Press `Ctrl+C` or `q` to exit
-
-### Command Line Options
-
-- `-output-dir <path>` or `-o <path>`: Override the notes directory specified in the config file
-
-   The output directory can be an absolute path or a path starting with `~` (which will be expanded to your home directory). This option takes precedence over the `notes_directory` setting in the config file.
-
-   **Examples**:
-
-   ```bash
-   touchlog -output-dir ~/my-notes
-   touchlog -o /tmp/notes
-   touchlog --output-dir ~/Documents/journal
-   ```
-
-## Keyboard Shortcuts
-
-### Default Mode
-
-- `↑/↓` - Navigate template list
-- `Enter` - Select template
-- `Ctrl+S` - Save note
-- `Ctrl+C` or `q` - Quit application
-
-### Vim Mode (when `vim_mode: true` in config)
-
-**Template Selection**:
-
-- `j`/`k` - Navigate up/down template list
-- `Enter` - Select template
-- `q` - Quit
-
-**Note Editing**:
-
-- `i`/`a` - Enter insert mode
-- `Esc` - Exit insert mode (normal mode)
-- `h`/`j`/`k`/`l` - Cursor movement (in normal mode, enters insert mode)
-- `w`/`b` - Word forward/backward (simplified)
-- `0`/`$` - Beginning/end of line (simplified)
-- `dd` - Delete line
-- `:w` - Save (vim-style)
-- `:q` - Quit (vim-style)
-- `Ctrl+S` - Save (works in both modes)
-
-## Project Structure
-
-```text
-touchlog/
-├── cmd/
-│   └── touchlog/
-│       └── main.go              # Application entry point
-├── internal/
-│   ├── config/
-│   │   └── config.go            # Configuration file parsing
-│   ├── template/
-│   │   └── template.go          # Template loading and processing
-│   ├── xdg/
-│   │   └── xdg.go               # XDG path resolution
-│   └── editor/
-│       └── editor.go            # Bubble Tea model and application logic
-├── go.mod                       # Go module definition
-└── README.md
-```
-
-## Programmatic API
-
-touchlog can be used programmatically by other Go applications. This is useful for external tools like a Zettelkasten daemon that needs to create notes programmatically.
-
-### Basic Usage
-
-```go
-import "github.com/sv4u/touchlog/internal/api"
-
-opts := &api.Options{
-    OutputDirectory: "/path/to/notes",
-}
-err := api.Run(opts)
-if err != nil {
-    // Handle error
-}
-```
-
-### API Reference
-
-**`api.Options`**:
-
-- `OutputDirectory` (string): Override the notes directory specified in the config file. This takes precedence over the config file setting. Supports `~` expansion for home directory paths.
-- `ConfigPath` (string): Reserved for future use. Currently, the default config file location is always used.
-
-**`api.Run(opts *Options) error`**:
-
-Creates and runs a touchlog instance with the given options. Returns an error if initialization or execution fails.
-
-**Priority Order**:
-
-When determining which output directory to use, touchlog follows this priority:
-
-1. CLI flag (`-output-dir` or `-o`) - highest priority
-2. API parameter (`Options.OutputDirectory`)
-3. Config file setting (`notes_directory`) - lowest priority
-
-Only one source is used (no merging). The first non-empty value in the priority order is used.
+- `touchlog daemon start` - Start the daemon for real-time indexing
+- `touchlog daemon stop` - Stop the daemon
+- `touchlog daemon status` - Check daemon status
 
 ## Architecture
 
-touchlog uses the Model-View-Update (MVU) pattern implemented by Bubble Tea:
+touchlog follows a **contracts-first** architecture with clear separation of concerns:
 
-- **Model**: Application state (current view, selected template, note content)
-- **Update**: Handles user input and state transitions
-- **View**: Renders the UI using Bubbles components (list, textarea)
+### Core Components
 
-The application flow:
+- **Models** (`internal/model/`): Canonical data structures (Note, Frontmatter, RawLink, etc.)
+- **Config** (`internal/config/`): Configuration loading and validation
+- **Note Parser** (`internal/note/`): Frontmatter parsing and wiki-link extraction
+- **Store** (`internal/store/`): SQLite persistence layer with migrations
+- **Index** (`internal/index/`): Full-scan indexing with atomic rebuilds
+- **Query** (`internal/query/`): Search and graph query execution
+- **Graph** (`internal/graph/`): Graph loading and export
+- **Daemon** (`internal/daemon/`): IPC server and lifecycle management
+- **Watch** (`internal/watch/`): Filesystem watching and incremental indexing
 
-1. **Template Selection**: User selects from available templates
-2. **Template Loading**: Template is loaded and variables are substituted
-3. **Note Editing**: User edits the note content
-4. **Saving**: Note is saved to the configured directory
+### Design Principles
 
-## Dependencies
+1. **Contracts First**: Models and schemas defined before behavior
+2. **Derived State Only**: Index and exports are always rebuildable
+3. **Determinism**: All outputs are stable and diffable
+4. **Explicit Errors**: Never silently fail or coerce invalid input
+5. **Diagnostics**: Validation produces diagnostics, not hard failures
 
-- [Bubble Tea](https://github.com/charmbracelet/bubbletea) - TUI framework
-- [Bubbles](https://github.com/charmbracelet/bubbles) - UI components
-- [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Terminal styling
-- [XDG](https://github.com/adrg/xdg) - XDG Base Directory implementation
-- [YAML v3](https://github.com/go-yaml/yaml) - YAML parsing
+### Indexing
+
+The index is built in two passes:
+
+1. **Pass 1**: Parse all notes, build `(type, key) -> id` map
+2. **Pass 2**: Resolve all links using the type/key map
+
+The index is stored in SQLite with the following schema:
+
+- `meta`: Metadata (schema version, etc.)
+- `nodes`: Note nodes with frontmatter
+- `edges`: Links between notes (with resolved `to_id`)
+- `tags`: Tags associated with notes
+- `diagnostics`: Parse errors and warnings
+
+### Graph Queries
+
+All graph queries (backlinks, neighbors, paths) execute in-memory after loading the relevant subgraph from SQLite. This approach:
+
+- Avoids complex recursive SQL
+- Simplifies BFS correctness and determinism
+- Aligns with future TUI graph viewer needs
+
+All traversals maintain visited sets for cycle detection and guarantee termination.
+
+## Examples
+
+### Creating and Linking Notes
+
+```bash
+# Create a note
+touchlog new
+# Follow prompts to create note with key "introduction"
+
+# Create another note that links to it
+touchlog new
+# Create note with key "getting-started" and add link: [[note:introduction]]
+
+# Rebuild index
+touchlog index rebuild
+
+# Find backlinks to introduction
+touchlog query backlinks --target note:introduction
+```
+
+### Finding Related Notes
+
+```bash
+# Find all neighbors within 2 hops
+touchlog query neighbors --root note:my-note --max-depth 2
+
+# Find paths between notes
+touchlog query paths --source note:start --destination note:end --max-depth 5
+
+# Export graph for visualization
+touchlog graph export dot --out graph.dot
+dot -Tsvg graph.dot -o graph.svg
+```
+
+### Using the Daemon
+
+```bash
+# Start daemon for real-time indexing
+touchlog daemon start
+
+# Create/edit notes - index updates automatically
+# Query works immediately
+touchlog query search --type note
+
+# Stop daemon
+touchlog daemon stop
+```
+
+## Development
+
+### Project Structure
+
+```
+touchlog/
+├── cmd/
+│   └── touchlog/
+│       └── main.go              # CLI entry point
+├── internal/
+│   ├── model/                   # Core data models
+│   ├── config/                  # Configuration loading
+│   ├── note/                    # Note parsing
+│   ├── store/                   # SQLite persistence
+│   ├── index/                   # Indexing logic
+│   ├── query/                   # Query execution
+│   ├── graph/                   # Graph operations
+│   ├── daemon/                  # Daemon and IPC
+│   ├── watch/                   # Filesystem watching
+│   └── cli/                     # CLI command definitions
+├── testdata/
+│   ├── vaults/                  # Test vault fixtures
+│   └── golden/                  # Golden test fixtures
+├── go.mod
+└── README.md
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with coverage
+go test ./... -cover
+
+# Run specific package tests
+go test ./internal/query -v
+```
+
+### Building
+
+```bash
+# Build binary
+go build ./cmd/touchlog
+
+# Build for specific platform
+GOOS=linux GOARCH=amd64 go build ./cmd/touchlog
+```
 
 ## Contributing
 
 ### Commit Message Guidelines
 
-This project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification. All commit messages should follow this format:
-
-```text
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
-```
+This project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 
 **Commit Types**:
 
@@ -352,121 +380,11 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 **Examples**:
 
 ```text
-feat(editor): add vim mode support
-fix(config): resolve path resolution issue
-docs(readme): update installation instructions
-test(template): add tests for variable substitution
+feat(query): add backlinks command
+fix(index): resolve link resolution bug
+docs(readme): update architecture section
+test(query): add edge case tests for cycles
 ```
-
-**Breaking Changes**: Use `BREAKING CHANGE:` in the footer or append `!` after the type/scope to indicate breaking changes:
-
-```text
-feat(api)!: change configuration file format
-
-BREAKING CHANGE: The config file now uses YAML instead of JSON
-```
-
-### Changelog
-
-The project uses GoReleaser to automatically generate changelogs from git commit history following the [Conventional Commits](https://www.conventionalcommits.org/) standard. The changelog appears in GitHub release notes and is not committed to the repository.
-
-**How commits appear in the changelog**:
-
-- Commits are automatically categorized by type (Features, Bug Fixes, Documentation, etc.)
-- The commit subject (description) appears in the changelog
-- Commits with scopes show the scope as a prefix (e.g., `**ci:** fix workflow`)
-- Breaking changes are highlighted separately
-- Only commits matching Conventional Commits format are included (feat, fix, docs, refactor, perf, ci, chore)
-
-**Changelog generation**:
-
-- Changelogs are generated automatically by GoReleaser during the release process
-- The changelog is included in GitHub release notes only
-- No `CHANGELOG.md` file is committed to the repository
-
-### Release Process
-
-The release workflow is manually triggered and provides full control over when and how releases are created.
-
-**Prerequisites**:
-
-- All changes must be merged to the `master` branch
-- Working directory must be clean (no uncommitted changes)
-- Local branch must be up-to-date with remote `origin/master`
-
-**How to create a release**:
-
-1. Navigate to the [Actions](https://github.com/sv4u/touchlog/actions) tab in GitHub
-2. Select the "Release" workflow from the left sidebar
-3. Click "Run workflow" button (top right)
-4. Select the release type:
-   - **major**: Increments major version, resets minor and patch to 0 (e.g., v1.2.3 → v2.0.0)
-   - **minor**: Increments minor version, resets patch to 0 (e.g., v1.2.3 → v1.3.0)
-   - **hotfix**: Increments patch version only (e.g., v1.2.3 → v1.2.4)
-5. Optionally enable dry-run mode to test without creating a release
-6. Click "Run workflow" to start
-
-**What the workflow does**:
-
-1. Validates branch and working directory state
-2. Calculates the next version based on the selected release type
-3. Validates that there are commits to include in the release
-4. Displays a preview of the release (version, commit count, commit types)
-5. Creates and pushes a git tag with the new version
-6. Builds release artifacts for all platforms (linux/darwin, amd64/arm64)
-7. Generates changelog from Conventional Commits
-8. Creates and publishes GitHub release with changelog and artifacts
-9. Verifies the release was created successfully
-
-**Version calculation**:
-
-- The workflow automatically calculates the next version from the latest git tag
-- If no tags exist, it defaults to `v0.1.0` for the first release
-- Version format must follow semantic versioning (vX.Y.Z)
-
-**Testing Release Process (Dry-Run Mode)**:
-
-The release workflow supports a dry-run mode that allows you to test the entire release process without creating actual releases, tags, or publishing artifacts. This is useful for:
-
-- Validating GoReleaser configuration changes before merging PRs
-- Testing version calculation logic
-- Verifying release workflow changes in pull requests
-- Debugging release issues without creating test releases
-- Validating artifact builds across all target platforms (linux/darwin, amd64/arm64)
-
-**How to use dry-run mode**:
-
-1. Navigate to the [Actions](https://github.com/sv4u/touchlog/actions) tab in GitHub
-2. Select the "Release" workflow from the left sidebar
-3. Click "Run workflow" button (top right)
-4. Select a release type (major, minor, or hotfix)
-5. Check the "Run in dry-run mode (no releases or commits)" checkbox
-6. Click "Run workflow" to start the dry-run
-
-**What dry-run mode does**:
-
-- ✅ Validates branch and working directory
-- ✅ Calculates and displays next version
-- ✅ Shows preview with commit count and types
-- ✅ Validates GoReleaser configuration
-- ✅ Builds artifacts for all target platforms (linux/darwin, amd64/arm64)
-- ✅ Uses GoReleaser's `--snapshot` mode (skips publishing)
-
-**What dry-run mode does NOT do**:
-
-- ❌ Create git tags
-- ❌ Create GitHub releases
-- ❌ Commit changes to the repository
-- ❌ Publish artifacts
-- ❌ Consume GitHub API rate limits for releases
-
-**Error Recovery**:
-
-If the workflow fails after creating a tag but before completing the release:
-
-- The workflow will automatically rollback (delete the tag)
-- If automatic rollback fails, you can manually delete the tag and retry
-- See the workflow logs for detailed error messages and recovery instructions
 
 ## License
 

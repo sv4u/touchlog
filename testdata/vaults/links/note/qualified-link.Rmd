@@ -1,0 +1,12 @@
+---
+id: link-001
+type: note
+key: qualified-link
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+title: Qualified Link
+tags: []
+state: draft
+---
+
+This note links to [[note:target-key]].

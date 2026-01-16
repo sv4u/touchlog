@@ -1,0 +1,11 @@
+---
+id: invalid-002
+type: note
+# missing key
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+title: Missing Required Fields
+tags: []
+state: draft
+---
+This note is missing the required 'key' field.

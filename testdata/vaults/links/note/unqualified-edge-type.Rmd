@@ -1,0 +1,12 @@
+---
+id: link-005
+type: note
+key: unqualified-edge-type
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+title: Unqualified with Edge Type
+tags: []
+state: draft
+---
+
+This note has an unqualified link with an edge type: [[some-key|depends-on]].

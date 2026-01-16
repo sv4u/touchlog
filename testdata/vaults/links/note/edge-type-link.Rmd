@@ -1,0 +1,12 @@
+---
+id: link-003
+type: note
+key: edge-type-link
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+title: Edge Type Link
+tags: []
+state: draft
+---
+
+This note links with an edge type: [[note:target-key|depends-on]].
