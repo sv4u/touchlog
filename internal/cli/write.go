@@ -31,24 +31,24 @@ func AtomicWrite(path string, content []byte) error {
 	}()
 	
 	// Write content
-	if _, err := tmpFile.Write(content); err != nil {
+	if _, err = tmpFile.Write(content); err != nil {
 		tmpFile.Close()
 		return fmt.Errorf("writing to temp file: %w", err)
 	}
 	
 	// Sync to disk (best effort)
-	if err := tmpFile.Sync(); err != nil {
+	if err = tmpFile.Sync(); err != nil {
 		tmpFile.Close()
 		return fmt.Errorf("syncing temp file: %w", err)
 	}
 	
 	// Close temp file
-	if err := tmpFile.Close(); err != nil {
+	if err = tmpFile.Close(); err != nil {
 		return fmt.Errorf("closing temp file: %w", err)
 	}
 	
 	// Atomic rename
-	if err := os.Rename(tmpPath, path); err != nil {
+	if err = os.Rename(tmpPath, path); err != nil {
 		return fmt.Errorf("renaming temp file: %w", err)
 	}
 	
