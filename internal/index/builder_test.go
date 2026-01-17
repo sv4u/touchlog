@@ -79,7 +79,9 @@ This is a test note.
 	if err != nil {
 		t.Fatalf("opening index: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Verify node was indexed
 	var count int

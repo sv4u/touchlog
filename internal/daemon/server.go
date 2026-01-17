@@ -91,7 +91,7 @@ func (s *Server) Start() error {
 		return fmt.Errorf("opening database: %w", err)
 	}
 	s.indexer = watch.NewIncrementalIndexer(s.vaultRoot, s.cfg, db)
-	db.Close()
+	_ = db.Close()
 
 	// Start event processing goroutine
 	go s.processWatchEvents()

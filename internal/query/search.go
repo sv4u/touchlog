@@ -29,7 +29,9 @@ func ExecuteSearch(vaultRoot string, q *SearchQuery) ([]SearchResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Build SQL query
 	query, args := buildSearchQuery(q)
@@ -39,7 +41,9 @@ func ExecuteSearch(vaultRoot string, q *SearchQuery) ([]SearchResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("executing query: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	// Collect results
 	var results []SearchResult

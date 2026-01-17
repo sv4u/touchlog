@@ -54,7 +54,9 @@ func LoadGraph(vaultRoot string) (*Graph, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	graph := NewGraph()
 
@@ -78,7 +80,9 @@ func LoadSubgraph(vaultRoot string, nodeIDs []model.NoteID) (*Graph, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	graph := NewGraph()
 
@@ -105,7 +109,9 @@ func loadNodes(db *sql.DB, graph *Graph) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	for rows.Next() {
 		var node Node
@@ -144,7 +150,9 @@ func loadNodesByIDs(db *sql.DB, graph *Graph, nodeIDs []model.NoteID) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	for rows.Next() {
 		var node Node
@@ -179,7 +187,9 @@ func loadEdges(db *sql.DB, graph *Graph) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	for rows.Next() {
 		var edge Edge
@@ -247,7 +257,9 @@ func loadEdgesForNodes(db *sql.DB, graph *Graph, nodeIDs []model.NoteID) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	for rows.Next() {
 		var edge Edge

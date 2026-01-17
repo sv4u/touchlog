@@ -58,7 +58,9 @@ Links to [[nonexistent]].
 	if err != nil {
 		t.Fatalf("opening database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	diagnostics, err := queryDiagnostics(db, "", "", "")
 	if err != nil {
@@ -135,7 +137,9 @@ Links to [[nonexistent]].
 	if err != nil {
 		t.Fatalf("opening database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Filter by warn level
 	warnDiags, err := queryDiagnostics(db, "warn", "", "")
@@ -212,8 +216,8 @@ templates:
 		t.Fatalf("opening database: %v", err)
 	}
 	if err := store.ApplyMigrations(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Fatalf("applying migrations: %v", err)
 	}
-	db.Close()
+	_ = db.Close()
 }

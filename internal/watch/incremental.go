@@ -39,14 +39,18 @@ func (ii *IncrementalIndexer) ProcessEvent(event Event) error {
 	if err != nil {
 		return fmt.Errorf("opening database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Start transaction
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	// Process based on event operation
 	switch {
@@ -215,7 +219,9 @@ func (ii *IncrementalIndexer) loadTypeKeyMap(tx *sql.Tx) (map[model.TypeKey]mode
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	typeKeyMap := make(map[model.TypeKey]model.NoteID)
 	for rows.Next() {

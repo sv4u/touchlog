@@ -26,7 +26,7 @@ func AtomicWrite(path string, content []byte) error {
 	// Ensure cleanup on error
 	defer func() {
 		if err != nil {
-			os.Remove(tmpPath)
+			_ = os.Remove(tmpPath)
 		}
 	}()
 
