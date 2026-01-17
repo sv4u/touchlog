@@ -327,6 +327,14 @@ func TestServer_HandleReindexPaths(t *testing.T) {
 		t.Fatalf("NewServer failed: %v", err)
 	}
 
+	// Start server to initialize indexer
+	if err := server.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer func() {
+		_ = server.Stop()
+	}()
+
 	req := ReindexPathsRequest{Paths: []string{"note/test.Rmd"}}
 	payload, err := json.Marshal(req)
 	if err != nil {

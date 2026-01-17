@@ -225,6 +225,11 @@ func (s *Server) handleReindexPaths(msg *Message) *Response {
 		return NewResponse(false, nil, fmt.Errorf("parsing reindex request: %w", err))
 	}
 
+	// Check if indexer is initialized (server must be started)
+	if s.indexer == nil {
+		return NewResponse(false, nil, fmt.Errorf("server not started: indexer not initialized"))
+	}
+
 	// Process each path
 	processed := 0
 	for _, path := range req.Paths {
