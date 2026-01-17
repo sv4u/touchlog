@@ -157,7 +157,7 @@ jobs:
           echo "Next version: $NEXT_VERSION"
 
       - name: Pre-release module validation
-        run: make validate-module
+        run: go mod verify
 
       - name: Check commit range
         id: commit-range

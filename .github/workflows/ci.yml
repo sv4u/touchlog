@@ -93,7 +93,7 @@ jobs:
         run: go mod verify
 
       - name: Build
-        run: make build-cross GOOS=${{ matrix.platform }} GOARCH=${{ matrix.arch }}
+        run: go build -o touchlog ./cmd/touchlog
         env:
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}
@@ -127,7 +127,14 @@ jobs:
         run: go mod download
 
       - name: Check code formatting
-        run: make fmt-check
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not formatted:"
+            echo "$unformatted"
+            echo "Run 'go fmt ./...' to format the code"
+            exit 1
+          fi
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
@@ -135,7 +142,10 @@ jobs:
           version: v2.6.2
 
       - name: Run go vet
-        run: make vet
+        run: go vet ./...
 
       - name: Run staticcheck
-        run: make staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          version: "latest"
+          args: "./..."
