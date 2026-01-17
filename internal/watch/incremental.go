@@ -43,6 +43,11 @@ func (ii *IncrementalIndexer) ProcessEvent(event Event) error {
 		_ = db.Close()
 	}()
 
+	// Ensure migrations are applied before using the database
+	if err := store.ApplyMigrations(db); err != nil {
+		return fmt.Errorf("applying migrations: %w", err)
+	}
+
 	// Start transaction
 	tx, err := db.Begin()
 	if err != nil {
