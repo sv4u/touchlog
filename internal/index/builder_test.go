@@ -107,7 +107,7 @@ func TestBuilder_Rebuild_AtomicReplace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating old index: %v", err)
 	}
-	oldDB.Close()
+	_ = oldDB.Close()
 
 	// Create minimal config
 	cfg := &config.Config{

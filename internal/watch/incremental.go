@@ -182,11 +182,6 @@ func (ii *IncrementalIndexer) processFileUpdate(tx *sql.Tx, filePath string) err
 	return tx.Commit()
 }
 
-// processFileDelete processes a file deletion
-func (ii *IncrementalIndexer) processFileDelete(tx *sql.Tx, filePath string) error {
-	return ii.processFileDeleteTx(tx, filePath)
-}
-
 // processFileDeleteTx processes a file deletion within a transaction
 func (ii *IncrementalIndexer) processFileDeleteTx(tx *sql.Tx, filePath string) error {
 	// Find node by path

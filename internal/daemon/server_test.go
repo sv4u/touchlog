@@ -53,7 +53,9 @@ func TestServer_UnixSocket(t *testing.T) {
 	if err := server.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
-	defer server.Stop()
+	defer func() {
+		_ = server.Stop()
+	}()
 
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
@@ -73,7 +75,9 @@ func TestServer_UnixSocket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dialing server: %v", err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// Send status request
 	msg, err := NewMessage(MessageTypeStatus, nil)

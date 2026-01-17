@@ -117,10 +117,8 @@ func (w *Watcher) watchLoop() {
 			// Filter for .Rmd files only
 			if filepath.Ext(event.Name) != ".Rmd" {
 				// Handle directory events (for recursive watching)
-				if event.Op&fsnotify.Create != 0 {
-					// New directory created, add it to watcher
-					// This will be handled by checking if it's a directory
-				}
+				// New directories will be automatically added by addRecursive
+				// when they are created, so we can skip non-.Rmd files
 				continue
 			}
 
@@ -181,10 +179,5 @@ func (w *Watcher) debounceEvent(event fsnotify.Event) {
 func (w *Watcher) processEvents() {
 	// This goroutine can be used for additional event processing
 	// For Phase 3, we just pass events through
-	for {
-		select {
-		case <-w.done:
-			return
-		}
-	}
+	<-w.done
 }

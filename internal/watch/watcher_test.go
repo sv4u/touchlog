@@ -14,7 +14,9 @@ func TestWatcher_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWatcher failed: %v", err)
 	}
-	defer watcher.Stop()
+	defer func() {
+		_ = watcher.Stop()
+	}()
 
 	if err := watcher.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
@@ -50,7 +52,9 @@ func TestWatcher_IgnoresNonRmdFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWatcher failed: %v", err)
 	}
-	defer watcher.Stop()
+	defer func() {
+		_ = watcher.Stop()
+	}()
 
 	if err := watcher.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
@@ -82,7 +86,9 @@ func TestWatcher_Debounce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWatcher failed: %v", err)
 	}
-	defer watcher.Stop()
+	defer func() {
+		_ = watcher.Stop()
+	}()
 
 	if err := watcher.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)

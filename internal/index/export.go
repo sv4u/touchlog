@@ -103,7 +103,9 @@ func queryNodes(db *sql.DB) ([]NodeExport, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var nodes []NodeExport
 	for rows.Next() {
@@ -127,7 +129,9 @@ func queryEdges(db *sql.DB) ([]EdgeExport, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var edges []EdgeExport
 	for rows.Next() {
@@ -155,7 +159,9 @@ func queryTags(db *sql.DB) ([]TagExport, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var tags []TagExport
 	for rows.Next() {

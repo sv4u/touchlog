@@ -32,13 +32,13 @@ func AtomicWrite(path string, content []byte) error {
 
 	// Write content
 	if _, err = tmpFile.Write(content); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("writing to temp file: %w", err)
 	}
 
 	// Sync to disk (best effort)
 	if err = tmpFile.Sync(); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("syncing temp file: %w", err)
 	}
 
