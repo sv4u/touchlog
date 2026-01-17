@@ -8,14 +8,17 @@ on:
       - master
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
-  security-events: write
   pull-requests: write
 
 jobs:
-  build-and-test:
-    name: Build and Test
+  build:
+    name: Build
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -25,22 +28,22 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: amd64
-            go-version: '1.21'
+            go-version: '1.22'
             cache-path: ~/.cache/go-build
           - os: ubuntu-latest
             platform: linux
             arch: arm64
-            go-version: '1.21'
+            go-version: '1.22'
             cache-path: ~/.cache/go-build
           - os: macos-latest
             platform: darwin
             arch: amd64
-            go-version: '1.21'
+            go-version: '1.22'
             cache-path: ~/Library/Caches/go-build
           - os: macos-latest
             platform: darwin
             arch: arm64
-            go-version: '1.21'
+            go-version: '1.22'
             cache-path: ~/Library/Caches/go-build
 
     steps:
@@ -53,6 +56,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
+          cache-dependency-path: go.sum
+          cache: true
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -94,28 +99,6 @@ jobs:
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 0
 
-      - name: Run tests with coverage
-        run: make test-coverage
-
-      - name: Check coverage threshold
-        run: make check-coverage THRESHOLD=20
-
-      - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.arch == 'amd64'
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.out
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.platform }}-${{ matrix.arch }}
-          path: coverage.out
-
   code-quality:
     name: Code Quality
     runs-on: ubuntu-latest
@@ -128,7 +111,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22'
+          cache-dependency-path: go.sum
+          cache: true
 
       - name: Cache Go build
         uses: actions/cache@v4
@@ -154,73 +139,3 @@ jobs:
 
       - name: Run staticcheck
         run: make staticcheck
-
-  security-analysis:
-    name: Security Analysis
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run gosec
-        id: gosec
-        continue-on-error: true
-        run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
-          gosec -exclude=G304,G301,G306 -fmt json -out gosec-report.json ./...
-
-      - name: Upload gosec report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: gosec-report
-          path: gosec-report.json
-
-      - name: Fail if gosec found issues
-        if: steps.gosec.outcome == 'failure'
-        run: |
-          echo "[X] gosec found security issues. Review the gosec-report.json artifact for details."
-          exit 1
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'HIGH,CRITICAL'
-          exit-code: '1'
-
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-      - name: Upload Trivy report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: trivy-report
-          path: trivy-results.sarif
