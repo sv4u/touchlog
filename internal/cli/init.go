@@ -240,8 +240,8 @@ func marshalConfig(cfg *config.Config) ([]byte, error) {
 	typesMap := configMap["types"].(map[string]any)
 	for typeName, typeDef := range cfg.Types {
 		typeMap := map[string]any{
-			"description":    typeDef.Description,
-			"default_state":  typeDef.DefaultState,
+			"description":     typeDef.Description,
+			"default_state":   typeDef.DefaultState,
 			"required_fields": typeDef.RequiredFields,
 		}
 		if typeDef.KeyPattern != nil {

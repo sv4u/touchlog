@@ -10,10 +10,10 @@ import (
 
 // PathResult represents a path between source and destination
 type PathResult struct {
-	Source      string        `json:"source"`
-	Destination string        `json:"destination"`
-	HopCount    int           `json:"hop_count"`
-	Nodes       []graph.Node  `json:"nodes"`
+	Source      string       `json:"source"`
+	Destination string       `json:"destination"`
+	HopCount    int          `json:"hop_count"`
+	Nodes       []graph.Node `json:"nodes"`
 	Edges       []graph.Edge `json:"edges"`
 }
 

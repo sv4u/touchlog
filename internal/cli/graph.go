@@ -79,9 +79,9 @@ func BuildGraphCommand() *cli3.Command {
 
 							// Build options
 							opts := graph.ExportOptions{
-								Roots:     cmd.StringSlice("root"),
-								Depth:     cmd.Int("depth"),
-								Force:     cmd.Bool("force"),
+								Roots: cmd.StringSlice("root"),
+								Depth: cmd.Int("depth"),
+								Force: cmd.Bool("force"),
 							}
 
 							if typeFlag := cmd.String("type"); typeFlag != "" {

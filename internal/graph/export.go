@@ -11,13 +11,13 @@ import (
 
 // ExportOptions represents options for graph export
 type ExportOptions struct {
-	Roots      []string // Root nodes (type:key or key) - empty means all nodes
-	Types      []string // Filter by types
-	Tags       []string // Filter by tags
-	States     []string // Filter by states
-	EdgeTypes  []string // Filter by edge types
-	Depth      int      // Maximum depth (default: 10)
-	Force      bool     // Overwrite existing file
+	Roots     []string // Root nodes (type:key or key) - empty means all nodes
+	Types     []string // Filter by types
+	Tags      []string // Filter by tags
+	States    []string // Filter by states
+	EdgeTypes []string // Filter by edge types
+	Depth     int      // Maximum depth (default: 10)
+	Force     bool     // Overwrite existing file
 }
 
 // ExportDOT exports the graph to DOT format

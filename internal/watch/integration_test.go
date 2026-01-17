@@ -170,7 +170,7 @@ func TestWatcher_Debouncing(t *testing.T) {
 	// Wait for debounced events (wait longer than debounce period)
 	timeout := time.After(500 * time.Millisecond)
 	eventCount := 0
-	
+
 	// Collect events until timeout
 	for {
 		select {

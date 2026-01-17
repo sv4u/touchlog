@@ -77,9 +77,9 @@ func renderNeighborsJSON(results []NeighborsResult, root string) error {
 		"schema_version":   1,
 		"touchlog_version": "0.0.0",
 		"query": map[string]interface{}{
-			"root":       root,
-			"direction":  "both", // Default, will be normalized
-			"max_depth":  0,      // Will be normalized
+			"root":      root,
+			"direction": "both", // Default, will be normalized
+			"max_depth": 0,      // Will be normalized
 		},
 		"root": root,
 		"results": map[string]interface{}{

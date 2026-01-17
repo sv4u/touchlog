@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strings"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/sv4u/touchlog/internal/model"
 	"github.com/sv4u/touchlog/internal/store"
 	cli3 "github.com/urfave/cli/v3"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // BuildDiagnosticsCommand builds the diagnostics command
@@ -95,14 +95,14 @@ func BuildDiagnosticsCommand() *cli3.Command {
 
 // DiagnosticResult represents a diagnostic with node information
 type DiagnosticResult struct {
-	NodeID    string          `json:"node_id"`
-	NodeType  string          `json:"node_type,omitempty"`
-	NodeKey   string          `json:"node_key,omitempty"`
-	Level     string          `json:"level"`
-	Code      string          `json:"code"`
-	Message   string          `json:"message"`
-	Span      model.Span      `json:"span"`
-	CreatedAt string          `json:"created_at,omitempty"`
+	NodeID    string     `json:"node_id"`
+	NodeType  string     `json:"node_type,omitempty"`
+	NodeKey   string     `json:"node_key,omitempty"`
+	Level     string     `json:"level"`
+	Code      string     `json:"code"`
+	Message   string     `json:"message"`
+	Span      model.Span `json:"span"`
+	CreatedAt string     `json:"created_at,omitempty"`
 }
 
 // queryDiagnostics queries diagnostics from the database
@@ -257,8 +257,8 @@ func renderDiagnosticsJSON(diagnostics []DiagnosticResult) error {
 	output := map[string]interface{}{
 		"schema_version":   1,
 		"touchlog_version": "0.0.0",
-		"diagnostics":     diagnostics,
-		"count":           len(diagnostics),
+		"diagnostics":      diagnostics,
+		"count":            len(diagnostics),
 	}
 
 	encoder := json.NewEncoder(os.Stdout)

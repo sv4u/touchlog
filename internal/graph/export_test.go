@@ -131,4 +131,3 @@ func TestExportDOT_RefusesOverwrite(t *testing.T) {
 		t.Error("file should have been overwritten")
 	}
 }
-

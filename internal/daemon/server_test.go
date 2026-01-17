@@ -63,7 +63,7 @@ func TestServer_UnixSocket(t *testing.T) {
 
 	// Connect to server
 	sockPath := filepath.Join(absVaultRoot, ".touchlog", "daemon.sock")
-	
+
 	// Check if socket exists
 	if _, err := os.Stat(sockPath); os.IsNotExist(err) {
 		t.Fatalf("socket was not created at %s", sockPath)

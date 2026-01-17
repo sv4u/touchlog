@@ -12,8 +12,8 @@ import (
 
 // BacklinksResult represents a single backlink path
 type BacklinksResult struct {
-	HopCount int           `json:"hop_count"`
-	Nodes    []graph.Node  `json:"nodes"`
+	HopCount int          `json:"hop_count"`
+	Nodes    []graph.Node `json:"nodes"`
 	Edges    []graph.Edge `json:"edges"`
 }
 

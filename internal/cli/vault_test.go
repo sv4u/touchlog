@@ -8,7 +8,7 @@ import (
 
 func TestResolveVault_ExplicitPath(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	vaultRoot, err := ResolveVault(tmpDir)
 	if err != nil {
 		t.Fatalf("ResolveVault failed: %v", err)
@@ -27,7 +27,7 @@ func TestResolveVault_ExplicitPath(t *testing.T) {
 func TestResolveVault_AutoDetect(t *testing.T) {
 	tmpDir := t.TempDir()
 	touchlogDir := filepath.Join(tmpDir, ".touchlog")
-	
+
 	// Create .touchlog directory
 	if err := os.MkdirAll(touchlogDir, 0755); err != nil {
 		t.Fatalf("failed to create .touchlog dir: %v", err)
@@ -62,11 +62,11 @@ func TestResolveVault_AutoDetect(t *testing.T) {
 	// Normalize paths for comparison (handles /var vs /private/var on macOS)
 	vaultRootClean := filepath.Clean(vaultRoot)
 	absPathClean := filepath.Clean(absPath)
-	
+
 	// Use EvalSymlinks to handle symlink differences
 	vaultRootEval, _ := filepath.EvalSymlinks(vaultRootClean)
 	absPathEval, _ := filepath.EvalSymlinks(absPathClean)
-	
+
 	if vaultRootEval != absPathEval && vaultRootClean != absPathClean {
 		t.Errorf("expected vault root %q (eval: %q), got %q (eval: %q)", absPathClean, absPathEval, vaultRootClean, vaultRootEval)
 	}
