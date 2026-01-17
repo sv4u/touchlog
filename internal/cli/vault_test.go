@@ -43,7 +43,11 @@ func TestResolveVault_AutoDetect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Getwd failed: %v", err)
 	}
-	defer os.Chdir(oldCwd)
+	defer func() {
+		if err := os.Chdir(oldCwd); err != nil {
+			t.Logf("Failed to restore working directory: %v", err)
+		}
+	}()
 
 	if err := os.Chdir(subDir); err != nil {
 		t.Fatalf("Chdir failed: %v", err)
@@ -79,7 +83,11 @@ func TestResolveVault_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Getwd failed: %v", err)
 	}
-	defer os.Chdir(oldCwd)
+	defer func() {
+		if err := os.Chdir(oldCwd); err != nil {
+			t.Logf("Failed to restore working directory: %v", err)
+		}
+	}()
 
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Chdir failed: %v", err)

@@ -106,7 +106,7 @@ func (s *Server) Start() error {
 func (s *Server) Stop() error {
 	close(s.done)
 	if s.watcher != nil {
-		s.watcher.Stop()
+		_ = s.watcher.Stop()
 	}
 	return s.listener.Close()
 }
@@ -136,7 +136,9 @@ func (s *Server) acceptConnections() {
 
 // handleConnection handles a single client connection
 func (s *Server) handleConnection(conn net.Conn) {
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	decoder := json.NewDecoder(conn)
 	encoder := json.NewEncoder(conn)

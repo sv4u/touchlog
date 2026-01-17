@@ -56,11 +56,10 @@ func (d *Daemon) Start() error {
 		if err := builder.Rebuild(); err != nil {
 			return fmt.Errorf("rebuilding index: %w", err)
 		}
-	} else {
-		// Index exists, check schema version
-		// For Phase 3, we'll assume schema is current
-		// In a full implementation, we'd check schema version and migrate if needed
 	}
+	// Index exists, check schema version
+	// For Phase 3, we'll assume schema is current
+	// In a full implementation, we'd check schema version and migrate if needed
 
 	// Start IPC server
 	server, err := NewServer(d.vaultRoot, cfg)
@@ -75,7 +74,7 @@ func (d *Daemon) Start() error {
 	// Write PID file
 	pid := os.Getpid()
 	if err := d.WritePID(pid); err != nil {
-		server.Stop()
+		_ = server.Stop()
 		return fmt.Errorf("writing PID file: %w", err)
 	}
 
@@ -111,8 +110,8 @@ func (d *Daemon) Stop() error {
 	// Wait a bit for graceful shutdown
 	// In a full implementation, we'd wait for the process to exit
 	// For Phase 3, we'll just remove the PID file
-	os.Remove(d.pidPath)
-	os.Remove(d.sockPath)
+	_ = os.Remove(d.pidPath)
+	_ = os.Remove(d.sockPath)
 
 	return nil
 }
@@ -137,7 +136,7 @@ func (d *Daemon) Status() (bool, int, error) {
 	// Check if process is alive by sending signal 0
 	if err := process.Signal(os.Signal(nil)); err != nil {
 		// Process doesn't exist, clean up PID file
-		os.Remove(d.pidPath)
+		_ = os.Remove(d.pidPath)
 		return false, 0, nil
 	}
 
@@ -164,7 +163,7 @@ func (d *Daemon) IsRunning() bool {
 	// Check if process is alive
 	if err := process.Signal(os.Signal(nil)); err != nil {
 		// Process doesn't exist, clean up
-		os.Remove(d.pidPath)
+		_ = os.Remove(d.pidPath)
 		return false
 	}
 

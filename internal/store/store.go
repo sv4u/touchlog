@@ -29,7 +29,7 @@ func OpenOrCreateDB(vaultRoot string) (*sql.DB, error) {
 
 	// Test connection
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 
@@ -97,7 +97,9 @@ func createSchemaV1(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	// Create meta table
 	_, err = tx.Exec(`
@@ -270,7 +272,9 @@ func ReplaceEdgesForNode(db *sql.DB, fromID model.NoteID, edges []model.RawLink)
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	// Delete existing edges
 	_, err = tx.Exec("DELETE FROM edges WHERE from_id = ?", fromID)
@@ -317,7 +321,9 @@ func ReplaceTagsForNode(db *sql.DB, nodeID model.NoteID, tags []string) error {
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	// Delete existing tags
 	_, err = tx.Exec("DELETE FROM tags WHERE node_id = ?", nodeID)
@@ -342,7 +348,9 @@ func InsertDiagnostics(db *sql.DB, nodeID model.NoteID, diags []model.Diagnostic
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	// Delete existing diagnostics for this node
 	_, err = tx.Exec("DELETE FROM diagnostics WHERE node_id = ?", nodeID)

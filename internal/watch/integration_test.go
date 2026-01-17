@@ -130,7 +130,9 @@ updated: 2024-01-01T00:00:00Z
 	if err != nil {
 		t.Fatalf("opening database: %v", err)
 	}
-	defer db2.Close()
+	defer func() {
+		_ = db2.Close()
+	}()
 
 	var count int
 	err = db2.QueryRow("SELECT COUNT(*) FROM nodes WHERE id = 'note-test'").Scan(&count)
@@ -149,7 +151,9 @@ func TestWatcher_Debouncing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWatcher failed: %v", err)
 	}
-	defer watcher.Stop()
+	defer func() {
+		_ = watcher.Stop()
+	}()
 
 	if err := watcher.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)

@@ -40,10 +40,11 @@ func renderNeighborsTable(results []NeighborsResult, root string) error {
 		fmt.Println(strings.Repeat("-", 65))
 
 		for _, node := range result.Nodes {
-			title := node.Title
-			if len(title) > 28 {
-				title = title[:25] + "..."
+			displayTitle := node.Title
+			if len(displayTitle) > 28 {
+				displayTitle = displayTitle[:25] + "..."
 			}
+			_ = displayTitle // Reserved for future use in table output
 			fmt.Printf("%-20s %-15s %-30s\n", node.ID, node.Type, node.Key)
 		}
 

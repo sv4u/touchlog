@@ -13,7 +13,9 @@ func TestReplaceEdgesForNode_MultipleUnresolved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -104,7 +106,9 @@ func TestReplaceEdgesForNode_EmptyEdges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -165,7 +169,9 @@ func TestReplaceTagsForNode_EmptyTags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -210,7 +216,9 @@ func TestInsertDiagnostics_EmptyDiagnostics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)

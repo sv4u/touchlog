@@ -228,7 +228,7 @@ func parseLinkContent(path, content string, startByte, endByte int) *model.RawLi
 
 	// Parse target and optional edge type
 	var target model.RawTarget
-	var edgeType model.EdgeType = model.DefaultEdgeType
+	edgeType := model.DefaultEdgeType
 
 	// Check for edge type separator: |
 	parts := strings.Split(content, "|")

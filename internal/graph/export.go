@@ -36,9 +36,8 @@ func ExportDOT(vaultRoot string, outputPath string, opts ExportOptions) error {
 	}
 
 	// Determine depth (default: 10)
-	depth := opts.Depth
-	if depth == 0 {
-		depth = 10
+	if opts.Depth == 0 {
+		opts.Depth = 10
 	}
 
 	// Determine which nodes to include
