@@ -139,6 +139,7 @@ func loadNodesByIDs(db *sql.DB, graph *Graph, nodeIDs []model.NoteID) error {
 	}
 
 	// Use efficient IN clause with proper indexing
+	// #nosec G201 - SQL query uses parameterized placeholders, values passed via args
 	query := fmt.Sprintf(`
 		SELECT id, type, key, title, state, created, updated, path
 		FROM nodes
@@ -246,6 +247,7 @@ func loadEdgesForNodes(db *sql.DB, graph *Graph, nodeIDs []model.NoteID) error {
 		args[i+len(nodeIDs)] = string(id)
 	}
 
+	// #nosec G201 - SQL query uses parameterized placeholders, values passed via args
 	query := fmt.Sprintf(`
 		SELECT from_id, to_id, edge_type, raw_target, span
 		FROM edges
