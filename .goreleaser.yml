@@ -1,0 +1,28 @@
+version: 2
+project_name: touchlog
+
+builds:
+  - id: touchlog
+    main: ./cmd/touchlog
+    binary: touchlog
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
+  algorithm: sha256
+
+release:
+  mode: replace

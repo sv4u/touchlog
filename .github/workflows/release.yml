@@ -48,7 +48,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -62,8 +62,8 @@ jobs:
       - name: Verify branch and working directory
         run: |
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [ "$CURRENT_BRANCH" != "master" ]; then
-            echo "[X] Error: This workflow must be run from the 'master' branch"
+          if [ "$CURRENT_BRANCH" != "master" ] && [ "$CURRENT_BRANCH" != "main" ]; then
+            echo "[X] Error: This workflow must be run from the 'master' or 'main' branch"
             echo "Current branch: $CURRENT_BRANCH"
             exit 1
           fi
@@ -74,9 +74,9 @@ jobs:
             exit 1
           fi
           
-          git fetch origin master
+          git fetch origin $CURRENT_BRANCH
           LOCAL=$(git rev-parse HEAD)
-          REMOTE=$(git rev-parse origin/master)
+          REMOTE=$(git rev-parse origin/$CURRENT_BRANCH)
           if [ "$LOCAL" != "$REMOTE" ]; then
             echo "[X] Error: Local branch is not up-to-date with remote. Please pull latest changes."
             echo "Local: $LOCAL"
