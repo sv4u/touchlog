@@ -1,0 +1,141 @@
+name: Test & Coverage
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [master, main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-coverage:
+    name: Run Tests and Generate Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: go.sum
+          cache: true
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Run unit tests
+        run: go test ./... -v
+        continue-on-error: false
+
+      - name: Run tests with race detector
+        run: go test ./... -race -v
+        continue-on-error: false
+
+      - name: Generate coverage profile
+        run: |
+          go test ./... -coverprofile=coverage.out -covermode=atomic
+          if [ ! -f coverage.out ]; then
+            echo "Warning: coverage.out was not created, creating empty file"
+            touch coverage.out
+          fi
+
+      - name: Generate HTML coverage report
+        run: |
+          mkdir -p coverage
+          if [ -f coverage.out ] && [ -s coverage.out ]; then
+            go tool cover -html=coverage.out -o coverage/coverage.html
+            echo "✓ HTML coverage report generated"
+          else
+            echo "⚠ Skipping HTML coverage report generation (coverage.out missing or empty)"
+            touch coverage/coverage.html
+          fi
+
+      - name: Install gocov tools for XML coverage
+        run: |
+          go install github.com/axw/gocov/gocov@latest
+          go install github.com/AlekSi/gocov-xml@latest
+
+      - name: Generate XML coverage report
+        run: |
+          if [ -f coverage.out ] && [ -s coverage.out ]; then
+            gocov convert coverage.out | gocov-xml > coverage/coverage.xml
+            echo "✓ XML coverage report generated"
+          else
+            echo "⚠ Skipping XML coverage report generation (coverage.out missing or empty)"
+            touch coverage/coverage.xml
+          fi
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.out
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-html
+          path: coverage/coverage.html
+          retention-days: 7
+
+      - name: Upload coverage XML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-xml
+          path: coverage/coverage.xml
+          retention-days: 7
+
+      - name: Upload coverage profile
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-profile
+          path: coverage.out
+          retention-days: 7
+
+      - name: Display coverage summary
+        if: always()
+        run: |
+          if [ -f coverage.out ]; then
+            if [ ! -s coverage.out ]; then
+              echo "[!] Warning: Coverage file exists but is empty"
+            else
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "[OK] Coverage report generated successfully"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo ""
+              echo "Coverage by package:"
+              go tool cover -func=coverage.out | grep -E "^github.com" | awk '{printf "  %-60s %s\n", $1, $3}' || echo "  (no coverage data found)"
+              echo ""
+              COVERAGE=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}')
+              echo "Total Coverage: $COVERAGE"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            fi
+          else
+            echo "[!] Warning: Coverage report (coverage.out) not found"
+          fi
