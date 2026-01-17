@@ -11,7 +11,7 @@ import (
 
 // ExportData represents the complete index export structure
 type ExportData struct {
-	Version string      `json:"version"`
+	Version string       `json:"version"`
 	Nodes   []NodeExport `json:"nodes"`
 	Edges   []EdgeExport `json:"edges"`
 	Tags    []TagExport  `json:"tags"`
@@ -31,11 +31,11 @@ type NodeExport struct {
 
 // EdgeExport represents an edge in the export
 type EdgeExport struct {
-	FromID   string  `json:"from_id"`
-	ToID     *string `json:"to_id,omitempty"` // nil for unresolved links
-	EdgeType string  `json:"edge_type"`
-	RawTarget string `json:"raw_target"` // JSON string of RawTarget
-	Span     string  `json:"span"`       // JSON string of Span
+	FromID    string  `json:"from_id"`
+	ToID      *string `json:"to_id,omitempty"` // nil for unresolved links
+	EdgeType  string  `json:"edge_type"`
+	RawTarget string  `json:"raw_target"` // JSON string of RawTarget
+	Span      string  `json:"span"`       // JSON string of Span
 }
 
 // TagExport represents a tag in the export

@@ -118,7 +118,7 @@ func selectType(cfg *config.Config) (model.TypeName, error) {
 	if _, ok := cfg.Types["note"]; ok {
 		return "note", nil
 	}
-	
+
 	// Fallback to first type
 	for typeName := range cfg.Types {
 		return typeName, nil

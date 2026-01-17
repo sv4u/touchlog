@@ -56,9 +56,9 @@ const DefaultKeyMaxLen = 64
 // Merge precedence: built-in < global < repo
 func LoadConfig(vaultRoot string) (*Config, error) {
 	cfg := &Config{
-		Types:  make(map[model.TypeName]TypeDef),
-		Edges:  make(map[model.EdgeType]EdgeDef),
-		Tags:   TagConfig{Preferred: []string{}},
+		Types:     make(map[model.TypeName]TypeDef),
+		Edges:     make(map[model.EdgeType]EdgeDef),
+		Tags:      TagConfig{Preferred: []string{}},
 		Templates: TemplateConfig{Root: ""},
 	}
 

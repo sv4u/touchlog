@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/sv4u/touchlog/internal/config"
 	"github.com/sv4u/touchlog/internal/model"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestBuilder_Rebuild_CreatesIndex(t *testing.T) {
@@ -31,8 +31,8 @@ func TestBuilder_Rebuild_CreatesIndex(t *testing.T) {
 				KeyMaxLen:    64,
 			},
 		},
-		Tags:    config.TagConfig{Preferred: []string{}},
-		Edges:   make(map[model.EdgeType]config.EdgeDef),
+		Tags:      config.TagConfig{Preferred: []string{}},
+		Edges:     make(map[model.EdgeType]config.EdgeDef),
 		Templates: config.TemplateConfig{Root: "templates"},
 	}
 

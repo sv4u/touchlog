@@ -12,16 +12,16 @@ const ProtocolVersion = 1
 type MessageType string
 
 const (
-	MessageTypeStatus      MessageType = "Status"
+	MessageTypeStatus       MessageType = "Status"
 	MessageTypeQueryExecute MessageType = "QueryExecute"
 	MessageTypeReindexPaths MessageType = "ReindexPaths"
-	MessageTypeShutdown    MessageType = "Shutdown"
+	MessageTypeShutdown     MessageType = "Shutdown"
 )
 
 // Message represents an IPC message
 type Message struct {
-	Version int         `json:"version"`
-	Type    MessageType `json:"type"`
+	Version int             `json:"version"`
+	Type    MessageType     `json:"type"`
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 

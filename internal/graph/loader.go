@@ -12,11 +12,11 @@ import (
 
 // Edge represents a graph edge in memory
 type Edge struct {
-	FromID     model.NoteID
-	ToID       *model.NoteID // nil for unresolved links
-	EdgeType   model.EdgeType
-	RawTarget  model.RawTarget
-	Span       model.Span
+	FromID    model.NoteID
+	ToID      *model.NoteID // nil for unresolved links
+	EdgeType  model.EdgeType
+	RawTarget model.RawTarget
+	Span      model.Span
 }
 
 // Node represents a graph node in memory

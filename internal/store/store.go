@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sv4u/touchlog/internal/model"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/sv4u/touchlog/internal/model"
 )
 
 // OpenOrCreateDB opens or creates the SQLite database at the vault root
 func OpenOrCreateDB(vaultRoot string) (*sql.DB, error) {
 	dbPath := filepath.Join(vaultRoot, ".touchlog", "index.db")
-	
+
 	// Ensure directory exists
 	dbDir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
