@@ -23,7 +23,9 @@ func TestIncrementalIndexer_ProcessFileUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opening database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Load config
 	cfg, err := config.LoadConfig(tmpDir)
@@ -116,7 +118,9 @@ updated: 2024-01-01T00:00:00Z
 	if err != nil {
 		t.Fatalf("opening database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Verify node exists
 	var count int
@@ -204,7 +208,9 @@ updated: 2024-01-01T00:00:00Z
 	if err != nil {
 		t.Fatalf("opening database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Create incremental indexer
 	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
@@ -294,10 +300,10 @@ templates:
 		t.Fatalf("opening database: %v", err)
 	}
 	if err := store.ApplyMigrations(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Fatalf("applying migrations: %v", err)
 	}
-	db.Close()
+	_ = db.Close()
 
 	// Create note directory
 	noteDir := filepath.Join(tmpDir, "note")

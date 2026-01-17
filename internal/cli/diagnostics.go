@@ -67,7 +67,9 @@ func BuildDiagnosticsCommand() *cli3.Command {
 					if err != nil {
 						return fmt.Errorf("opening database: %w", err)
 					}
-					defer db.Close()
+					defer func() {
+						_ = db.Close()
+					}()
 
 					// Build query
 					levelFilter := cmd.String("level")
@@ -147,7 +149,9 @@ func queryDiagnostics(db *sql.DB, levelFilter, nodeFilter, codeFilter string) ([
 	if err != nil {
 		return nil, fmt.Errorf("executing query: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var results []DiagnosticResult
 	for rows.Next() {

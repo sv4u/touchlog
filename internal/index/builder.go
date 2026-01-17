@@ -54,7 +54,9 @@ func (b *Builder) Rebuild() error {
 	if err != nil {
 		return fmt.Errorf("opening temp database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Test connection
 	if err := db.Ping(); err != nil {

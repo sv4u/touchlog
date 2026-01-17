@@ -136,7 +136,9 @@ func resolveNodeID(vaultRoot string, identifier string) (model.NoteID, error) {
 	if err != nil {
 		return "", fmt.Errorf("opening database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Parse identifier
 	parts := strings.Split(identifier, ":")
@@ -173,7 +175,9 @@ func resolveNodeID(vaultRoot string, identifier string) (model.NoteID, error) {
 	if err != nil {
 		return "", fmt.Errorf("querying nodes: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var nodeIDs []model.NoteID
 	var types []string

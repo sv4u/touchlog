@@ -15,7 +15,9 @@ func TestOpenOrCreateDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Verify database file was created
 	dbPath := filepath.Join(tmpDir, ".touchlog", "index.db")
@@ -30,7 +32,9 @@ func TestApplyMigrations_CreatesSchemaV1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -71,7 +75,9 @@ func TestApplyMigrations_Idempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Apply migrations twice
 	if err := ApplyMigrations(db); err != nil {
@@ -98,7 +104,9 @@ func TestUpsertNode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -143,7 +151,9 @@ func TestUpsertNode_Update(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -194,7 +204,9 @@ func TestReplaceTagsForNode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -249,7 +261,9 @@ func TestReplaceEdgesForNode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -340,7 +354,9 @@ func TestInsertDiagnostics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)
@@ -429,7 +445,9 @@ func TestUniqueConstraint_TypeKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenOrCreateDB failed: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	if err := ApplyMigrations(db); err != nil {
 		t.Fatalf("ApplyMigrations failed: %v", err)

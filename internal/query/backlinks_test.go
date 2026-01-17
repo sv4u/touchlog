@@ -264,8 +264,8 @@ templates:
 		t.Fatalf("opening database: %v", err)
 	}
 	if err := store.ApplyMigrations(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Fatalf("applying migrations: %v", err)
 	}
-	db.Close()
+	_ = db.Close()
 }
