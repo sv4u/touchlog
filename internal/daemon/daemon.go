@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/sv4u/touchlog/internal/config"
 	"github.com/sv4u/touchlog/internal/index"
@@ -134,7 +135,7 @@ func (d *Daemon) Status() (bool, int, error) {
 	}
 
 	// Check if process is alive by sending signal 0
-	if err := process.Signal(os.Signal(nil)); err != nil {
+	if err := process.Signal(syscall.Signal(0)); err != nil {
 		// Process doesn't exist, clean up PID file
 		_ = os.Remove(d.pidPath)
 		return false, 0, nil
@@ -160,8 +161,8 @@ func (d *Daemon) IsRunning() bool {
 		return false
 	}
 
-	// Check if process is alive
-	if err := process.Signal(os.Signal(nil)); err != nil {
+	// Check if process is alive by sending signal 0
+	if err := process.Signal(syscall.Signal(0)); err != nil {
 		// Process doesn't exist, clean up
 		_ = os.Remove(d.pidPath)
 		return false
