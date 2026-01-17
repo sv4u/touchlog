@@ -631,6 +631,11 @@ updated: 2024-01-01T00:00:00Z
 		_ = db.Close()
 	}()
 
+	// Apply migrations to ensure schema exists
+	if err := store.ApplyMigrations(db); err != nil {
+		t.Fatalf("applying migrations: %v", err)
+	}
+
 	var count int
 	err = db.QueryRow("SELECT COUNT(*) FROM nodes WHERE id = 'note-test'").Scan(&count)
 	if err != nil {
@@ -638,7 +643,7 @@ updated: 2024-01-01T00:00:00Z
 	}
 
 	// Note: The watcher may or may not have processed the event yet,
-	// so we just verify the server doesn't crash
+	// so we just verify the server doesn't crash and the database is accessible
 	_ = count
 }
 
