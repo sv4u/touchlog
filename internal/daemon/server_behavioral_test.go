@@ -185,27 +185,47 @@ func TestServer_ProcessMessage_Behavior_HandlesAllMessageTypes(t *testing.T) {
 		t.Fatalf("NewServer failed: %v", err)
 	}
 
+	// Start server to initialize indexer (required for ReindexPaths)
+	if err := server.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer func() {
+		_ = server.Stop()
+	}()
+
 	// Test all message types return responses (not nil)
-	messageTypes := []MessageType{
-		MessageTypeStatus,
-		MessageTypeQueryExecute,
-		MessageTypeReindexPaths,
-		MessageTypeShutdown,
+	testCases := []struct {
+		msgType MessageType
+		payload interface{}
+	}{
+		{MessageTypeStatus, nil},
+		{MessageTypeQueryExecute, QueryExecuteRequest{Query: "test"}},
+		{MessageTypeReindexPaths, ReindexPathsRequest{Paths: []string{}}},
+		{MessageTypeShutdown, nil},
 	}
 
-	for _, msgType := range messageTypes {
-		msg := &Message{
-			Version: ProtocolVersion,
-			Type:    msgType,
+	for _, tc := range testCases {
+		var msg *Message
+		var err error
+		if tc.payload != nil {
+			msg, err = NewMessage(tc.msgType, tc.payload)
+			if err != nil {
+				t.Fatalf("creating message for %s: %v", tc.msgType, err)
+			}
+		} else {
+			msg = &Message{
+				Version: ProtocolVersion,
+				Type:    tc.msgType,
+			}
 		}
 
 		response := server.processMessage(msg)
 		if response == nil {
-			t.Errorf("expected response for message type %s, got nil", msgType)
+			t.Errorf("expected response for message type %s, got nil", tc.msgType)
 			continue
 		}
 		if response.Version != ProtocolVersion {
-			t.Errorf("expected protocol version %d for %s, got %d", ProtocolVersion, msgType, response.Version)
+			t.Errorf("expected protocol version %d for %s, got %d", ProtocolVersion, tc.msgType, response.Version)
 		}
 	}
 }
