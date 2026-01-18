@@ -49,7 +49,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: test-results.xml,test-results-race.xml
-          report-type: test_results
+          report_type: test_results
           flags: unittests
           fail_ci_if_error: false
 
