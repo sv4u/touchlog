@@ -281,6 +281,23 @@ jobs:
             exit 1
           fi
 
+      - name: Checkout tag for build
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          NEXT_TAG="${{ steps.version.outputs.tag }}"
+          
+          echo "Checking out tag $NEXT_TAG to ensure correct version is used..."
+          
+          # Fetch the tag to ensure it's available locally
+          git fetch origin "$NEXT_TAG"
+          
+          # Checkout the tag (this puts us in detached HEAD state, which is fine for building)
+          git checkout "$NEXT_TAG"
+          
+          echo "[OK] Checked out tag $NEXT_TAG"
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current tag: $(git describe --tags --exact-match HEAD 2>/dev/null || echo 'none')"
+
       - name: Trigger Go module indexing
         if: ${{ inputs.dry_run != 'true' }}
         continue-on-error: true
