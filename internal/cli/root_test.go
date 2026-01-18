@@ -1,7 +1,10 @@
 package cli
 
 import (
+	"context"
 	"testing"
+
+	cli3 "github.com/urfave/cli/v3"
 )
 
 // TestBuildRootCommand tests root command structure
@@ -131,5 +134,56 @@ func TestBuildDiagnosticsCommand(t *testing.T) {
 
 	if len(diagCmd.Commands) == 0 {
 		t.Error("expected diagnostics command to have subcommands")
+	}
+}
+
+// TestVersionCommand_Action tests the version command action behavior
+func TestVersionCommand_Action(t *testing.T) {
+	versionCmd := buildVersionCommand()
+	if versionCmd.Action == nil {
+		t.Fatal("version command should have an action")
+	}
+
+	// Test that action executes without error
+	ctx := context.Background()
+	cmd := &cli3.Command{}
+	err := versionCmd.Action(ctx, cmd)
+	if err != nil {
+		t.Fatalf("version command action failed: %v", err)
+	}
+}
+
+// TestCompletionCommand_Actions tests that completion command actions execute without error
+func TestCompletionCommand_Actions(t *testing.T) {
+	completionCmd := buildCompletionCommand()
+
+	ctx := context.Background()
+	testCmd := &cli3.Command{}
+
+	// Test bash completion
+	bashCmd := completionCmd.Commands[0]
+	if bashCmd.Action == nil {
+		t.Fatal("bash completion command should have an action")
+	}
+	if err := bashCmd.Action(ctx, testCmd); err != nil {
+		t.Errorf("bash completion action failed: %v", err)
+	}
+
+	// Test zsh completion
+	zshCmd := completionCmd.Commands[1]
+	if zshCmd.Action == nil {
+		t.Fatal("zsh completion command should have an action")
+	}
+	if err := zshCmd.Action(ctx, testCmd); err != nil {
+		t.Errorf("zsh completion action failed: %v", err)
+	}
+
+	// Test fish completion
+	fishCmd := completionCmd.Commands[2]
+	if fishCmd.Action == nil {
+		t.Fatal("fish completion command should have an action")
+	}
+	if err := fishCmd.Action(ctx, testCmd); err != nil {
+		t.Errorf("fish completion action failed: %v", err)
 	}
 }

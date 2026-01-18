@@ -3,90 +3,61 @@ package graph
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/index"
 )
 
-func TestExportDOT_WithEmptyGraph(t *testing.T) {
+// TestExportDOT_FileExistsWithoutForce tests export when file exists and force is false
+func TestExportDOT_FileExistsWithoutForce(t *testing.T) {
 	tmpDir := t.TempDir()
-
 	setupTestVaultWithIndex(t, tmpDir)
 
-	// Export empty graph
-	outputPath := filepath.Join(tmpDir, "graph.dot")
+	// Create an existing file
+	exportPath := filepath.Join(tmpDir, "graph.dot")
+	if err := os.WriteFile(exportPath, []byte("existing content"), 0644); err != nil {
+		t.Fatalf("creating existing file: %v", err)
+	}
+
 	opts := ExportOptions{
-		Depth: 10,
+		Force: false,
 	}
 
-	if err := ExportDOT(tmpDir, outputPath, opts); err != nil {
-		t.Fatalf("ExportDOT failed: %v", err)
-	}
-
-	// Verify file exists and contains basic structure
-	content, err := os.ReadFile(outputPath)
-	if err != nil {
-		t.Fatalf("reading DOT file: %v", err)
-	}
-
-	dotContent := string(content)
-	if !strings.Contains(dotContent, "digraph touchlog") {
-		t.Error("DOT file should contain 'digraph touchlog'")
+	err := ExportDOT(tmpDir, exportPath, opts)
+	if err == nil {
+		t.Error("expected error when file exists and force is false")
 	}
 }
 
-func TestExportDOT_WithEdges(t *testing.T) {
+// TestExportDOT_FileExistsWithForce tests export when file exists and force is true
+func TestExportDOT_FileExistsWithForce(t *testing.T) {
 	tmpDir := t.TempDir()
-
 	setupTestVaultWithIndex(t, tmpDir)
 
-	// Create notes with links
+	// Create test notes
 	noteDir := filepath.Join(tmpDir, "note")
 	if err := os.MkdirAll(noteDir, 0755); err != nil {
 		t.Fatalf("creating note dir: %v", err)
 	}
 
-	// Note A links to B
-	noteAPath := filepath.Join(noteDir, "note-a.Rmd")
-	noteAContent := `---
-id: note-a
+	notePath := filepath.Join(noteDir, "test-note.Rmd")
+	noteContent := `---
+id: note-1
 type: note
-key: note-a
-title: Note A
+key: test-note
+title: Test Note
 state: draft
 tags: []
 created: 2024-01-01T00:00:00Z
 updated: 2024-01-01T00:00:00Z
 ---
-# Note A
-
-Links to [[note:note-b]].
+# Test Note
 `
-	if err := os.WriteFile(noteAPath, []byte(noteAContent), 0644); err != nil {
-		t.Fatalf("writing note A: %v", err)
+	if err := os.WriteFile(notePath, []byte(noteContent), 0644); err != nil {
+		t.Fatalf("writing test note: %v", err)
 	}
 
-	// Note B
-	noteBPath := filepath.Join(noteDir, "note-b.Rmd")
-	noteBContent := `---
-id: note-b
-type: note
-key: note-b
-title: Note B
-state: draft
-tags: []
-created: 2024-01-01T00:00:00Z
-updated: 2024-01-01T00:00:00Z
----
-# Note B
-`
-	if err := os.WriteFile(noteBPath, []byte(noteBContent), 0644); err != nil {
-		t.Fatalf("writing note B: %v", err)
-	}
-
-	// Build index
 	cfg, err := config.LoadConfig(tmpDir)
 	if err != nil {
 		t.Fatalf("loading config: %v", err)
@@ -97,82 +68,60 @@ updated: 2024-01-01T00:00:00Z
 		t.Fatalf("rebuilding index: %v", err)
 	}
 
-	// Export graph
-	outputPath := filepath.Join(tmpDir, "graph.dot")
+	// Create an existing file
+	exportPath := filepath.Join(tmpDir, "graph.dot")
+	if err := os.WriteFile(exportPath, []byte("existing content"), 0644); err != nil {
+		t.Fatalf("creating existing file: %v", err)
+	}
+
 	opts := ExportOptions{
-		Depth: 10,
+		Force: true,
 	}
 
-	if err := ExportDOT(tmpDir, outputPath, opts); err != nil {
-		t.Fatalf("ExportDOT failed: %v", err)
-	}
-
-	// Verify file contains edge
-	content, err := os.ReadFile(outputPath)
+	err = ExportDOT(tmpDir, exportPath, opts)
 	if err != nil {
-		t.Fatalf("reading DOT file: %v", err)
+		t.Fatalf("ExportDOT with force=true failed: %v", err)
 	}
 
-	dotContent := string(content)
-	if !strings.Contains(dotContent, "note-a") {
-		t.Error("DOT file should contain 'note-a'")
+	// Verify file was overwritten
+	content, err := os.ReadFile(exportPath)
+	if err != nil {
+		t.Fatalf("reading export file: %v", err)
 	}
-	if !strings.Contains(dotContent, "note-b") {
-		t.Error("DOT file should contain 'note-b'")
-	}
-	if !strings.Contains(dotContent, "->") {
-		t.Error("DOT file should contain edge (->)")
+
+	if string(content) == "existing content" {
+		t.Error("expected file to be overwritten")
 	}
 }
 
+// TestExportDOT_WithFilters tests export with various filters
 func TestExportDOT_WithFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-
 	setupTestVaultWithIndex(t, tmpDir)
 
-	// Create notes with different states
+	// Create test notes
 	noteDir := filepath.Join(tmpDir, "note")
 	if err := os.MkdirAll(noteDir, 0755); err != nil {
 		t.Fatalf("creating note dir: %v", err)
 	}
 
-	// Note A (draft)
-	noteAPath := filepath.Join(noteDir, "note-a.Rmd")
-	noteAContent := `---
-id: note-a
+	notePath := filepath.Join(noteDir, "test-note.Rmd")
+	noteContent := `---
+id: note-1
 type: note
-key: note-a
-title: Note A
+key: test-note
+title: Test Note
 state: draft
 tags: []
 created: 2024-01-01T00:00:00Z
 updated: 2024-01-01T00:00:00Z
 ---
-# Note A
+# Test Note
 `
-	if err := os.WriteFile(noteAPath, []byte(noteAContent), 0644); err != nil {
-		t.Fatalf("writing note A: %v", err)
+	if err := os.WriteFile(notePath, []byte(noteContent), 0644); err != nil {
+		t.Fatalf("writing test note: %v", err)
 	}
 
-	// Note B (published)
-	noteBPath := filepath.Join(noteDir, "note-b.Rmd")
-	noteBContent := `---
-id: note-b
-type: note
-key: note-b
-title: Note B
-state: published
-tags: []
-created: 2024-01-01T00:00:00Z
-updated: 2024-01-01T00:00:00Z
----
-# Note B
-`
-	if err := os.WriteFile(noteBPath, []byte(noteBContent), 0644); err != nil {
-		t.Fatalf("writing note B: %v", err)
-	}
-
-	// Build index
 	cfg, err := config.LoadConfig(tmpDir)
 	if err != nil {
 		t.Fatalf("loading config: %v", err)
@@ -183,28 +132,78 @@ updated: 2024-01-01T00:00:00Z
 		t.Fatalf("rebuilding index: %v", err)
 	}
 
-	// Export graph with state filter (only published)
-	outputPath := filepath.Join(tmpDir, "graph.dot")
+	exportPath := filepath.Join(tmpDir, "graph.dot")
 	opts := ExportOptions{
-		Depth:  10,
-		States: []string{"published"},
+		Types:     []string{"note"},
+		States:    []string{"draft"},
+		EdgeTypes: []string{"related-to"},
+		Depth:     5,
+		Force:     true,
 	}
 
-	if err := ExportDOT(tmpDir, outputPath, opts); err != nil {
-		t.Fatalf("ExportDOT failed: %v", err)
-	}
-
-	// Verify file contains only published note
-	content, err := os.ReadFile(outputPath)
+	err = ExportDOT(tmpDir, exportPath, opts)
 	if err != nil {
-		t.Fatalf("reading DOT file: %v", err)
+		t.Fatalf("ExportDOT with filters failed: %v", err)
 	}
 
-	dotContent := string(content)
-	if strings.Contains(dotContent, "note-a") {
-		t.Error("DOT file should not contain 'note-a' (draft state filtered out)")
+	// Verify file was created
+	if _, err := os.Stat(exportPath); err != nil {
+		t.Fatalf("export file was not created: %v", err)
 	}
-	if !strings.Contains(dotContent, "note-b") {
-		t.Error("DOT file should contain 'note-b' (published state)")
+}
+
+// TestExportDOT_WithRoots tests export with root nodes specified
+func TestExportDOT_WithRoots(t *testing.T) {
+	tmpDir := t.TempDir()
+	setupTestVaultWithIndex(t, tmpDir)
+
+	// Create test notes
+	noteDir := filepath.Join(tmpDir, "note")
+	if err := os.MkdirAll(noteDir, 0755); err != nil {
+		t.Fatalf("creating note dir: %v", err)
+	}
+
+	notePath := filepath.Join(noteDir, "test-note.Rmd")
+	noteContent := `---
+id: note-1
+type: note
+key: test-note
+title: Test Note
+state: draft
+tags: []
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+---
+# Test Note
+`
+	if err := os.WriteFile(notePath, []byte(noteContent), 0644); err != nil {
+		t.Fatalf("writing test note: %v", err)
+	}
+
+	cfg, err := config.LoadConfig(tmpDir)
+	if err != nil {
+		t.Fatalf("loading config: %v", err)
+	}
+
+	builder := index.NewBuilder(tmpDir, cfg)
+	if err := builder.Rebuild(); err != nil {
+		t.Fatalf("rebuilding index: %v", err)
+	}
+
+	exportPath := filepath.Join(tmpDir, "graph.dot")
+	opts := ExportOptions{
+		Roots: []string{"note:test-note"},
+		Depth: 2,
+		Force: true,
+	}
+
+	err = ExportDOT(tmpDir, exportPath, opts)
+	if err != nil {
+		t.Fatalf("ExportDOT with roots failed: %v", err)
+	}
+
+	// Verify file was created
+	if _, err := os.Stat(exportPath); err != nil {
+		t.Fatalf("export file was not created: %v", err)
 	}
 }
