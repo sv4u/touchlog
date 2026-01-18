@@ -28,22 +28,22 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: amd64
-            go-version: '1.22'
+            go-version: '1.25'
             cache-path: ~/.cache/go-build
           - os: ubuntu-latest
             platform: linux
             arch: arm64
-            go-version: '1.22'
+            go-version: '1.25'
             cache-path: ~/.cache/go-build
           - os: macos-latest
             platform: darwin
             arch: amd64
-            go-version: '1.22'
+            go-version: '1.25'
             cache-path: ~/Library/Caches/go-build
           - os: macos-latest
             platform: darwin
             arch: arm64
-            go-version: '1.22'
+            go-version: '1.25'
             cache-path: ~/Library/Caches/go-build
 
     steps:
@@ -111,7 +111,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.25'
           cache-dependency-path: go.sum
           cache: true
 
