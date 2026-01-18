@@ -134,7 +134,7 @@ func TestQueryCommand_InvalidVault(t *testing.T) {
 	if vaultRoot == "" {
 		t.Error("ResolveVault should return absolute path")
 	}
-	
+
 	// ValidateVault should fail for non-existent vault
 	err = ValidateVault(vaultRoot)
 	if err == nil {

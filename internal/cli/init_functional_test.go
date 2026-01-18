@@ -43,4 +43,3 @@ func TestBuildInitCommand_Action_AlreadyInitialized(t *testing.T) {
 		t.Errorf("expected error about vault already initialized, got: %v", err)
 	}
 }
-

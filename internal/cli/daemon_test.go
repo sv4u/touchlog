@@ -22,7 +22,7 @@ func TestDaemonCommand_Start_Behavior(t *testing.T) {
 	if startCmd.Name != "start" {
 		t.Errorf("expected command name 'start', got %q", startCmd.Name)
 	}
-	
+
 	// Verify vault exists
 	vaultRoot, err := ResolveVault(tmpDir)
 	if err != nil {
@@ -87,7 +87,7 @@ func TestDaemonCommand_Start_InvalidVault(t *testing.T) {
 		// So we just verify the command structure
 		t.Log("ResolveVault with empty string may succeed if in vault directory")
 	}
-	
+
 	// Test with explicit non-existent path - should return absolute path without error
 	absPath, err := ResolveVault(tmpDir)
 	if err != nil {

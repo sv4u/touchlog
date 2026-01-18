@@ -51,7 +51,7 @@ func TestGraphCommand_Export_InvalidVault(t *testing.T) {
 	if vaultRoot == "" {
 		t.Error("ResolveVault should return absolute path")
 	}
-	
+
 	// ValidateVault should fail for non-existent vault
 	err = ValidateVault(vaultRoot)
 	if err == nil {
@@ -85,6 +85,6 @@ func TestGraphCommand_Export_ValidVault(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(vaultRoot, ".touchlog", "config.yaml")); err != nil {
 		t.Fatalf("vault config not found: %v", err)
 	}
-	
+
 	_ = dotCmd
 }
