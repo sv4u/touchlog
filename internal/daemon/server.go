@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -23,6 +24,7 @@ type Server struct {
 	watcher   *watch.Watcher
 	indexer   *watch.IncrementalIndexer
 	done      chan struct{}
+	once      sync.Once
 }
 
 // NewServer creates a new IPC server
@@ -104,7 +106,9 @@ func (s *Server) Start() error {
 
 // Stop stops the IPC server
 func (s *Server) Stop() error {
-	close(s.done)
+	s.once.Do(func() {
+		close(s.done)
+	})
 	if s.watcher != nil {
 		_ = s.watcher.Stop()
 	}
@@ -114,12 +118,25 @@ func (s *Server) Stop() error {
 // acceptConnections accepts incoming connections
 func (s *Server) acceptConnections() {
 	for {
+		// Check if we should stop before attempting to accept
 		select {
 		case <-s.done:
 			return
 		default:
-			conn, err := s.listener.Accept()
-			if err != nil {
+		}
+
+		// Set a deadline so Accept() doesn't block indefinitely
+		// This allows us to periodically check s.done
+		// UnixListener supports SetDeadline
+		if unixListener, ok := s.listener.(*net.UnixListener); ok {
+			_ = unixListener.SetDeadline(time.Now().Add(100 * time.Millisecond))
+		}
+
+		conn, err := s.listener.Accept()
+		if err != nil {
+			// Check if error is due to timeout (expected) or shutdown
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				// Timeout is expected, check if we should stop
 				select {
 				case <-s.done:
 					return
@@ -127,10 +144,17 @@ func (s *Server) acceptConnections() {
 					continue
 				}
 			}
-
-			// Handle connection in a goroutine
-			go s.handleConnection(conn)
+			// Other errors (like closed listener) - check if we should stop
+			select {
+			case <-s.done:
+				return
+			default:
+				continue
+			}
 		}
+
+		// Handle connection in a goroutine
+		go s.handleConnection(conn)
 	}
 }
 
@@ -258,7 +282,9 @@ func (s *Server) handleShutdown() *Response {
 	// Signal shutdown
 	go func() {
 		time.Sleep(100 * time.Millisecond) // Give time for response
-		close(s.done)
+		s.once.Do(func() {
+			close(s.done)
+		})
 	}()
 
 	return NewResponse(true, nil, nil)
