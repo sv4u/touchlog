@@ -292,16 +292,12 @@ func (s *Server) handleShutdown() *Response {
 
 // processWatchEvents processes filesystem watch events
 func (s *Server) processWatchEvents() {
-	for {
-		// Check if we should stop before attempting to receive from channels
-		select {
-		case <-s.done:
-			return
-		default:
-		}
+	// Use a ticker to periodically check s.done
+	// This ensures we can exit even if watcher channels never receive values
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
 
-		// Use a timeout to periodically check s.done
-		// This ensures we can exit even if watcher channels never receive values
+	for {
 		select {
 		case event := <-s.watcher.Events():
 			// Process event with incremental indexer
@@ -320,8 +316,8 @@ func (s *Server) processWatchEvents() {
 		case <-s.done:
 			return
 
-		case <-time.After(100 * time.Millisecond):
-			// Timeout to periodically check s.done
+		case <-ticker.C:
+			// Periodic check - if s.done is closed, we'll catch it in the next iteration
 			// This ensures we can exit even if no events occur
 			continue
 		}
