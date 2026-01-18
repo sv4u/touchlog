@@ -49,13 +49,12 @@ test-coverage: ## Generate test coverage reports
 		touch $(COVERAGE_DIR)/coverage.html; \
 	fi
 
-test-coverage-xml: test-coverage ## Generate XML coverage report (requires gocov tools)
+test-coverage-xml: test-coverage ## Generate XML coverage report (requires gocover-cobertura)
 	@if [ -f $(COVERAGE_OUT) ] && [ -s $(COVERAGE_OUT) ]; then \
-		echo "Installing gocov tools if needed..."; \
-		which gocov > /dev/null 2>&1 || go install github.com/axw/gocov/gocov@latest; \
-		which gocov-xml > /dev/null 2>&1 || go install github.com/AlekSi/gocov-xml@latest; \
+		echo "Installing gocover-cobertura if needed..."; \
+		which gocover-cobertura > /dev/null 2>&1 || go install github.com/boumenot/gocover-cobertura@latest; \
 		echo "Generating XML coverage report..."; \
-		gocov convert $(COVERAGE_OUT) | gocov-xml > $(COVERAGE_DIR)/coverage.xml; \
+		gocover-cobertura < $(COVERAGE_OUT) > $(COVERAGE_DIR)/coverage.xml; \
 		echo "✓ XML coverage report generated"; \
 	else \
 		echo "⚠ Skipping XML coverage report generation ($(COVERAGE_OUT) missing or empty)"; \
@@ -117,9 +116,8 @@ install-tools: ## Install development tools
 	@which golangci-lint > /dev/null 2>&1 || (curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin $(GOLANGCI_LINT_VERSION))
 	@echo "Installing staticcheck..."
 	@go install honnef.co/go/tools/cmd/staticcheck@latest
-	@echo "Installing gocov tools..."
-	@go install github.com/axw/gocov/gocov@latest
-	@go install github.com/AlekSi/gocov-xml@latest
+	@echo "Installing gocover-cobertura..."
+	@go install github.com/boumenot/gocover-cobertura@latest
 	@echo "✓ Development tools installed"
 
 # Cleanup targets

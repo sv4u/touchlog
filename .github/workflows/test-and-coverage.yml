@@ -59,15 +59,14 @@ jobs:
             touch coverage/coverage.html
           fi
 
-      - name: Install gocov tools for XML coverage
+      - name: Install gocover-cobertura for XML coverage
         run: |
-          go install github.com/axw/gocov/gocov@latest
-          go install github.com/AlekSi/gocov-xml@latest
+          go install github.com/boumenot/gocover-cobertura@latest
 
       - name: Generate XML coverage report
         run: |
           if [ -f coverage.out ] && [ -s coverage.out ]; then
-            gocov convert coverage.out | gocov-xml > coverage/coverage.xml
+            gocover-cobertura < coverage.out > coverage/coverage.xml
             echo "✓ XML coverage report generated"
           else
             echo "⚠ Skipping XML coverage report generation (coverage.out missing or empty)"
