@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/sv4u/touchlog/internal/graph"
-	"github.com/sv4u/touchlog/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/graph"
+	"github.com/sv4u/touchlog/v2/internal/model"
 )
 
 // NeighborsResult represents neighbors at a specific depth

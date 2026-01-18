@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sv4u/touchlog/internal/cli"
+	"github.com/sv4u/touchlog/v2/internal/cli"
 )
 
 func main() {

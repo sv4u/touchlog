@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sv4u/touchlog/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/model"
 )
 
 func TestLoadConfig_Empty(t *testing.T) {

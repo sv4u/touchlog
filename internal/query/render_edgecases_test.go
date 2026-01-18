@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/sv4u/touchlog/internal/graph"
+	"github.com/sv4u/touchlog/v2/internal/graph"
 )
 
 func TestRenderBacklinks_EmptyResults(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/model"
 	cli3 "github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
 )

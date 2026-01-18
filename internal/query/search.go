@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
 // SearchResult represents a single search result

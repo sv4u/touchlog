@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sv4u/touchlog/internal/daemon"
+	"github.com/sv4u/touchlog/v2/internal/daemon"
 	cli3 "github.com/urfave/cli/v3"
 )
 

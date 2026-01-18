@@ -286,7 +286,7 @@ jobs:
         continue-on-error: true
         run: |
           NEXT_TAG="${{ steps.version.outputs.tag }}"
-          MODULE_PATH="github.com/sv4u/touchlog"
+          MODULE_PATH="github.com/sv4u/touchlog/v2"
           
           echo "Triggering Go module indexing for $MODULE_PATH@${NEXT_TAG}..."
           echo "Using GOPROXY=direct to force fetch from source"
@@ -434,7 +434,7 @@ jobs:
         run: |
           NEXT_TAG="${{ steps.version.outputs.tag }}"
           NEXT_VERSION="${{ steps.version.outputs.version }}"
-          MODULE_PATH="github.com/sv4u/touchlog"
+          MODULE_PATH="github.com/sv4u/touchlog/v2"
           
           echo "Verifying Go module indexing for ${MODULE_PATH}@${NEXT_TAG}..."
           echo "This may take several minutes as indexing is asynchronous."
@@ -570,7 +570,7 @@ jobs:
           NEXT_TAG="${{ steps.version.outputs.tag }}"
           NEXT_VERSION="${{ steps.version.outputs.version }}"
           DRY_RUN="${{ inputs.dry_run }}"
-          MODULE_PATH="github.com/sv4u/touchlog"
+          MODULE_PATH="github.com/sv4u/touchlog/v2"
           
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           if [ "$DRY_RUN" = "true" ]; then

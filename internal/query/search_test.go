@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/index"
-	"github.com/sv4u/touchlog/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/index"
+	"github.com/sv4u/touchlog/v2/internal/model"
 )
 
 func TestExecuteSearch_NoFilters(t *testing.T) {

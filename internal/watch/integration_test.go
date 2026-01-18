@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
 func TestIncrementalIndexing_TransactionSafety(t *testing.T) {

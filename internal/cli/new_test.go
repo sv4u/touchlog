@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/model"
-	"github.com/sv4u/touchlog/internal/note"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/note"
 )
 
 func TestNew_CreatesNote(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sv4u/touchlog/internal/graph"
+	"github.com/sv4u/touchlog/v2/internal/graph"
 	cli3 "github.com/urfave/cli/v3"
 )
 

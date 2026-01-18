@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
 // ExportData represents the complete index export structure

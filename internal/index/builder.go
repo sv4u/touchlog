@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/model"
-	"github.com/sv4u/touchlog/internal/note"
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/note"
+	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
 // Builder handles full scan indexing of a vault

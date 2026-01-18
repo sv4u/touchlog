@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sv4u/touchlog/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/model"
 )
 
 // ExportOptions represents options for graph export

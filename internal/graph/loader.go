@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/sv4u/touchlog/internal/model"
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
 // Edge represents a graph edge in memory

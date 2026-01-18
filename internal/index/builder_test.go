@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/model"
 )
 
 func TestBuilder_Rebuild_CreatesIndex(t *testing.T) {

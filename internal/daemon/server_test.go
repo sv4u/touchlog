@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
 // contains checks if a string contains a substring

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sv4u/touchlog/internal/query"
+	"github.com/sv4u/touchlog/v2/internal/query"
 	cli3 "github.com/urfave/cli/v3"
 )
 

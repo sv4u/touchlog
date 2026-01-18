@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/query"
-	"github.com/sv4u/touchlog/internal/store"
-	"github.com/sv4u/touchlog/internal/watch"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/query"
+	"github.com/sv4u/touchlog/v2/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/watch"
 )
 
 // Server handles IPC communication via Unix domain socket

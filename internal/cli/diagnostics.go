@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/sv4u/touchlog/internal/model"
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/store"
 	cli3 "github.com/urfave/cli/v3"
 )
 

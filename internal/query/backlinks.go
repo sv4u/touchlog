@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sv4u/touchlog/internal/graph"
-	"github.com/sv4u/touchlog/internal/model"
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/graph"
+	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
 // BacklinksResult represents a single backlink path

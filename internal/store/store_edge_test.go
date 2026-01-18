@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sv4u/touchlog/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/model"
 )
 
 func TestReplaceEdgesForNode_MultipleUnresolved(t *testing.T) {

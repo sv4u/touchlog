@@ -39,7 +39,7 @@ The binary will be created in the current directory as `touchlog`.
 ### Install via Go
 
 ```bash
-go install github.com/sv4u/touchlog/cmd/touchlog@latest
+go install github.com/sv4u/touchlog/v2/cmd/touchlog@latest
 ```
 
 ## Quick Start

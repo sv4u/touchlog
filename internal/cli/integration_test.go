@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sv4u/touchlog/internal/config"
-	"github.com/sv4u/touchlog/internal/index"
-	"github.com/sv4u/touchlog/internal/query"
-	"github.com/sv4u/touchlog/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/config"
+	"github.com/sv4u/touchlog/v2/internal/index"
+	"github.com/sv4u/touchlog/v2/internal/query"
+	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
 // TestIntegration_InitNewIndexQuery tests the full workflow: init -> new -> index -> query
