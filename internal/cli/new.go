@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
 	cli3 "github.com/urfave/cli/v3"
@@ -47,6 +48,27 @@ func runNewWizard(vaultRoot string, cfg *config.Config) error {
 		return fmt.Errorf("no types configured in vault (run 'touchlog init' first)")
 	}
 
+	// Check if we're in an interactive terminal
+	if isInteractiveTerminal() {
+		return runInteractiveWizard(vaultRoot, cfg)
+	}
+
+	// Non-interactive mode (for tests)
+	return runNonInteractiveWizard(vaultRoot, cfg)
+}
+
+// runInteractiveWizard runs the bubbletea interactive wizard
+func runInteractiveWizard(vaultRoot string, cfg *config.Config) error {
+	model := initialModel(vaultRoot, cfg)
+	program := tea.NewProgram(model, tea.WithAltScreen())
+	if _, err := program.Run(); err != nil {
+		return fmt.Errorf("running wizard: %w", err)
+	}
+	return nil
+}
+
+// runNonInteractiveWizard runs the wizard in non-interactive mode (for tests)
+func runNonInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 	// Step 1: Select type
 	typeName, err := selectType(cfg)
 	if err != nil {

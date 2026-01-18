@@ -11,6 +11,7 @@ A knowledge graph note-taking system built with Go. touchlog provides a powerful
 
 ## Features
 
+- **Interactive wizard**: Beautiful TUI wizard for creating notes with step-by-step guidance
 - **Vault-based organization**: Organize notes in type-specific directories with structured frontmatter
 - **Automatic indexing**: SQLite-based index with automatic link resolution and incremental updates
 - **Graph queries**: Find backlinks, neighbors, and paths between notes using graph traversal
@@ -58,7 +59,13 @@ go install github.com/sv4u/touchlog/v2/cmd/touchlog@latest
    touchlog new
    ```
 
-   Follow the interactive prompts to create a new note with frontmatter.
+   This launches an interactive wizard that guides you through:
+   - Selecting the note type
+   - Entering a unique key/name (with validation)
+   - Setting the title
+   - Adding optional tags (comma-separated)
+   - Setting the state (optional, defaults to type's default)
+   - Reviewing all details before creation
 
 3. **Build the index**:
 
@@ -163,7 +170,9 @@ templates:
 ### Vault Management
 
 - `touchlog init` - Initialize a new vault in the current directory
-- `touchlog new` - Create a new note interactively
+- `touchlog new` - Create a new note using an interactive TUI wizard
+  - The wizard guides you through type selection, key input (with validation), title, tags, and state
+  - Automatically falls back to non-interactive mode in CI/test environments
 
 ### Index Management
 
@@ -195,6 +204,29 @@ templates:
   - `--direction in|out|both` - Link direction (default: both)
   - `--edge-type <types>` - Filter by edge types
   - `--format table|json` - Output format
+
+### Interactive Wizard
+
+The `touchlog new` command launches an interactive TUI (Terminal User Interface) wizard built with [bubbletea](https://github.com/charmbracelet/bubbletea). The wizard guides you through creating a new note step-by-step:
+
+1. **Type Selection**: Choose from available note types configured in your vault
+2. **Key Input**: Enter a unique key/name for the note
+   - Validates against the type's key pattern
+   - Checks maximum length
+   - Ensures uniqueness within the type directory
+3. **Title Input**: Enter a descriptive title for the note
+4. **Tags Input** (optional): Add comma-separated tags
+5. **State Input** (optional): Set the note state (defaults to the type's default state)
+6. **Verification**: Review all details before creating the note
+
+**Navigation**:
+
+- Use arrow keys (`↑`/`↓` or `j`/`k`) to navigate selections
+- Press `Enter` to confirm/continue
+- Press `Esc` to go back to the previous step
+- Press `q` or `Ctrl+C` to quit
+
+**Automatic Mode Detection**: The wizard automatically detects if it's running in an interactive terminal. In non-interactive environments (tests, CI), it falls back to default values without starting the TUI.
 
 ### Graph Operations
 
@@ -267,9 +299,15 @@ All traversals maintain visited sets for cycle detection and guarantee terminati
 ### Creating and Linking Notes
 
 ```bash
-# Create a note
+# Create a note using the interactive wizard
 touchlog new
-# Follow prompts to create note with key "introduction"
+# The wizard will guide you through:
+# 1. Select type (e.g., "note")
+# 2. Enter key (e.g., "introduction")
+# 3. Enter title (e.g., "Introduction to touchlog")
+# 4. Add tags (optional, e.g., "getting-started, tutorial")
+# 5. Set state (optional, defaults to type's default)
+# 6. Review and confirm
 
 # Create another note that links to it
 touchlog new
@@ -375,45 +413,57 @@ You can run tests in isolated Linux and macOS environments using Docker. This en
 - Docker and Docker Compose installed
 - For macOS testing: macOS host (tests run natively on macOS)
 
-#### Running Tests in Docker
-
-**Using Makefile (Recommended)**:
+#### Quick Start
 
 ```bash
-# Build Docker test image
-make docker-build-test
-
-# Run all tests in Linux Docker container
+# Run all tests in Linux container
 make docker-test-linux
 
-# Run specific test variants
-make docker-test-linux-basic      # Basic tests only
-make docker-test-linux-race       # Race detector tests
+# Run specific test types
+make docker-test-linux-basic      # Basic tests
+make docker-test-linux-race       # Race detector
 make docker-test-linux-coverage   # Coverage reports
 
-# Run tests natively on macOS (requires macOS host)
+# Run tests natively on macOS
 make docker-test-macos
+```
 
-# Clean Docker test resources
+#### Available Methods
+
+**1. Using Makefile (Recommended)**:
+
+```bash
+# Build Docker image
+make docker-build-test
+
+# Run all test variants
+make docker-test-linux
+
+# Run specific variants
+make docker-test-linux-basic
+make docker-test-linux-race
+make docker-test-linux-coverage
+
+# Clean up
 make docker-clean-test
 ```
 
-**Using Docker Compose**:
+**2. Using Docker Compose**:
 
 ```bash
 # Run all tests
 docker-compose -f docker-compose.test.yml run --rm test-linux
 
-# Run specific test variants
+# Run specific variants
 docker-compose -f docker-compose.test.yml run --rm test-linux-basic
 docker-compose -f docker-compose.test.yml run --rm test-linux-race
 docker-compose -f docker-compose.test.yml run --rm test-linux-coverage
 ```
 
-**Using Docker directly**:
+**3. Using Docker Directly**:
 
 ```bash
-# Build the test image
+# Build image
 docker build -f Dockerfile.test -t touchlog-test:linux .
 
 # Run tests
@@ -425,13 +475,49 @@ docker run --rm \
   touchlog-test:linux make test-full
 ```
 
+**4. Using Helper Script**:
+
+```bash
+# Run all tests
+./scripts/docker-test.sh
+
+# Run with options
+./scripts/docker-test.sh -p linux -t coverage
+./scripts/docker-test.sh -p macos -t full
+
+# Build only
+./scripts/docker-test.sh build
+
+# Clean up
+./scripts/docker-test.sh clean
+```
+
 #### Coverage Reports
 
-Coverage reports are automatically saved to the host machine:
+All coverage reports are automatically saved to the host:
 
-- **HTML Report**: `coverage/coverage.html` - Open in a web browser
-- **XML Report**: `coverage/coverage.xml` - For CI/CD integration
-- **Coverage Profile**: `coverage.out` - Raw coverage data
+- **HTML**: `coverage/coverage.html` - Open in browser
+- **XML**: `coverage/coverage.xml` - For CI/CD
+- **Profile**: `coverage.out` - Raw data
+
+#### Platform-Specific Notes
+
+**Linux**: The Linux Docker container uses Alpine Linux with Go 1.25. All dependencies (including SQLite) are pre-installed.
+
+**macOS**: macOS testing runs natively on the macOS host (not in a container). This is because Docker on macOS runs Linux containers, not macOS containers.
+
+```bash
+make docker-test-macos
+```
+
+**WSL (Windows Subsystem for Linux)**: For WSL testing, run the Linux Docker container from within WSL:
+
+```bash
+# In WSL terminal
+make docker-test-linux
+```
+
+The container will run in the WSL2 environment, providing Linux-like testing on Windows.
 
 #### Testing on Multiple Platforms
 
@@ -440,14 +526,46 @@ The GitHub Actions workflow automatically runs tests on:
 - **Linux** (Ubuntu latest)
 - **macOS** (macOS latest and macOS 14)
 
-**WSL Testing**: For WSL (Windows Subsystem for Linux) testing, you can run the Linux Docker container on a Windows machine with WSL2:
+See `.github/workflows/test-and-coverage.yml` for details.
+
+#### Troubleshooting
+
+**Permission Issues**: If you encounter permission issues with coverage files:
 
 ```bash
-# On Windows with WSL2, run from WSL terminal
-make docker-test-linux
+# Fix permissions
+sudo chown -R $USER:$USER coverage/ coverage.out
 ```
 
-The Linux Docker container will run in the WSL2 environment, providing a Linux-like testing environment on Windows.
+**Container Build Fails**: If the Docker build fails:
+
+```bash
+# Clean and rebuild
+make docker-clean-test
+make docker-build-test
+```
+
+**Coverage Files Not Saved**: Ensure the coverage directory exists and is writable:
+
+```bash
+mkdir -p coverage
+chmod 755 coverage
+```
+
+#### File Structure
+
+```
+touchlog/
+├── Dockerfile.test              # Docker image for testing
+├── docker-compose.test.yml     # Docker Compose configuration
+├── .dockerignore               # Files to exclude from Docker build
+├── scripts/
+│   └── docker-test.sh          # Helper script for Docker testing
+└── coverage/                   # Coverage reports (generated)
+    ├── coverage.html
+    ├── coverage.xml
+    └── coverage.out
+```
 
 ### Building
 
