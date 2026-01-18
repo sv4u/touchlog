@@ -293,6 +293,15 @@ func (s *Server) handleShutdown() *Response {
 // processWatchEvents processes filesystem watch events
 func (s *Server) processWatchEvents() {
 	for {
+		// Check if we should stop before attempting to receive from channels
+		select {
+		case <-s.done:
+			return
+		default:
+		}
+
+		// Use a timeout to periodically check s.done
+		// This ensures we can exit even if watcher channels never receive values
 		select {
 		case event := <-s.watcher.Events():
 			// Process event with incremental indexer
@@ -310,6 +319,11 @@ func (s *Server) processWatchEvents() {
 
 		case <-s.done:
 			return
+
+		case <-time.After(100 * time.Millisecond):
+			// Timeout to periodically check s.done
+			// This ensures we can exit even if no events occur
+			continue
 		}
 	}
 }
