@@ -1,0 +1,61 @@
+services:
+  test-linux:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: touchlog-test:linux
+    container_name: touchlog-test-linux
+    volumes:
+      # Mount source code for live updates
+      - .:/app
+      # Mount coverage output directory
+      - ./coverage:/app/coverage
+      # Mount coverage profile
+      - ./coverage.out:/app/coverage.out
+    environment:
+      - CGO_ENABLED=1
+    command: make test-full
+    working_dir: /app
+
+  test-linux-basic:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: touchlog-test:linux
+    container_name: touchlog-test-linux-basic
+    volumes:
+      - .:/app
+      - ./coverage:/app/coverage
+    environment:
+      - CGO_ENABLED=1
+    command: make test
+    working_dir: /app
+
+  test-linux-race:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: touchlog-test:linux
+    container_name: touchlog-test-linux-race
+    volumes:
+      - .:/app
+      - ./coverage:/app/coverage
+    environment:
+      - CGO_ENABLED=1
+    command: make test-race
+    working_dir: /app
+
+  test-linux-coverage:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: touchlog-test:linux
+    container_name: touchlog-test-linux-coverage
+    volumes:
+      - .:/app
+      - ./coverage:/app/coverage
+      - ./coverage.out:/app/coverage.out
+    environment:
+      - CGO_ENABLED=1
+    command: make test-coverage-xml
+    working_dir: /app

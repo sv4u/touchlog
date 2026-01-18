@@ -12,9 +12,22 @@ concurrency:
 
 jobs:
   test-and-coverage:
-    name: Run Tests and Generate Coverage
-    runs-on: ubuntu-latest
+    name: Run Tests and Generate Coverage (${{ matrix.os }})
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            runs-on: ubuntu-latest
+            cache-path: ~/.cache/go-build
+          - os: macos
+            runs-on: macos-latest
+            cache-path: ~/Library/Caches/go-build
+          - os: macos-arm
+            runs-on: macos-14
+            cache-path: ~/Library/Caches/go-build
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,6 +38,16 @@ jobs:
           go-version: '1.25'
           cache-dependency-path: go.sum
           cache: true
+
+      - name: Cache Go build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ matrix.cache-path }}
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Download dependencies
         run: go mod download
@@ -94,14 +117,14 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.out
           flags: unittests
-          name: codecov-umbrella
+          name: codecov-${{ matrix.os }}
           fail_ci_if_error: false
 
       - name: Upload coverage HTML report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-html
+          name: coverage-html-${{ matrix.os }}
           path: coverage/coverage.html
           retention-days: 7
 
@@ -109,7 +132,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-xml
+          name: coverage-xml-${{ matrix.os }}
           path: coverage/coverage.xml
           retention-days: 7
 
@@ -117,7 +140,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-profile
+          name: coverage-profile-${{ matrix.os }}
           path: coverage.out
           retention-days: 7
 

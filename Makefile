@@ -1,4 +1,4 @@
-.PHONY: help build test test-race test-coverage lint fmt fmt-check deps deps-verify deps-tidy clean all install-tools
+.PHONY: help build test test-race test-coverage lint fmt fmt-check deps deps-verify deps-tidy clean all install-tools docker-test docker-test-linux docker-test-linux-basic docker-test-linux-race docker-test-linux-coverage docker-test-macos docker-build-test docker-clean-test
 
 # Variables
 BINARY_NAME=touchlog
@@ -140,6 +140,66 @@ all: fmt-check lint test ## Run all checks (format check, lint, test)
 ci: deps-verify fmt-check lint test test-race test-coverage ## Run CI checks (mirrors GitHub Actions CI workflow)
 
 test-full: test test-race test-coverage ## Run all test variants
+
+# Docker test targets
+docker-build-test: ## Build Docker test image
+	@echo "Building Docker test image..."
+	@docker build -f Dockerfile.test -t touchlog-test:linux .
+	@echo "✓ Docker test image built"
+
+docker-test-linux: docker-build-test ## Run all tests in Linux Docker container
+	@echo "Running all tests in Linux Docker container..."
+	@mkdir -p $(COVERAGE_DIR)
+	@docker run --rm \
+		-v $$(pwd):/app \
+		-v $$(pwd)/$(COVERAGE_DIR):/app/$(COVERAGE_DIR) \
+		-v $$(pwd)/$(COVERAGE_OUT):/app/$(COVERAGE_OUT) \
+		-e CGO_ENABLED=1 \
+		touchlog-test:linux make test-full
+	@echo "✓ Tests completed. Coverage reports saved to $(COVERAGE_DIR)/"
+
+docker-test-linux-basic: docker-build-test ## Run basic tests in Linux Docker container
+	@echo "Running basic tests in Linux Docker container..."
+	@docker run --rm \
+		-v $$(pwd):/app \
+		-v $$(pwd)/$(COVERAGE_DIR):/app/$(COVERAGE_DIR) \
+		-e CGO_ENABLED=1 \
+		touchlog-test:linux make test
+
+docker-test-linux-race: docker-build-test ## Run race detector tests in Linux Docker container
+	@echo "Running race detector tests in Linux Docker container..."
+	@docker run --rm \
+		-v $$(pwd):/app \
+		-v $$(pwd)/$(COVERAGE_DIR):/app/$(COVERAGE_DIR) \
+		-e CGO_ENABLED=1 \
+		touchlog-test:linux make test-race
+
+docker-test-linux-coverage: docker-build-test ## Generate coverage reports in Linux Docker container
+	@echo "Generating coverage reports in Linux Docker container..."
+	@mkdir -p $(COVERAGE_DIR)
+	@docker run --rm \
+		-v $$(pwd):/app \
+		-v $$(pwd)/$(COVERAGE_DIR):/app/$(COVERAGE_DIR) \
+		-v $$(pwd)/$(COVERAGE_OUT):/app/$(COVERAGE_OUT) \
+		-e CGO_ENABLED=1 \
+		touchlog-test:linux make test-coverage-xml
+	@echo "✓ Coverage reports saved to $(COVERAGE_DIR)/"
+
+docker-test: docker-test-linux ## Run all tests in Docker (alias for docker-test-linux)
+
+docker-test-macos: ## Run tests natively on macOS (requires macOS host)
+	@echo "Running tests natively on macOS..."
+	@if [ "$$(uname)" != "Darwin" ]; then \
+		echo "Error: This target requires macOS host"; \
+		exit 1; \
+	fi
+	@$(MAKE) test-full
+
+docker-clean-test: ## Clean Docker test containers and images
+	@echo "Cleaning Docker test resources..."
+	@docker-compose -f docker-compose.test.yml down --rmi local 2>/dev/null || true
+	@docker rmi touchlog-test:linux 2>/dev/null || true
+	@echo "✓ Docker test resources cleaned"
 
 # Release targets (for local testing)
 goreleaser-check: ## Validate GoReleaser configuration

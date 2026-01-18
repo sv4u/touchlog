@@ -350,6 +350,105 @@ go test ./... -cover
 go test ./internal/query -v
 ```
 
+#### Using Makefile
+
+```bash
+# Run all test variants (test, test-race, test-coverage)
+make test-full
+
+# Run basic tests
+make test
+
+# Run tests with race detector
+make test-race
+
+# Generate coverage reports
+make test-coverage
+```
+
+### Docker Testing
+
+You can run tests in isolated Linux and macOS environments using Docker. This ensures consistent test execution across different platforms.
+
+#### Prerequisites
+
+- Docker and Docker Compose installed
+- For macOS testing: macOS host (tests run natively on macOS)
+
+#### Running Tests in Docker
+
+**Using Makefile (Recommended)**:
+
+```bash
+# Build Docker test image
+make docker-build-test
+
+# Run all tests in Linux Docker container
+make docker-test-linux
+
+# Run specific test variants
+make docker-test-linux-basic      # Basic tests only
+make docker-test-linux-race       # Race detector tests
+make docker-test-linux-coverage   # Coverage reports
+
+# Run tests natively on macOS (requires macOS host)
+make docker-test-macos
+
+# Clean Docker test resources
+make docker-clean-test
+```
+
+**Using Docker Compose**:
+
+```bash
+# Run all tests
+docker-compose -f docker-compose.test.yml run --rm test-linux
+
+# Run specific test variants
+docker-compose -f docker-compose.test.yml run --rm test-linux-basic
+docker-compose -f docker-compose.test.yml run --rm test-linux-race
+docker-compose -f docker-compose.test.yml run --rm test-linux-coverage
+```
+
+**Using Docker directly**:
+
+```bash
+# Build the test image
+docker build -f Dockerfile.test -t touchlog-test:linux .
+
+# Run tests
+docker run --rm \
+  -v $(pwd):/app \
+  -v $(pwd)/coverage:/app/coverage \
+  -v $(pwd)/coverage.out:/app/coverage.out \
+  -e CGO_ENABLED=1 \
+  touchlog-test:linux make test-full
+```
+
+#### Coverage Reports
+
+Coverage reports are automatically saved to the host machine:
+
+- **HTML Report**: `coverage/coverage.html` - Open in a web browser
+- **XML Report**: `coverage/coverage.xml` - For CI/CD integration
+- **Coverage Profile**: `coverage.out` - Raw coverage data
+
+#### Testing on Multiple Platforms
+
+The GitHub Actions workflow automatically runs tests on:
+
+- **Linux** (Ubuntu latest)
+- **macOS** (macOS latest and macOS 14)
+
+**WSL Testing**: For WSL (Windows Subsystem for Linux) testing, you can run the Linux Docker container on a Windows machine with WSL2:
+
+```bash
+# On Windows with WSL2, run from WSL terminal
+make docker-test-linux
+```
+
+The Linux Docker container will run in the WSL2 environment, providing a Linux-like testing environment on Windows.
+
 ### Building
 
 ```bash
