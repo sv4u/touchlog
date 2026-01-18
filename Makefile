@@ -7,6 +7,12 @@ COVERAGE_OUT=coverage.out
 COVERAGE_DIR=coverage
 GOLANGCI_LINT_VERSION=v2.6.2
 
+# Version detection
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo "dev")
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "")
+VERSION_PKG=github.com/sv4u/touchlog/v2/internal/version
+LDFLAGS=-X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Commit=$(COMMIT)
+
 # Default target
 help: ## Show this help message
 	@echo "Available targets:"
@@ -14,8 +20,8 @@ help: ## Show this help message
 
 # Build targets
 build: ## Build the binary
-	@echo "Building $(BINARY_NAME)..."
-	@CGO_ENABLED=0 go build -o $(BINARY_NAME) $(MAIN_PATH)
+	@echo "Building $(BINARY_NAME) (version: $(VERSION))..."
+	@CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) $(MAIN_PATH)
 
 # Test targets
 test: ## Run all tests

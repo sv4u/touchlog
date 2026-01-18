@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/sv4u/touchlog/v2/internal/version"
 )
 
 // RenderBacklinks renders backlinks results in the specified format
@@ -58,7 +60,7 @@ func renderBacklinksTable(results []BacklinksResult, target string) error {
 func renderBacklinksJSON(results []BacklinksResult, target string) error {
 	output := map[string]interface{}{
 		"schema_version":   1,
-		"touchlog_version": "0.0.0",
+		"touchlog_version": version.GetVersion(),
 		"query": map[string]interface{}{
 			"target":    target,
 			"direction": "in", // Default, will be normalized

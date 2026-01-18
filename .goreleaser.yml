@@ -13,6 +13,9 @@ builds:
       - arm64
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -X github.com/sv4u/touchlog/v2/internal/version.Version={{ .Version }}
+      - -X github.com/sv4u/touchlog/v2/internal/version.Commit={{ .Commit }}
 
 archives:
   - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'

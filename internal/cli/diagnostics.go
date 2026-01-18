@@ -12,6 +12,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sv4u/touchlog/v2/internal/model"
 	"github.com/sv4u/touchlog/v2/internal/store"
+	"github.com/sv4u/touchlog/v2/internal/version"
 	cli3 "github.com/urfave/cli/v3"
 )
 
@@ -260,7 +261,7 @@ func renderDiagnosticsTable(diagnostics []DiagnosticResult) error {
 func renderDiagnosticsJSON(diagnostics []DiagnosticResult) error {
 	output := map[string]interface{}{
 		"schema_version":   1,
-		"touchlog_version": "0.0.0",
+		"touchlog_version": version.GetVersion(),
 		"diagnostics":      diagnostics,
 		"count":            len(diagnostics),
 	}

@@ -6,6 +6,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/sv4u/touchlog/v2/internal/version"
 )
 
 // RenderPaths renders paths results in the specified format
@@ -102,7 +104,7 @@ func renderPathsJSON(results []PathResult, source string) error {
 
 	output := map[string]interface{}{
 		"schema_version":   1,
-		"touchlog_version": "0.0.0",
+		"touchlog_version": version.GetVersion(),
 		"query": map[string]interface{}{
 			"source":    source,
 			"direction": "both", // Default, will be normalized

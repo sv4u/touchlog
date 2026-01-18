@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/sv4u/touchlog/v2/internal/version"
 )
 
 // RenderNeighbors renders neighbors results in the specified format
@@ -76,7 +78,7 @@ func renderNeighborsJSON(results []NeighborsResult, root string) error {
 
 	output := map[string]interface{}{
 		"schema_version":   1,
-		"touchlog_version": "0.0.0",
+		"touchlog_version": version.GetVersion(),
 		"query": map[string]interface{}{
 			"root":      root,
 			"direction": "both", // Default, will be normalized

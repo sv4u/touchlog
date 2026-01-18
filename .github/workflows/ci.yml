@@ -92,8 +92,18 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
 
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo "dev")
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+          echo "Building with version: $VERSION (commit: $COMMIT)"
+
       - name: Build
-        run: go build -o touchlog ./cmd/touchlog
+        run: |
+          go build -ldflags "-X github.com/sv4u/touchlog/v2/internal/version.Version=${{ steps.version.outputs.version }} -X github.com/sv4u/touchlog/v2/internal/version.Commit=${{ steps.version.outputs.commit }}" -o touchlog ./cmd/touchlog
         env:
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}

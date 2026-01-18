@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sv4u/touchlog/v2/internal/version"
 	cli3 "github.com/urfave/cli/v3"
 )
 
@@ -40,7 +41,7 @@ func buildVersionCommand() *cli3.Command {
 		Name:  "version",
 		Usage: "Show version information",
 		Action: func(ctx context.Context, cmd *cli3.Command) error {
-			fmt.Println("touchlog version 0.0.0 (Phase 0 - Integration Spine)")
+			fmt.Printf("touchlog version %s\n", version.GetVersion())
 			return nil
 		},
 	}
