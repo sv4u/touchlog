@@ -17,6 +17,7 @@ type Daemon struct {
 	vaultRoot string
 	pidPath   string
 	sockPath  string
+	server    *Server
 }
 
 // NewDaemon creates a new daemon instance for a vault
@@ -72,6 +73,9 @@ func (d *Daemon) Start() error {
 		return fmt.Errorf("starting IPC server: %w", err)
 	}
 
+	// Store server reference for cleanup
+	d.server = server
+
 	// Write PID file
 	pid := os.Getpid()
 	if err := d.WritePID(pid); err != nil {
@@ -91,6 +95,15 @@ func (d *Daemon) Start() error {
 func (d *Daemon) Stop() error {
 	if !d.IsRunning() {
 		return fmt.Errorf("daemon is not running")
+	}
+
+	// Stop the server if it exists
+	if d.server != nil {
+		if err := d.server.Stop(); err != nil {
+			// Log error but continue with cleanup
+			_ = err
+		}
+		d.server = nil
 	}
 
 	pid := d.GetPID()
