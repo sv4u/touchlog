@@ -202,6 +202,7 @@ func TestServer_ProcessMessage_Behavior_HandlesAllMessageTypes(t *testing.T) {
 		response := server.processMessage(msg)
 		if response == nil {
 			t.Errorf("expected response for message type %s, got nil", msgType)
+			continue
 		}
 		if response.Version != ProtocolVersion {
 			t.Errorf("expected protocol version %d for %s, got %d", ProtocolVersion, msgType, response.Version)
