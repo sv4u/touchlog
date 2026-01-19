@@ -80,13 +80,13 @@ func TestGetVersion_DefaultValues(t *testing.T) {
 	done := make(chan string)
 	go func() {
 		result := GetVersion()
-		w.Close()
+		_ = w.Close()
 		done <- result
 	}()
 
 	// Read captured stderr
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 	result := <-done
 
@@ -151,13 +151,13 @@ func TestGetVersion_WarningWhenDevAndNoCommit(t *testing.T) {
 	done := make(chan string)
 	go func() {
 		result := GetVersion()
-		w.Close()
+		_ = w.Close()
 		done <- result
 	}()
 
 	// Read captured stderr
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 	result := <-done
 
@@ -198,13 +198,13 @@ func TestGetVersion_NoWarningWhenCommitSet(t *testing.T) {
 	done := make(chan string)
 	go func() {
 		result := GetVersion()
-		w.Close()
+		_ = w.Close()
 		done <- result
 	}()
 
 	// Read captured stderr
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 	result := <-done
 
@@ -245,13 +245,13 @@ func TestGetVersion_NoWarningWhenVersionNotDev(t *testing.T) {
 	done := make(chan string)
 	go func() {
 		result := GetVersion()
-		w.Close()
+		_ = w.Close()
 		done <- result
 	}()
 
 	// Read captured stderr
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	output := buf.String()
 	result := <-done
 
