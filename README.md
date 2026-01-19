@@ -39,9 +39,23 @@ The binary will be created in the current directory as `touchlog`.
 
 ### Install via Go
 
+**Recommended: Install with version information (from local source):**
+
+```bash
+git clone https://github.com/sv4u/touchlog.git
+cd touchlog
+make install
+```
+
+This installs touchlog to `$GOPATH/bin` (or `$GOBIN` if set) with proper version information.
+
+**Alternative: Install from remote (without version information):**
+
 ```bash
 go install github.com/sv4u/touchlog/v2/cmd/touchlog@latest
 ```
+
+Note: Installing directly from remote will show "dev" as the version. See [Building with Version Information](#building-with-version-information) for details.
 
 ## Quick Start
 
@@ -576,6 +590,107 @@ go build ./cmd/touchlog
 # Build for specific platform
 GOOS=linux GOARCH=amd64 go build ./cmd/touchlog
 ```
+
+### Building with Version Information
+
+Touchlog embeds version information at build time using Go's ldflags mechanism. The version displayed depends on how the binary was built:
+
+#### Using Makefile (Recommended for Development)
+
+The Makefile automatically injects version information:
+
+```bash
+make build
+./touchlog version
+# Output: touchlog version v1.2.3-5-gabc123-abc123
+```
+
+The Makefile uses:
+
+- `git describe --tags --always --dirty` for the version string
+- `git rev-parse --short HEAD` for the commit hash
+
+#### Using GoReleaser (Releases)
+
+Official releases built with GoReleaser include:
+
+- Full semantic version from git tags (e.g., "1.2.3")
+- Full 40-character commit hash
+
+#### Using `go install`
+
+**Installing from local source (recommended for development):**
+
+```bash
+# Clone the repository first
+git clone https://github.com/sv4u/touchlog.git
+cd touchlog
+
+# Install with version information using Makefile
+make install
+
+# Or install manually with ldflags
+VERSION=$(git describe --tags --always --dirty | sed 's/^v//')
+COMMIT=$(git rev-parse --short HEAD)
+go install -ldflags "-X github.com/sv4u/touchlog/v2/internal/version.Version=$VERSION -X github.com/sv4u/touchlog/v2/internal/version.Commit=$COMMIT" ./cmd/touchlog
+```
+
+**Installing from remote (with automatic version detection):**
+
+When installing directly from GitHub, touchlog automatically extracts version information from Go's build metadata:
+
+```bash
+go install github.com/sv4u/touchlog/v2/cmd/touchlog@latest
+touchlog version
+# Output: touchlog version 2.1.1
+# (Version extracted from module version in build info)
+```
+
+**Important:** When installing from the module proxy (via `go install @latest`), Go only includes the module version in build metadata, not the VCS commit hash. This is a limitation of the Go module proxy system - it doesn't have access to the git repository.
+
+**To get full version information (including commit hash) like GoReleaser builds:**
+
+- Clone the repository and use `make install` (recommended)
+- Or build manually with ldflags as shown in the "Manual Build with ldflags" section
+
+The automatic version detection from BuildInfo provides the module version, which is better than "dev" but doesn't include the commit hash when installing from remote.
+
+#### Manual Build with ldflags
+
+To build manually with version information:
+
+```bash
+VERSION=$(git describe --tags --always --dirty | sed 's/^v//')
+COMMIT=$(git rev-parse --short HEAD)
+go build -ldflags "-X github.com/sv4u/touchlog/v2/internal/version.Version=$VERSION -X github.com/sv4u/touchlog/v2/internal/version.Commit=$COMMIT" -o touchlog ./cmd/touchlog
+```
+
+#### When Git is Not Available
+
+If git is not installed or you're not in a git repository, the Makefile will automatically fall back to `VERSION=dev` and `COMMIT=""`. You'll see a warning message, and the binary will show "dev" as the version.
+
+**To manually specify version when git is unavailable:**
+
+```bash
+# Build with custom version
+make build VERSION=1.0.0 COMMIT=abc123
+
+# Install with custom version
+make install VERSION=1.0.0 COMMIT=abc123
+
+# Or build directly with go
+go build -ldflags "-X github.com/sv4u/touchlog/v2/internal/version.Version=1.0.0 -X github.com/sv4u/touchlog/v2/internal/version.Commit=abc123" -o touchlog ./cmd/touchlog
+```
+
+**Scenarios:**
+
+1. **`go install` from remote (GitHub)**: No git repository available, version will be "dev" with a warning. This is expected and cannot be avoided without cloning the repository.
+
+2. **`make install` without git installed**: Falls back to "dev", shows warning. Install git or manually specify VERSION/COMMIT.
+
+3. **`make install` in non-git directory**: Falls back to "dev", shows warning. Initialize git repo or manually specify VERSION/COMMIT.
+
+4. **`go install` from local source without git**: Same as #2 or #3. Use `make install` or manually specify ldflags.
 
 ## Contributing
 
