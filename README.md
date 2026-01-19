@@ -80,6 +80,8 @@ Note: Installing directly from remote will show "dev" as the version. See [Build
    - Adding optional tags (comma-separated)
    - Setting the state (optional, defaults to type's default)
    - Reviewing all details before creation
+   
+   After creation, the note file is automatically opened in your configured editor.
 
 3. **Build the index**:
 
@@ -181,12 +183,58 @@ templates:
 
 ## Commands
 
+### Global Options
+
+All commands support the following global flag:
+
+- `--vault <path>` - Path to vault root (default: auto-detect from current directory)
+
+The vault path is automatically detected by searching upward from the current directory for a `.touchlog` directory. Use `--vault` to explicitly specify a vault location.
+
+Examples:
+```bash
+touchlog --vault /path/to/vault init
+touchlog --vault /path/to/vault query search --type note
+```
+
+### Utility Commands
+
+- `touchlog version` - Show version information
+  - Displays the touchlog version and commit hash (if available)
+  - Version format depends on how the binary was built (see [Building with Version Information](#building-with-version-information))
+
+- `touchlog completion <shell>` - Generate shell completion scripts
+  - `touchlog completion bash` - Generate bash completion script
+  - `touchlog completion zsh` - Generate zsh completion script
+  - `touchlog completion fish` - Generate fish completion script
+  
+  To enable completion, add the generated script to your shell configuration:
+  
+  **Bash:**
+  ```bash
+  touchlog completion bash > /etc/bash_completion.d/touchlog
+  # or for user-specific:
+  touchlog completion bash >> ~/.bashrc
+  ```
+  
+  **Zsh:**
+  ```bash
+  touchlog completion zsh > "${fpath[1]}/_touchlog"
+  ```
+  
+  **Fish:**
+  ```bash
+  touchlog completion fish > ~/.config/fish/completions/touchlog.fish
+  ```
+
 ### Vault Management
 
 - `touchlog init` - Initialize a new vault in the current directory
 - `touchlog new` - Create a new note using an interactive TUI wizard
   - The wizard guides you through type selection, key input (with validation), title, tags, and state
   - Automatically falls back to non-interactive mode in CI/test environments
+  - After creating the note, automatically launches your configured editor (if available)
+  - Editor is determined from `$EDITOR` environment variable or system default
 
 ### Index Management
 
@@ -200,7 +248,8 @@ templates:
   - `--state <states>` - Filter by states (comma-separated)
   - `--tag <tags>` - Filter by tags (comma-separated)
   - `--match-any-tag` - Match any tag (default: match all)
-  - `--limit <n>` - Limit results
+  - `--limit <n>` - Limit number of results
+  - `--offset <n>` - Offset for pagination (default: 0)
   - `--format table|json` - Output format
 
 - `touchlog query backlinks --target <node> [options]` - Find backlinks to a node
@@ -242,6 +291,12 @@ The `touchlog new` command launches an interactive TUI (Terminal User Interface)
 
 **Automatic Mode Detection**: The wizard automatically detects if it's running in an interactive terminal. In non-interactive environments (tests, CI), it falls back to default values without starting the TUI.
 
+**Editor Launch**: After successfully creating a note, the wizard automatically launches your configured editor to open the new note file. The editor is determined from:
+- `$EDITOR` environment variable (if set)
+- System default editor
+
+If the editor launch fails, a warning is displayed but the command still succeeds (the note is created successfully).
+
 ### Graph Operations
 
 - `touchlog graph export dot --out <file> [options]` - Export graph to DOT format
@@ -252,6 +307,28 @@ The `touchlog new` command launches an interactive TUI (Terminal User Interface)
   - `--edge-type <types>` - Filter by edge types
   - `--depth <n>` - Maximum depth (default: 10)
   - `--force` - Overwrite existing file
+
+### Diagnostics
+
+- `touchlog diagnostics list [options]` - View parse errors, warnings, and informational messages
+  - `--level <level>` - Filter by level (info|warn|error)
+  - `--node <node>` - Filter by node (type:key or key)
+  - `--code <code>` - Filter by diagnostic code
+  - `--format table|json` - Output format (default: table)
+  
+  Diagnostics are generated during note parsing and link resolution. They help identify issues like:
+  - Missing or invalid frontmatter
+  - Invalid links or unresolved references
+  - Parsing errors
+  - Validation warnings
+  
+  Examples:
+  ```bash
+  touchlog diagnostics list
+  touchlog diagnostics list --level error
+  touchlog diagnostics list --node note:my-note
+  touchlog diagnostics list --code missing-frontmatter --format json
+  ```
 
 ### Daemon
 

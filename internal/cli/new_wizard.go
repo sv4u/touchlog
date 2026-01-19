@@ -22,6 +22,7 @@ const (
 	stateInputTitle
 	stateInputTags
 	stateInputState
+	stateInputFilename
 	stateVerification
 	stateComplete
 	stateError
@@ -43,16 +44,18 @@ type wizardModel struct {
 	stateVal string
 
 	// UI state
-	typeCursor  int
-	typeChoices []model.TypeName
-	keyInput    string
-	keyError    string
-	titleInput  string
-	tagsInput   string
-	stateInput  string
-	verifying   bool
-	notePath    string
-	noteID      model.NoteID
+	typeCursor   int
+	typeChoices  []model.TypeName
+	keyInput     string
+	keyError     string
+	titleInput   string
+	tagsInput    string
+	stateInput   string
+	filenameInput string
+	filenameError string
+	verifying    bool
+	notePath     string
+	noteID       model.NoteID
 }
 
 // initialModel creates the initial wizard model
@@ -67,14 +70,15 @@ func initialModel(vaultRoot string, cfg *config.Config) wizardModel {
 	// We'll populate this when a type is selected
 
 	return wizardModel{
-		vaultRoot:   vaultRoot,
-		cfg:         cfg,
-		state:       stateSelectType,
-		typeChoices: typeChoices,
-		keyInput:    "",
-		titleInput:  "",
-		tagsInput:   "",
-		stateInput:  "",
+		vaultRoot:     vaultRoot,
+		cfg:           cfg,
+		state:         stateSelectType,
+		typeChoices:   typeChoices,
+		keyInput:      "",
+		titleInput:    "",
+		tagsInput:     "",
+		stateInput:    "",
+		filenameInput: "",
 	}
 }
 
@@ -109,6 +113,8 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateTagsInput(msg)
 		case stateInputState:
 			return m.updateStateInput(msg)
+		case stateInputFilename:
+			return m.updateFilenameInput(msg)
 		case stateVerification:
 			return m.updateVerification(msg)
 		}
@@ -134,6 +140,8 @@ func (m wizardModel) View() string {
 		return m.viewTagsInput()
 	case stateInputState:
 		return m.viewStateInput()
+	case stateInputFilename:
+		return m.viewFilenameInput()
 	case stateVerification:
 		return m.viewVerification()
 	case stateComplete:
@@ -218,6 +226,8 @@ func (m wizardModel) updateKeyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Valid key
 		m.key = model.Key(keyStr)
 		m.keyError = ""
+		// Set default filename based on key
+		m.filenameInput = keyStr
 		m.state = stateInputTitle
 	case "backspace":
 		if len(m.keyInput) > 0 {
@@ -324,7 +334,7 @@ func (m wizardModel) updateStateInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			stateStr = m.typeDef.DefaultState
 		}
 		m.stateVal = stateStr
-		m.state = stateVerification
+		m.state = stateInputFilename
 	case "backspace":
 		if len(m.stateInput) > 0 {
 			m.stateInput = m.stateInput[:len(m.stateInput)-1]
@@ -343,6 +353,67 @@ func (m wizardModel) viewStateInput() string {
 	s.WriteString(fmt.Sprintf("Enter state (optional, default: %s):\n\n", m.typeDef.DefaultState))
 	s.WriteString(fmt.Sprintf("> %s", m.stateInput))
 	s.WriteString("\n\n(Enter to continue with default or custom state, Esc to go back, q to quit)")
+	return s.String()
+}
+
+// updateFilenameInput handles filename input
+func (m wizardModel) updateFilenameInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		filenameStr := strings.TrimSpace(m.filenameInput)
+		if filenameStr == "" {
+			m.filenameError = "Filename cannot be empty"
+			return m, nil
+		}
+
+		// Remove .Rmd extension if provided (we'll add it automatically)
+		filenameStr = strings.TrimSuffix(filenameStr, ".Rmd")
+		filenameStr = strings.TrimSuffix(filenameStr, ".rmd")
+
+		// Validate filename (basic validation - no path separators, no empty)
+		if filenameStr == "" {
+			m.filenameError = "Filename cannot be empty"
+			return m, nil
+		}
+		if strings.Contains(filenameStr, string(filepath.Separator)) || strings.Contains(filenameStr, "/") || strings.Contains(filenameStr, "\\") {
+			m.filenameError = "Filename cannot contain path separators"
+			return m, nil
+		}
+
+		// Check if file already exists
+		notePath := filepath.Join(m.vaultRoot, string(m.typeName), filenameStr+".Rmd")
+		if _, err := os.Stat(notePath); err == nil {
+			m.filenameError = fmt.Sprintf("File %q already exists", filenameStr+".Rmd")
+			return m, nil
+		}
+
+		// Valid filename
+		m.filenameInput = filenameStr
+		m.filenameError = ""
+		m.state = stateVerification
+	case "backspace":
+		if len(m.filenameInput) > 0 {
+			m.filenameInput = m.filenameInput[:len(m.filenameInput)-1]
+			m.filenameError = ""
+		}
+	default:
+		if len(msg.Runes) > 0 {
+			m.filenameInput += string(msg.Runes)
+			m.filenameError = ""
+		}
+	}
+	return m, nil
+}
+
+// viewFilenameInput renders the filename input screen
+func (m wizardModel) viewFilenameInput() string {
+	s := strings.Builder{}
+	s.WriteString("Enter output filename (without .Rmd extension):\n\n")
+	s.WriteString(fmt.Sprintf("> %s", m.filenameInput))
+	if m.filenameError != "" {
+		s.WriteString(fmt.Sprintf("\n\nError: %s", m.filenameError))
+	}
+	s.WriteString("\n\n(Enter to continue, Esc to go back, q to quit)")
 	return s.String()
 }
 
@@ -382,23 +453,24 @@ func (m wizardModel) viewVerification() string {
 
 	s := strings.Builder{}
 	s.WriteString("Review your note:\n\n")
-	s.WriteString(fmt.Sprintf("Type:  %s\n", m.typeName))
-	s.WriteString(fmt.Sprintf("Key:   %s\n", m.key))
-	s.WriteString(fmt.Sprintf("Title: %s\n", m.title))
+	s.WriteString(fmt.Sprintf("Type:     %s\n", m.typeName))
+	s.WriteString(fmt.Sprintf("Key:      %s\n", m.key))
+	s.WriteString(fmt.Sprintf("Title:    %s\n", m.title))
 	if len(m.tags) > 0 {
-		s.WriteString(fmt.Sprintf("Tags:  %s\n", strings.Join(m.tags, ", ")))
+		s.WriteString(fmt.Sprintf("Tags:     %s\n", strings.Join(m.tags, ", ")))
 	} else {
-		s.WriteString("Tags:  (none)\n")
+		s.WriteString("Tags:     (none)\n")
 	}
-	s.WriteString(fmt.Sprintf("State: %s\n", m.stateVal))
+	s.WriteString(fmt.Sprintf("State:    %s\n", m.stateVal))
+	s.WriteString(fmt.Sprintf("Filename: %s.Rmd\n", m.filenameInput))
 	s.WriteString("\n(Create note? [y/N], Esc to go back, q to quit)")
 	return s.String()
 }
 
 // createNote creates the note file and returns the note path and ID
 func (m wizardModel) createNote() (string, model.NoteID, error) {
-	// Determine path
-	notePath := filepath.Join(m.vaultRoot, string(m.typeName), string(m.key)+".Rmd")
+	// Determine path using user-provided filename
+	notePath := filepath.Join(m.vaultRoot, string(m.typeName), m.filenameInput+".Rmd")
 	typeDir := filepath.Dir(notePath)
 
 	// Create directory if missing
@@ -434,8 +506,10 @@ func (m wizardModel) goBack() wizardModel {
 		m.state = stateInputTitle
 	case stateInputState:
 		m.state = stateInputTags
-	case stateVerification:
+	case stateInputFilename:
 		m.state = stateInputState
+	case stateVerification:
+		m.state = stateInputFilename
 	}
 	return m
 }

@@ -235,6 +235,9 @@ func marshalConfig(cfg *config.Config) ([]byte, error) {
 			"root": cfg.Templates.Root,
 		},
 	}
+	if cfg.Editor != "" {
+		configMap["editor"] = cfg.Editor
+	}
 
 	// Add types
 	typesMap := configMap["types"].(map[string]any)

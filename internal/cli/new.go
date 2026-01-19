@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -61,9 +62,21 @@ func runNewWizard(vaultRoot string, cfg *config.Config) error {
 func runInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 	model := initialModel(vaultRoot, cfg)
 	program := tea.NewProgram(model, tea.WithAltScreen())
-	if _, err := program.Run(); err != nil {
+	finalModel, err := program.Run()
+	if err != nil {
 		return fmt.Errorf("running wizard: %w", err)
 	}
+
+	// Launch editor if note was created successfully
+	if wizardModel, ok := finalModel.(wizardModel); ok {
+		if wizardModel.notePath != "" {
+			if err := launchEditor(cfg, wizardModel.notePath); err != nil {
+				// Don't fail the command if editor launch fails, just warn
+				fmt.Fprintf(os.Stderr, "Warning: failed to launch editor: %v\n", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -98,11 +111,17 @@ func runNonInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 	// Step 5: Select state (default from type)
 	state := typeDef.DefaultState
 
-	// Step 6: Determine path
-	notePath := filepath.Join(vaultRoot, string(typeName), string(key)+".Rmd")
+	// Step 6: Input filename
+	filename, err := inputFilename(vaultRoot, typeName, key)
+	if err != nil {
+		return fmt.Errorf("inputting filename: %w", err)
+	}
+
+	// Step 7: Determine path
+	notePath := filepath.Join(vaultRoot, string(typeName), filename+".Rmd")
 	typeDir := filepath.Dir(notePath)
 
-	// Step 7: Prompt for directory creation if missing
+	// Step 8: Prompt for directory creation if missing
 	if _, err := os.Stat(typeDir); os.IsNotExist(err) {
 		// For Phase 1, we'll create it automatically
 		// In a full implementation, we'd prompt: "Create directory? (y/N)"
@@ -111,13 +130,13 @@ func runNonInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 		}
 	}
 
-	// Step 8: Generate frontmatter and body
+	// Step 9: Generate frontmatter and body
 	now := time.Now().UTC()
 	noteID := generateNoteID()
 	frontmatter := generateFrontmatter(noteID, typeName, key, title, tags, state, now)
 	body := generateBody(title, cfg, typeName)
 
-	// Step 9: Write file atomically
+	// Step 10: Write file atomically
 	content := formatNote(frontmatter, body)
 	if err := AtomicWrite(notePath, content); err != nil {
 		return fmt.Errorf("writing note: %w", err)
@@ -126,9 +145,12 @@ func runNonInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 	fmt.Printf("✓ Created %s\n", notePath)
 	fmt.Printf("Note ID: %s\n", noteID)
 
-	// Step 10: Launch editor (skip for Phase 1, will be added later)
-	// For now, just inform the user
-	fmt.Println("\nNote created successfully. Edit it with your preferred editor.")
+	// Step 11: Launch editor
+	if err := launchEditor(cfg, notePath); err != nil {
+		// Don't fail the command if editor launch fails, just warn
+		fmt.Fprintf(os.Stderr, "Warning: failed to launch editor: %v\n", err)
+		fmt.Println("\nNote created successfully. Edit it with your preferred editor.")
+	}
 
 	return nil
 }
@@ -189,6 +211,31 @@ func inputTags() ([]string, error) {
 	return []string{}, nil
 }
 
+// inputFilename prompts for output filename
+func inputFilename(vaultRoot string, typeName model.TypeName, key model.Key) (string, error) {
+	// For Phase 1, we'll use the key as default
+	// In a full implementation, we'd prompt interactively
+	// For non-interactive mode (tests), use key as default
+	filenameStr := string(key)
+
+	// Remove .Rmd extension if provided (we'll add it automatically)
+	filenameStr = strings.TrimSuffix(filenameStr, ".Rmd")
+	filenameStr = strings.TrimSuffix(filenameStr, ".rmd")
+
+	// Validate filename (basic validation - no path separators)
+	if strings.Contains(filenameStr, string(filepath.Separator)) || strings.Contains(filenameStr, "/") || strings.Contains(filenameStr, "\\") {
+		return "", fmt.Errorf("filename cannot contain path separators")
+	}
+
+	// Check if file already exists
+	notePath := filepath.Join(vaultRoot, string(typeName), filenameStr+".Rmd")
+	if _, err := os.Stat(notePath); err == nil {
+		return "", fmt.Errorf("file %q already exists", filenameStr+".Rmd")
+	}
+
+	return filenameStr, nil
+}
+
 // generateNoteID generates a unique note ID
 func generateNoteID() model.NoteID {
 	// For Phase 1, use a simple timestamp-based ID
@@ -236,4 +283,34 @@ func formatNote(frontmatter map[string]any, body string) []byte {
 	buf.WriteString(body)
 
 	return []byte(buf.String())
+}
+
+// launchEditor launches the configured editor to open the specified file
+func launchEditor(cfg *config.Config, filePath string) error {
+	// If no editor is configured, skip
+	if cfg.Editor == "" {
+		return nil
+	}
+
+	// Parse editor command - split by spaces
+	// Note: This simple parsing doesn't handle quoted arguments with spaces.
+	// For complex cases, users should ensure editor paths don't contain spaces
+	// or use the full path without spaces.
+	editorCmd := strings.Fields(cfg.Editor)
+	if len(editorCmd) == 0 {
+		return fmt.Errorf("editor command is empty")
+	}
+
+	// Create command with file path as last argument
+	cmd := exec.Command(editorCmd[0], append(editorCmd[1:], filePath)...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// Run the editor (this will block until editor exits)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("running editor %q: %w", cfg.Editor, err)
+	}
+
+	return nil
 }

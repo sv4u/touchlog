@@ -17,6 +17,7 @@ type Config struct {
 	Tags      TagConfig
 	Edges     map[model.EdgeType]EdgeDef
 	Templates TemplateConfig
+	Editor    string // Editor command to use for opening files
 }
 
 // TypeDef defines a note type
@@ -60,6 +61,7 @@ func LoadConfig(vaultRoot string) (*Config, error) {
 		Edges:     make(map[model.EdgeType]EdgeDef),
 		Tags:      TagConfig{Preferred: []string{}},
 		Templates: TemplateConfig{Root: ""},
+		Editor:    "", // Editor will be set from config or environment
 	}
 
 	// Start with built-in defaults
@@ -81,6 +83,11 @@ func LoadConfig(vaultRoot string) (*Config, error) {
 		if err := mergeConfigFile(cfg, repoPath); err != nil {
 			return nil, fmt.Errorf("loading repo config: %w", err)
 		}
+	}
+
+	// Fall back to EDITOR environment variable if editor not set in config
+	if cfg.Editor == "" {
+		cfg.Editor = os.Getenv("EDITOR")
 	}
 
 	// Validate the merged config
@@ -117,6 +124,7 @@ func mergeConfigFile(cfg *Config, path string) error {
 		"tags":      true,
 		"edges":     true,
 		"templates": true,
+		"editor":    true,
 	}
 
 	for key := range raw {
@@ -174,6 +182,11 @@ func mergeConfigFile(cfg *Config, path string) error {
 		if root, ok := templatesRaw["root"].(string); ok {
 			cfg.Templates.Root = root
 		}
+	}
+
+	// Parse editor
+	if editor, ok := raw["editor"].(string); ok {
+		cfg.Editor = editor
 	}
 
 	return nil
