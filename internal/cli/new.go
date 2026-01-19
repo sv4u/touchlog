@@ -302,6 +302,8 @@ func launchEditor(cfg *config.Config, filePath string) error {
 	}
 
 	// Create command with file path as last argument
+	// #nosec G204 - filePath is constructed using filepath.Join from validated inputs
+	// and passed directly to exec.Command (not shell), so it's safe from command injection
 	cmd := exec.Command(editorCmd[0], append(editorCmd[1:], filePath)...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
