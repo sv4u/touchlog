@@ -44,18 +44,18 @@ type wizardModel struct {
 	stateVal string
 
 	// UI state
-	typeCursor   int
-	typeChoices  []model.TypeName
-	keyInput     string
-	keyError     string
-	titleInput   string
-	tagsInput    string
-	stateInput   string
+	typeCursor    int
+	typeChoices   []model.TypeName
+	keyInput      string
+	keyError      string
+	titleInput    string
+	tagsInput     string
+	stateInput    string
 	filenameInput string
 	filenameError string
-	verifying    bool
-	notePath     string
-	noteID       model.NoteID
+	verifying     bool
+	notePath      string
+	noteID        model.NoteID
 }
 
 // initialModel creates the initial wizard model
