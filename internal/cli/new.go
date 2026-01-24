@@ -112,7 +112,7 @@ func runNonInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 	state := typeDef.DefaultState
 
 	// Step 6: Input filename
-	filename, err := inputFilename(vaultRoot, typeName, key)
+	filename, err := inputFilename(vaultRoot, typeName, title)
 	if err != nil {
 		return fmt.Errorf("inputting filename: %w", err)
 	}
@@ -212,11 +212,11 @@ func inputTags() ([]string, error) {
 }
 
 // inputFilename prompts for output filename
-func inputFilename(vaultRoot string, typeName model.TypeName, key model.Key) (string, error) {
-	// For Phase 1, we'll use the key as default
+func inputFilename(vaultRoot string, typeName model.TypeName, title string) (string, error) {
+	// For Phase 1, we'll use the title as default
 	// In a full implementation, we'd prompt interactively
-	// For non-interactive mode (tests), use key as default
-	filenameStr := string(key)
+	// For non-interactive mode (tests), use sanitized title as default
+	filenameStr := sanitizeTitleForFilename(title)
 
 	// Remove .Rmd extension if provided (we'll add it automatically)
 	filenameStr = strings.TrimSuffix(filenameStr, ".Rmd")
@@ -279,10 +279,41 @@ func formatNote(frontmatter map[string]any, body string) []byte {
 	buf.Write(fmYAML)
 	buf.WriteString("---\n")
 
-	// Write body
+	// Write body with newline between frontmatter and body
+	buf.WriteString("\n")
 	buf.WriteString(body)
 
 	return []byte(buf.String())
+}
+
+// sanitizeTitleForFilename converts a title to a filename-safe string
+func sanitizeTitleForFilename(title string) string {
+	// Convert to lowercase
+	filename := strings.ToLower(title)
+
+	// Replace spaces with hyphens
+	filename = strings.ReplaceAll(filename, " ", "-")
+
+	// Remove or replace invalid filename characters
+	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", ".", ",", "!", "@", "#", "$", "%", "^", "&", "(", ")", "+", "=", "[", "]", "{", "}", ";", "'"}
+	for _, char := range invalidChars {
+		filename = strings.ReplaceAll(filename, char, "")
+	}
+
+	// Replace multiple consecutive hyphens with a single hyphen
+	for strings.Contains(filename, "--") {
+		filename = strings.ReplaceAll(filename, "--", "-")
+	}
+
+	// Trim leading and trailing hyphens
+	filename = strings.Trim(filename, "-")
+
+	// If empty after sanitization, use a default
+	if filename == "" {
+		filename = "untitled"
+	}
+
+	return filename
 }
 
 // launchEditor launches the configured editor to open the specified file

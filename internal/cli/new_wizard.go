@@ -226,8 +226,6 @@ func (m wizardModel) updateKeyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Valid key
 		m.key = model.Key(keyStr)
 		m.keyError = ""
-		// Set default filename based on key
-		m.filenameInput = keyStr
 		m.state = stateInputTitle
 	case "backspace":
 		if len(m.keyInput) > 0 {
@@ -264,6 +262,8 @@ func (m wizardModel) updateTitleInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.title = title
+		// Set default filename based on title
+		m.filenameInput = sanitizeTitleForFilename(title)
 		m.state = stateInputTags
 	case "backspace":
 		if len(m.titleInput) > 0 {
