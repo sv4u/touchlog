@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sv4u/touchlog/v2/internal/config"
@@ -88,11 +87,12 @@ func (b *Builder) Rebuild() error {
 }
 
 // indexAll performs two-pass indexing:
-// Pass 1: Parse all notes, build (type,key) -> id map
+// Pass 1: Parse all notes, build (type,key) -> id map and last-segment map
 // Pass 2: Resolve links to edges
 func (b *Builder) indexAll(db *sql.DB) error {
-	// Pass 1: Parse all notes and build type/key -> id map
+	// Pass 1: Parse all notes and build type/key -> id map and last-segment map
 	typeKeyMap := make(map[model.TypeKey]model.NoteID)
+	lastSegmentMap := make(map[string][]model.NoteID) // last segment -> note IDs for unqualified link resolution
 	notesByPath := make(map[string]*model.Note)
 
 	// Discover all .Rmd files in type directories
@@ -127,6 +127,10 @@ func (b *Builder) indexAll(db *sql.DB) error {
 					Key:  parsedNote.FM.Key,
 				}
 				typeKeyMap[typeKey] = parsedNote.FM.ID
+
+				// Also index by last segment for unqualified link resolution
+				lastSeg := config.LastSegment(string(parsedNote.FM.Key))
+				lastSegmentMap[lastSeg] = append(lastSegmentMap[lastSeg], parsedNote.FM.ID)
 
 				// Get file stats for change detection
 				fileInfo, err := os.Stat(rmdPath)
@@ -166,8 +170,8 @@ func (b *Builder) indexAll(db *sql.DB) error {
 			continue
 		}
 
-		// Resolve links
-		resolvedEdges, diags := b.resolveLinks(parsedNote.RawLinks, typeKeyMap, parsedNote.FM.Type)
+		// Resolve links using both typeKeyMap and lastSegmentMap
+		resolvedEdges, diags := b.resolveLinks(parsedNote.RawLinks, typeKeyMap, lastSegmentMap, parsedNote.FM.Type)
 
 		// Replace edges for node
 		if err := store.ReplaceEdgesForNode(db, parsedNote.FM.ID, resolvedEdges); err != nil {
@@ -224,10 +228,13 @@ func (b *Builder) discoverRmdFiles(dir string) ([]string, error) {
 
 // resolveLinks resolves raw links to edges, returning resolved edges and diagnostics
 // This implements the link resolution rules:
-// - [[type:key]] → direct resolution
-// - [[key]] → uniqueness check, diagnostic if ambiguous
+// - [[type:key]] → direct resolution by full key
+// - [[key]] → first try exact match on full key, then fall back to last-segment matching
+//   - exact match takes priority to support path-based keys like [[projects/web/auth]]
+//   - ambiguous if multiple matches found at either phase
+//
 // - Unknown targets → diagnostics + unresolved edge rows
-func (b *Builder) resolveLinks(rawLinks []model.RawLink, typeKeyMap map[model.TypeKey]model.NoteID, sourceType model.TypeName) ([]model.RawLink, []model.Diagnostic) {
+func (b *Builder) resolveLinks(rawLinks []model.RawLink, typeKeyMap map[model.TypeKey]model.NoteID, lastSegmentMap map[string][]model.NoteID, sourceType model.TypeName) ([]model.RawLink, []model.Diagnostic) {
 	var resolvedEdges []model.RawLink
 	var diags []model.Diagnostic
 
@@ -254,41 +261,56 @@ func (b *Builder) resolveLinks(rawLinks []model.RawLink, typeKeyMap map[model.Ty
 			}
 		} else {
 			// Unqualified link: [[key]]
-			// Check for uniqueness across all types
-			var matches []model.TypeKey
+			// First try exact match on full key, then fall back to last-segment matching
+			searchKey := string(link.Target.Key)
+
+			// Priority 1: Try exact match on full key (across all types)
+			var exactMatches []model.NoteID
 			for typeKey, id := range typeKeyMap {
-				if typeKey.Key == link.Target.Key {
-					matches = append(matches, typeKey)
-					if targetID == nil {
-						targetID = &id
-					}
+				if string(typeKey.Key) == searchKey {
+					exactMatches = append(exactMatches, id)
 				}
 			}
 
-			if len(matches) == 0 {
-				// Unknown target
-				diagnostic = &model.Diagnostic{
-					Level:   model.DiagnosticLevelWarn,
-					Code:    "UNRESOLVED_LINK",
-					Message: fmt.Sprintf("Link target '%s' not found. The target note may not exist or may not have been indexed yet. Use a qualified link (type:key) or run 'touchlog index rebuild'.", link.Target.Key),
-					Span:    link.Span,
-				}
-			} else if len(matches) > 1 {
-				// Ambiguous: multiple matches
-				typeNames := make([]string, len(matches))
-				for i, match := range matches {
-					typeNames[i] = string(match.Type)
-				}
+			if len(exactMatches) == 1 {
+				// Unique exact match
+				targetID = &exactMatches[0]
+			} else if len(exactMatches) > 1 {
+				// Multiple exact matches (same key in different types)
 				diagnostic = &model.Diagnostic{
 					Level:   model.DiagnosticLevelError,
 					Code:    "AMBIGUOUS_LINK",
-					Message: fmt.Sprintf("Link target '%s' is ambiguous - matches %d types: %s. Use a qualified link (type:key) to specify the target type.", link.Target.Key, len(matches), strings.Join(typeNames, ", ")),
+					Message: fmt.Sprintf("Link target '%s' is ambiguous - matches %d notes with the same key. Use a qualified link (type:key) to specify the target.", searchKey, len(exactMatches)),
 					Span:    link.Span,
 				}
-				// Don't set targetID for ambiguous links
 				targetID = nil
+			} else {
+				// Priority 2: Fall back to last-segment matching
+				lastSeg := config.LastSegment(searchKey)
+				matchingIDs := lastSegmentMap[lastSeg]
+
+				if len(matchingIDs) == 0 {
+					// No match found
+					diagnostic = &model.Diagnostic{
+						Level:   model.DiagnosticLevelWarn,
+						Code:    "UNRESOLVED_LINK",
+						Message: fmt.Sprintf("Link target '%s' not found. The target note may not exist or may not have been indexed yet. Use a qualified link (type:key) or run 'touchlog index rebuild'.", searchKey),
+						Span:    link.Span,
+					}
+				} else if len(matchingIDs) == 1 {
+					// Unique last-segment match
+					targetID = &matchingIDs[0]
+				} else {
+					// Ambiguous: multiple notes have same last segment
+					diagnostic = &model.Diagnostic{
+						Level:   model.DiagnosticLevelError,
+						Code:    "AMBIGUOUS_LINK",
+						Message: fmt.Sprintf("Link target '%s' is ambiguous - matches %d notes with the same last segment. Use a qualified link (type:full/path/key) to specify the target.", searchKey, len(matchingIDs)),
+						Span:    link.Span,
+					}
+					targetID = nil
+				}
 			}
-			// If len(matches) == 1, targetID is already set
 		}
 
 		// Create resolved edge with resolved ID

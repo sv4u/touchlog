@@ -202,24 +202,15 @@ func (m wizardModel) updateKeyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Validate pattern
-		if m.typeDef.KeyPattern != nil {
-			if !m.typeDef.KeyPattern.MatchString(keyStr) {
-				m.keyError = fmt.Sprintf("Key must match pattern: %s", m.typeDef.KeyPattern.String())
-				return m, nil
-			}
-		}
-
-		// Validate length
-		if len(keyStr) > m.typeDef.KeyMaxLen {
-			m.keyError = fmt.Sprintf("Key exceeds maximum length of %d", m.typeDef.KeyMaxLen)
+		// Validate key using the new ValidateKey function that supports path-based keys
+		if err := config.ValidateKey(keyStr, m.typeDef.KeyPattern, m.typeDef.KeyMaxLen); err != nil {
+			m.keyError = err.Error()
 			return m, nil
 		}
 
-		// Check uniqueness
-		notePath := filepath.Join(m.vaultRoot, string(m.typeName), keyStr+".Rmd")
-		if _, err := os.Stat(notePath); err == nil {
-			m.keyError = fmt.Sprintf("Note with key %q already exists", keyStr)
+		// Check uniqueness using store if it exists (for indexed notes)
+		if err := checkKeyUniqueness(m.vaultRoot, m.typeName, keyStr); err != nil {
+			m.keyError = err.Error()
 			return m, nil
 		}
 
@@ -380,8 +371,16 @@ func (m wizardModel) updateFilenameInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Check if file already exists
-		notePath := filepath.Join(m.vaultRoot, string(m.typeName), filenameStr+".Rmd")
+		// Check if file already exists using branching path logic
+		var notePath string
+		keyStr := string(m.key)
+		if strings.Contains(keyStr, "/") {
+			// Path-based key: file in subfolder
+			notePath = filepath.Join(m.vaultRoot, string(m.typeName), keyStr, filenameStr+".Rmd")
+		} else {
+			// Flat key: file at type root (backward compatible)
+			notePath = filepath.Join(m.vaultRoot, string(m.typeName), filenameStr+".Rmd")
+		}
 		if _, err := os.Stat(notePath); err == nil {
 			m.filenameError = fmt.Sprintf("File %q already exists", filenameStr+".Rmd")
 			return m, nil
@@ -469,8 +468,16 @@ func (m wizardModel) viewVerification() string {
 
 // createNote creates the note file and returns the note path and ID
 func (m wizardModel) createNote() (string, model.NoteID, error) {
-	// Determine path using user-provided filename
-	notePath := filepath.Join(m.vaultRoot, string(m.typeName), m.filenameInput+".Rmd")
+	// Determine path using branching logic for backward compatibility
+	var notePath string
+	keyStr := string(m.key)
+	if strings.Contains(keyStr, "/") {
+		// Path-based key: file in subfolder
+		notePath = filepath.Join(m.vaultRoot, string(m.typeName), keyStr, m.filenameInput+".Rmd")
+	} else {
+		// Flat key: file at type root (backward compatible)
+		notePath = filepath.Join(m.vaultRoot, string(m.typeName), m.filenameInput+".Rmd")
+	}
 	typeDir := filepath.Dir(notePath)
 
 	// Create directory if missing

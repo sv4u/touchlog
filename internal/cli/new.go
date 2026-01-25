@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/store"
 	cli3 "github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
 )
@@ -112,13 +113,21 @@ func runNonInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 	state := typeDef.DefaultState
 
 	// Step 6: Input filename
-	filename, err := inputFilename(vaultRoot, typeName, title)
+	filename, err := inputFilename(vaultRoot, typeName, key, title)
 	if err != nil {
 		return fmt.Errorf("inputting filename: %w", err)
 	}
 
-	// Step 7: Determine path
-	notePath := filepath.Join(vaultRoot, string(typeName), filename+".Rmd")
+	// Step 7: Determine path with branching logic for backward compatibility
+	var notePath string
+	keyStr := string(key)
+	if strings.Contains(keyStr, "/") {
+		// Path-based key: file in subfolder
+		notePath = filepath.Join(vaultRoot, string(typeName), keyStr, filename+".Rmd")
+	} else {
+		// Flat key: file at type root (backward compatible)
+		notePath = filepath.Join(vaultRoot, string(typeName), filename+".Rmd")
+	}
 	typeDir := filepath.Dir(notePath)
 
 	// Step 8: Prompt for directory creation if missing
@@ -176,25 +185,36 @@ func inputKey(typeDef config.TypeDef, vaultRoot string, typeName model.TypeName)
 	// In a full implementation, we'd prompt and validate interactively
 	keyStr := "new-note"
 
-	// Validate pattern
-	if typeDef.KeyPattern != nil {
-		if !typeDef.KeyPattern.MatchString(keyStr) {
-			return "", fmt.Errorf("key %q does not match pattern %q", keyStr, typeDef.KeyPattern.String())
-		}
+	// Validate key using the new ValidateKey function that supports path-based keys
+	if err := config.ValidateKey(keyStr, typeDef.KeyPattern, typeDef.KeyMaxLen); err != nil {
+		return "", fmt.Errorf("invalid key: %w", err)
 	}
 
-	// Validate length
-	if len(keyStr) > typeDef.KeyMaxLen {
-		return "", fmt.Errorf("key %q exceeds maximum length of %d", keyStr, typeDef.KeyMaxLen)
-	}
-
-	// Check uniqueness within the type directory
-	notePath := filepath.Join(vaultRoot, string(typeName), keyStr+".Rmd")
-	if _, err := os.Stat(notePath); err == nil {
-		return "", fmt.Errorf("note with key %q already exists in type %q", keyStr, typeName)
+	// Check uniqueness using store if it exists (for indexed notes)
+	if err := checkKeyUniqueness(vaultRoot, typeName, keyStr); err != nil {
+		return "", err
 	}
 
 	return model.Key(keyStr), nil
+}
+
+// checkKeyUniqueness checks if a key already exists in the store
+func checkKeyUniqueness(vaultRoot string, typeName model.TypeName, keyStr string) error {
+	dbPath := filepath.Join(vaultRoot, ".touchlog", "index.db")
+	if _, err := os.Stat(dbPath); err == nil {
+		db, err := store.OpenOrCreateDB(vaultRoot)
+		if err == nil {
+			defer func() {
+				_ = db.Close()
+			}()
+			var exists int
+			err := db.QueryRow("SELECT 1 FROM nodes WHERE type = ? AND key = ?", typeName, keyStr).Scan(&exists)
+			if err == nil && exists == 1 {
+				return fmt.Errorf("note with key %q already exists in type %q", keyStr, typeName)
+			}
+		}
+	}
+	return nil
 }
 
 // inputTitle prompts for title (for Phase 1, uses default)
@@ -212,7 +232,7 @@ func inputTags() ([]string, error) {
 }
 
 // inputFilename prompts for output filename
-func inputFilename(vaultRoot string, typeName model.TypeName, title string) (string, error) {
+func inputFilename(vaultRoot string, typeName model.TypeName, key model.Key, title string) (string, error) {
 	// For Phase 1, we'll use the title as default
 	// In a full implementation, we'd prompt interactively
 	// For non-interactive mode (tests), use sanitized title as default
@@ -227,8 +247,16 @@ func inputFilename(vaultRoot string, typeName model.TypeName, title string) (str
 		return "", fmt.Errorf("filename cannot contain path separators")
 	}
 
-	// Check if file already exists
-	notePath := filepath.Join(vaultRoot, string(typeName), filenameStr+".Rmd")
+	// Check if file already exists using branching path logic
+	var notePath string
+	keyStr := string(key)
+	if strings.Contains(keyStr, "/") {
+		// Path-based key: file in subfolder
+		notePath = filepath.Join(vaultRoot, string(typeName), keyStr, filenameStr+".Rmd")
+	} else {
+		// Flat key: file at type root (backward compatible)
+		notePath = filepath.Join(vaultRoot, string(typeName), filenameStr+".Rmd")
+	}
 	if _, err := os.Stat(notePath); err == nil {
 		return "", fmt.Errorf("file %q already exists", filenameStr+".Rmd")
 	}

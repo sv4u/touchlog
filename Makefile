@@ -101,7 +101,7 @@ test-coverage-xml: test-coverage ## Generate XML coverage report (requires gocov
 # Linting and code quality targets
 lint: ## Run all linters (golangci-lint, go vet, staticcheck)
 	@echo "Running golangci-lint..."
-	@golangci-lint run --version || (echo "golangci-lint not found. Install with: make install-tools" && exit 1)
+	@golangci-lint --version || (echo "golangci-lint not found. Install with: make install-tools" && exit 1)
 	@golangci-lint run
 	@echo "Running go vet..."
 	@go vet ./...
