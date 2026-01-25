@@ -81,7 +81,7 @@ Note: Installing directly from remote will show "dev" as the version. See [Build
    - Adding optional tags (comma-separated)
    - Setting the state (optional, defaults to type's default)
    - Reviewing all details before creation
-   
+
    After creation, the note file is automatically opened in your configured editor.
 
 3. **Build the index**:
@@ -112,7 +112,7 @@ Note: Installing directly from remote will show "dev" as the version. See [Build
 
 A touchlog vault is a directory containing:
 
-```
+```text
 vault/
 ├── .touchlog/
 │   ├── config.yaml          # Vault configuration
@@ -214,7 +214,7 @@ Unqualified links are resolved in two phases:
 **Examples:**
 
 | Link Target | Notes in Vault | Resolution |
-|-------------|----------------|------------|
+| ----------- | -------------- | ---------- |
 | `[[auth]]` | `auth` | Exact match → `auth` |
 | `[[auth]]` | `projects/auth` | Last-segment match → `projects/auth` |
 | `[[auth]]` | `auth`, `projects/auth` | Exact match → `auth` (exact takes priority) |
@@ -268,11 +268,13 @@ templates:
 Keys are validated according to these rules:
 
 #### Flat Keys
+
 - Must match the configured `key_pattern` (default: `^[a-z0-9]+(-[a-z0-9]+)*$`)
 - Must not exceed `key_max_len` (default: 64 characters)
 - Examples: `my-note`, `getting-started`, `auth`
 
 #### Path-Based Keys
+
 - Each segment separated by `/` must match the `key_pattern`
 - Total key length (including `/` separators) must not exceed `key_max_len`
 - Cannot start or end with `/`
@@ -280,6 +282,7 @@ Keys are validated according to these rules:
 - Examples: `projects/web/auth`, `docs/api/v2`
 
 **Invalid keys** (will be rejected):
+
 - `/projects/web` - starts with `/`
 - `projects/web/` - ends with `/`
 - `projects//web` - empty segment
@@ -297,6 +300,7 @@ All commands support the following global flag:
 The vault path is automatically detected by searching upward from the current directory for a `.touchlog` directory. Use `--vault` to explicitly specify a vault location.
 
 Examples:
+
 ```bash
 touchlog --vault /path/to/vault init
 touchlog --vault /path/to/vault query search --type note
@@ -316,6 +320,7 @@ touchlog --vault /path/to/vault query search --type note
   To enable completion, add the generated script to your shell configuration:
   
   **Bash:**
+
   ```bash
   touchlog completion bash > /etc/bash_completion.d/touchlog
   # or for user-specific:
@@ -323,11 +328,13 @@ touchlog --vault /path/to/vault query search --type note
   ```
   
   **Zsh:**
+
   ```bash
   touchlog completion zsh > "${fpath[1]}/_touchlog"
   ```
   
   **Fish:**
+
   ```bash
   touchlog completion fish > ~/.config/fish/completions/touchlog.fish
   ```
@@ -400,6 +407,7 @@ The `touchlog new` command launches an interactive TUI (Terminal User Interface)
 **Automatic Mode Detection**: The wizard automatically detects if it's running in an interactive terminal. In non-interactive environments (tests, CI), it falls back to default values without starting the TUI.
 
 **Editor Launch**: After successfully creating a note, the wizard automatically launches your configured editor to open the new note file. The editor is determined from:
+
 - `$EDITOR` environment variable (if set)
 - System default editor
 
@@ -434,13 +442,14 @@ If the editor launch fails, a warning is displayed but the command still succeed
   **Common Diagnostic Codes:**
   
   | Code | Level | Description |
-  |------|-------|-------------|
+  | ---- | ----- | ----------- |
   | `UNRESOLVED_LINK` | warn | Link target not found in index |
   | `AMBIGUOUS_LINK` | error | Unqualified link matches multiple notes |
   | `MISSING_FRONTMATTER` | error | Note lacks required YAML frontmatter |
   | `INVALID_FRONTMATTER` | error | Frontmatter has syntax or validation errors |
   
   Examples:
+
   ```bash
   touchlog diagnostics list
   touchlog diagnostics list --level error
@@ -594,7 +603,7 @@ touchlog daemon stop
 
 ### Project Structure
 
-```
+```text
 touchlog/
 ├── cmd/
 │   └── touchlog/
@@ -650,11 +659,13 @@ make test-coverage
 
 You can run tests in isolated Linux and macOS environments using Docker. This ensures consistent test execution across different platforms.
 
+<!-- markdownlint-disable-next-line MD024 -->
 #### Prerequisites
 
 - Docker and Docker Compose installed
 - For macOS testing: macOS host (tests run natively on macOS)
 
+<!-- markdownlint-disable-next-line MD024 -->
 #### Quick Start
 
 ```bash
@@ -796,7 +807,7 @@ chmod 755 coverage
 
 #### File Structure
 
-```
+```text
 touchlog/
 ├── Dockerfile.test              # Docker image for testing
 ├── docker-compose.test.yml     # Docker Compose configuration
