@@ -217,7 +217,7 @@ func (d noteItemDelegate) Render(w io.Writer, m list.Model, index int, item list
 		desc = d.styles.normalDesc.Render(desc)
 	}
 
-	fmt.Fprintf(w, "%s\n%s", title, desc)
+	_, _ = fmt.Fprintf(w, "%s\n%s", title, desc)
 }
 
 // loadNotesForEdit loads all notes from the vault with optional filters

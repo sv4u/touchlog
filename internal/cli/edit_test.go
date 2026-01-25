@@ -1,15 +1,12 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/index"
-	"github.com/sv4u/touchlog/v2/internal/model"
 	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
@@ -743,52 +740,4 @@ func TestEditWizardModel_Init(t *testing.T) {
 	if model.list.Title != "Select a note to edit" {
 		t.Errorf("expected list title 'Select a note to edit', got %q", model.list.Title)
 	}
-}
-
-// Helper to create a test note in the vault
-func createTestNote(t *testing.T, vaultRoot string, noteID model.NoteID, typeName model.TypeName, key model.Key, title string, tags []string) string {
-	t.Helper()
-
-	noteDir := filepath.Join(vaultRoot, string(typeName))
-	if err := os.MkdirAll(noteDir, 0755); err != nil {
-		t.Fatalf("creating note dir: %v", err)
-	}
-
-	now := time.Now().UTC().Format(time.RFC3339)
-	tagsStr := "[]"
-	if len(tags) > 0 {
-		tagsStr = "[" + joinQuoted(tags) + "]"
-	}
-
-	content := fmt.Sprintf(`---
-id: %s
-type: %s
-key: %s
-created: %s
-updated: %s
-title: %s
-tags: %s
-state: draft
----
-
-# %s
-`, noteID, typeName, key, now, now, title, tagsStr, title)
-
-	notePath := filepath.Join(noteDir, string(key)+".Rmd")
-	if err := os.WriteFile(notePath, []byte(content), 0644); err != nil {
-		t.Fatalf("writing note: %v", err)
-	}
-
-	return notePath
-}
-
-func joinQuoted(strs []string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	result := `"` + strs[0] + `"`
-	for i := 1; i < len(strs); i++ {
-		result += `, "` + strs[i] + `"`
-	}
-	return result
 }
