@@ -57,7 +57,7 @@ install: ## Install the binary with version information (from local source)
 # Test targets
 test: ## Run all tests
 	@echo "Running tests..."
-	@go test ./... -v
+	@go test ./... -v -timeout 10m
 
 test-race: ## Run tests with race detector
 	@echo "Running tests with race detector..."
@@ -101,7 +101,7 @@ test-coverage-xml: test-coverage ## Generate XML coverage report (requires gocov
 # Linting and code quality targets
 lint: ## Run all linters (golangci-lint, go vet, staticcheck)
 	@echo "Running golangci-lint..."
-	@golangci-lint run --version || (echo "golangci-lint not found. Install with: make install-tools" && exit 1)
+	@golangci-lint --version || (echo "golangci-lint not found. Install with: make install-tools" && exit 1)
 	@golangci-lint run
 	@echo "Running go vet..."
 	@go vet ./...

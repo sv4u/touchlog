@@ -1,7 +1,7 @@
 # touchlog
 
 [![CI](https://github.com/sv4u/touchlog/workflows/CI/badge.svg)](https://github.com/sv4u/touchlog/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sv4u/touchlog)](https://goreportcard.com/report/github.com/sv4u/touchlog)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sv4u/touchlog/v2)](https://goreportcard.com/report/github.com/sv4u/touchlog/v2)
 [![codecov](https://codecov.io/gh/sv4u/touchlog/branch/master/graph/badge.svg?token=IOT1S6CPGY)](https://codecov.io/gh/sv4u/touchlog/branch/master)
 [![License](https://img.shields.io/github/license/sv4u/touchlog.svg)](https://github.com/sv4u/touchlog/blob/main/LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/sv4u/touchlog)](https://github.com/sv4u/touchlog/blob/main/go.mod)
@@ -13,12 +13,13 @@ A knowledge graph note-taking system built with Go. touchlog provides a powerful
 
 - **Interactive wizard**: Beautiful TUI wizard for creating notes with step-by-step guidance
 - **Vault-based organization**: Organize notes in type-specific directories with structured frontmatter
+- **Path-based keys**: Hierarchical organization with keys like `projects/web/auth` that create nested subfolders
 - **Automatic indexing**: SQLite-based index with automatic link resolution and incremental updates
 - **Graph queries**: Find backlinks, neighbors, and paths between notes using graph traversal
 - **Graph visualization**: Export knowledge graphs to Graphviz DOT format
 - **Real-time updates**: Daemon mode with filesystem watching for automatic index updates
 - **Structured notes**: YAML frontmatter with validation and diagnostics
-- **Wiki-style links**: Support for `[[note:key]]`, `[[key]]`, and edge-type annotations
+- **Wiki-style links**: Support for `[[note:key]]`, `[[key]]`, and edge-type annotations with smart last-segment matching
 - **Deterministic exports**: Stable, diffable JSON and DOT exports
 
 ## Installation
@@ -80,7 +81,7 @@ Note: Installing directly from remote will show "dev" as the version. See [Build
    - Adding optional tags (comma-separated)
    - Setting the state (optional, defaults to type's default)
    - Reviewing all details before creation
-   
+
    After creation, the note file is automatically opened in your configured editor.
 
 3. **Build the index**:
@@ -111,18 +112,35 @@ Note: Installing directly from remote will show "dev" as the version. See [Build
 
 A touchlog vault is a directory containing:
 
-```
+```text
 vault/
 ├── .touchlog/
 │   ├── config.yaml          # Vault configuration
 │   └── index.db             # SQLite index (auto-generated)
 ├── note/                    # Type-specific directories
-│   ├── my-note.Rmd
-│   └── another-note.Rmd
+│   ├── my-note.Rmd          # Flat key: stored at type root
+│   ├── another-note.Rmd
+│   └── projects/            # Path-based keys create subfolders
+│       └── web/
+│           └── auth.Rmd     # Key: projects/web/auth
 ├── article/
 │   └── my-article.Rmd
 └── ...
 ```
+
+### Flat Keys vs Path-Based Keys
+
+touchlog supports two types of keys:
+
+- **Flat keys** (e.g., `my-note`): Notes are stored directly in the type directory
+  - File path: `vault/note/my-note.Rmd`
+  
+- **Path-based keys** (e.g., `projects/web/auth`): Notes are stored in nested subfolders
+  - File path: `vault/note/projects/web/auth/<filename>.Rmd`
+  - Each segment of the key creates a subdirectory
+  - The filename is specified separately during note creation
+
+This allows hierarchical organization while maintaining backward compatibility with existing flat-key vaults.
 
 ### Note Files
 
@@ -144,6 +162,70 @@ updated: 2024-01-01T00:00:00Z
 This note links to [[note:another-note]] and [[article:my-article]].
 
 You can also use unqualified links: [[another-note]] if the key is unique.
+```
+
+#### Path-Based Keys Example
+
+Notes with path-based keys use the full path in the `key` field:
+
+```markdown
+---
+id: note-002
+type: note
+key: projects/web/auth
+title: Authentication System
+state: draft
+tags: [security, backend]
+created: 2024-01-01T00:00:00Z
+updated: 2024-01-01T00:00:00Z
+---
+# Authentication System
+
+This note is stored at: vault/note/projects/web/auth/filename.Rmd
+```
+
+### Link Resolution
+
+touchlog supports flexible link resolution:
+
+#### Qualified Links
+
+Use the full `type:key` format for explicit targeting:
+
+```markdown
+[[note:projects/web/auth]]     # Links to note with key "projects/web/auth"
+[[article:getting-started]]    # Links to article with key "getting-started"
+```
+
+#### Unqualified Links (Two-Phase Resolution)
+
+Unqualified links are resolved in two phases:
+
+1. **Exact Match**: First, touchlog looks for a note whose key exactly matches the link target
+2. **Last-Segment Fallback**: If no exact match, it matches by the last segment of the key
+
+```markdown
+[[auth]]                       # First tries exact match on "auth"
+                               # If not found, matches any note ending with "auth"
+[[projects/web/auth]]          # First tries exact match on "projects/web/auth"
+                               # If not found, matches notes ending with "auth"
+```
+
+**Examples:**
+
+| Link Target | Notes in Vault | Resolution |
+| ----------- | -------------- | ---------- |
+| `[[auth]]` | `auth` | Exact match → `auth` |
+| `[[auth]]` | `projects/auth` | Last-segment match → `projects/auth` |
+| `[[auth]]` | `auth`, `projects/auth` | Exact match → `auth` (exact takes priority) |
+| `[[auth]]` | `projects/auth`, `users/auth` | Ambiguous (no exact match, multiple last-segment matches) |
+| `[[projects/web/auth]]` | `projects/web/auth` | Exact match → `projects/web/auth` |
+
+**Ambiguity Detection**: If no exact match exists and multiple notes share the same last segment, touchlog generates an `AMBIGUOUS_LINK` diagnostic. Use qualified links to resolve:
+
+```markdown
+[[note:projects/auth]]         # Explicit: targets projects/auth
+[[note:users/auth]]            # Explicit: targets users/auth
 ```
 
 ### Configuration
@@ -181,6 +263,32 @@ templates:
   root: templates
 ```
 
+### Key Validation
+
+Keys are validated according to these rules:
+
+#### Flat Keys
+
+- Must match the configured `key_pattern` (default: `^[a-z0-9]+(-[a-z0-9]+)*$`)
+- Must not exceed `key_max_len` (default: 64 characters)
+- Examples: `my-note`, `getting-started`, `auth`
+
+#### Path-Based Keys
+
+- Each segment separated by `/` must match the `key_pattern`
+- Total key length (including `/` separators) must not exceed `key_max_len`
+- Cannot start or end with `/`
+- Cannot contain empty segments (no consecutive slashes `//`)
+- Examples: `projects/web/auth`, `docs/api/v2`
+
+**Invalid keys** (will be rejected):
+
+- `/projects/web` - starts with `/`
+- `projects/web/` - ends with `/`
+- `projects//web` - empty segment
+- `Projects/web` - uppercase not allowed (default pattern)
+- `projects/WEB/auth` - uppercase in middle segment
+
 ## Commands
 
 ### Global Options
@@ -192,6 +300,7 @@ All commands support the following global flag:
 The vault path is automatically detected by searching upward from the current directory for a `.touchlog` directory. Use `--vault` to explicitly specify a vault location.
 
 Examples:
+
 ```bash
 touchlog --vault /path/to/vault init
 touchlog --vault /path/to/vault query search --type note
@@ -211,6 +320,7 @@ touchlog --vault /path/to/vault query search --type note
   To enable completion, add the generated script to your shell configuration:
   
   **Bash:**
+
   ```bash
   touchlog completion bash > /etc/bash_completion.d/touchlog
   # or for user-specific:
@@ -218,11 +328,13 @@ touchlog --vault /path/to/vault query search --type note
   ```
   
   **Zsh:**
+
   ```bash
   touchlog completion zsh > "${fpath[1]}/_touchlog"
   ```
   
   **Fish:**
+
   ```bash
   touchlog completion fish > ~/.config/fish/completions/touchlog.fish
   ```
@@ -274,13 +386,16 @@ The `touchlog new` command launches an interactive TUI (Terminal User Interface)
 
 1. **Type Selection**: Choose from available note types configured in your vault
 2. **Key Input**: Enter a unique key/name for the note
-   - Validates against the type's key pattern
-   - Checks maximum length
-   - Ensures uniqueness within the type directory
+   - Supports both flat keys (`my-note`) and path-based keys (`projects/web/auth`)
+   - Validates each segment against the type's key pattern
+   - Checks maximum total length
+   - Ensures uniqueness within the vault (checks both index and filesystem)
+   - Path-based keys automatically create nested subdirectories
 3. **Title Input**: Enter a descriptive title for the note
 4. **Tags Input** (optional): Add comma-separated tags
 5. **State Input** (optional): Set the note state (defaults to the type's default state)
-6. **Verification**: Review all details before creating the note
+6. **Filename Input**: Specify the output filename (without `.Rmd` extension)
+7. **Verification**: Review all details before creating the note
 
 **Navigation**:
 
@@ -292,6 +407,7 @@ The `touchlog new` command launches an interactive TUI (Terminal User Interface)
 **Automatic Mode Detection**: The wizard automatically detects if it's running in an interactive terminal. In non-interactive environments (tests, CI), it falls back to default values without starting the TUI.
 
 **Editor Launch**: After successfully creating a note, the wizard automatically launches your configured editor to open the new note file. The editor is determined from:
+
 - `$EDITOR` environment variable (if set)
 - System default editor
 
@@ -318,16 +434,27 @@ If the editor launch fails, a warning is displayed but the command still succeed
   
   Diagnostics are generated during note parsing and link resolution. They help identify issues like:
   - Missing or invalid frontmatter
-  - Invalid links or unresolved references
+  - Invalid links or unresolved references (`UNRESOLVED_LINK`)
+  - Ambiguous unqualified links (`AMBIGUOUS_LINK`)
   - Parsing errors
   - Validation warnings
   
+  **Common Diagnostic Codes:**
+  
+  | Code | Level | Description |
+  | ---- | ----- | ----------- |
+  | `UNRESOLVED_LINK` | warn | Link target not found in index |
+  | `AMBIGUOUS_LINK` | error | Unqualified link matches multiple notes |
+  | `MISSING_FRONTMATTER` | error | Note lacks required YAML frontmatter |
+  | `INVALID_FRONTMATTER` | error | Frontmatter has syntax or validation errors |
+  
   Examples:
+
   ```bash
   touchlog diagnostics list
   touchlog diagnostics list --level error
   touchlog diagnostics list --node note:my-note
-  touchlog diagnostics list --code missing-frontmatter --format json
+  touchlog diagnostics list --code AMBIGUOUS_LINK --format json
   ```
 
 ### Daemon
@@ -364,16 +491,22 @@ touchlog follows a **contracts-first** architecture with clear separation of con
 
 The index is built in two passes:
 
-1. **Pass 1**: Parse all notes, build `(type, key) -> id` map
-2. **Pass 2**: Resolve all links using the type/key map
+1. **Pass 1**: Parse all notes, build two maps:
+   - `(type, key) -> id` map for qualified link resolution
+   - `last-segment -> [ids]` map for unqualified link resolution
+2. **Pass 2**: Resolve all links using these maps
+   - Qualified links (`[[type:key]]`) use exact matching
+   - Unqualified links (`[[key]]`) use last-segment matching with ambiguity detection
+
+The indexer recursively scans all subdirectories within type folders, supporting path-based keys stored in nested directories.
 
 The index is stored in SQLite with the following schema:
 
 - `meta`: Metadata (schema version, etc.)
-- `nodes`: Note nodes with frontmatter
+- `nodes`: Note nodes with frontmatter (key column stores full path-based keys)
 - `edges`: Links between notes (with resolved `to_id`)
 - `tags`: Tags associated with notes
-- `diagnostics`: Parse errors and warnings
+- `diagnostics`: Parse errors, warnings, and ambiguous link notifications
 
 ### Graph Queries
 
@@ -398,7 +531,8 @@ touchlog new
 # 3. Enter title (e.g., "Introduction to touchlog")
 # 4. Add tags (optional, e.g., "getting-started, tutorial")
 # 5. Set state (optional, defaults to type's default)
-# 6. Review and confirm
+# 6. Enter filename (e.g., "intro")
+# 7. Review and confirm
 
 # Create another note that links to it
 touchlog new
@@ -409,6 +543,32 @@ touchlog index rebuild
 
 # Find backlinks to introduction
 touchlog query backlinks --target note:introduction
+```
+
+### Using Path-Based Keys
+
+```bash
+# Create a note with a path-based key for hierarchical organization
+touchlog new
+# Enter key: projects/web/auth
+# This creates: vault/note/projects/web/auth/filename.Rmd
+
+# Create another note in the same project
+touchlog new
+# Enter key: projects/web/api
+# This creates: vault/note/projects/web/api/filename.Rmd
+
+# Link to path-based keys using full path
+# In a note body: [[note:projects/web/auth]]
+
+# Or use last-segment matching (if unique)
+# In a note body: [[auth]]
+
+# Query using full path
+touchlog query backlinks --target note:projects/web/auth
+
+# Rebuild index - discovers notes in all subdirectories
+touchlog index rebuild
 ```
 
 ### Finding Related Notes
@@ -443,7 +603,7 @@ touchlog daemon stop
 
 ### Project Structure
 
-```
+```text
 touchlog/
 ├── cmd/
 │   └── touchlog/
@@ -499,11 +659,13 @@ make test-coverage
 
 You can run tests in isolated Linux and macOS environments using Docker. This ensures consistent test execution across different platforms.
 
+<!-- markdownlint-disable-next-line MD024 -->
 #### Prerequisites
 
 - Docker and Docker Compose installed
 - For macOS testing: macOS host (tests run natively on macOS)
 
+<!-- markdownlint-disable-next-line MD024 -->
 #### Quick Start
 
 ```bash
@@ -645,7 +807,7 @@ chmod 755 coverage
 
 #### File Structure
 
-```
+```text
 touchlog/
 ├── Dockerfile.test              # Docker image for testing
 ├── docker-compose.test.yml     # Docker Compose configuration

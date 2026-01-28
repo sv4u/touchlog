@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/sv4u/touchlog/v2/internal/model"
 	"gopkg.in/yaml.v3"
@@ -52,6 +53,39 @@ const DefaultKeyPattern = `^[a-z0-9]+(-[a-z0-9]+)*$`
 
 // DefaultKeyMaxLen is the default maximum length for keys
 const DefaultKeyMaxLen = 64
+
+// LastSegment returns the last segment of a key (after the last `/`).
+// For flat keys (no `/`), returns the key itself.
+func LastSegment(key string) string {
+	if idx := strings.LastIndex(key, "/"); idx >= 0 {
+		return key[idx+1:]
+	}
+	return key
+}
+
+// ValidateKey validates a key that may contain path segments separated by "/".
+// Each segment must match the pattern, and the total length must not exceed maxLen.
+func ValidateKey(key string, pattern *regexp.Regexp, maxLen int) error {
+	if key == "" {
+		return fmt.Errorf("key cannot be empty")
+	}
+	if strings.HasPrefix(key, "/") || strings.HasSuffix(key, "/") {
+		return fmt.Errorf("key cannot start or end with /")
+	}
+	if len(key) > maxLen {
+		return fmt.Errorf("key exceeds maximum length of %d", maxLen)
+	}
+	segments := strings.Split(key, "/")
+	for _, seg := range segments {
+		if seg == "" {
+			return fmt.Errorf("key cannot contain empty segments (consecutive slashes)")
+		}
+		if !pattern.MatchString(seg) {
+			return fmt.Errorf("segment %q does not match pattern %s", seg, pattern.String())
+		}
+	}
+	return nil
+}
 
 // LoadConfig loads and merges configuration from built-in, global, and repo sources
 // Merge precedence: built-in < global < repo

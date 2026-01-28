@@ -183,6 +183,20 @@ func TestFormatNote(t *testing.T) {
 		t.Error("expected content to contain body")
 	}
 
+	// Verify there's a newline between the closing --- and the body
+	contentStr := string(content)
+	closingFrontmatter := "---\n"
+	closingIndex := strings.LastIndex(contentStr, closingFrontmatter)
+	if closingIndex == -1 {
+		t.Error("expected to find closing '---\\n' in content")
+	} else {
+		// Check that there's at least one newline after the closing ---
+		afterClosing := contentStr[closingIndex+len(closingFrontmatter):]
+		if len(afterClosing) > 0 && afterClosing[0] != '\n' {
+			t.Error("expected newline between closing '---' and body")
+		}
+	}
+
 	// Verify it can be parsed
 	parsedNote := note.Parse("test.Rmd", content)
 	if parsedNote.FM.ID != "test-id" {

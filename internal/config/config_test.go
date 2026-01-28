@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/sv4u/touchlog/v2/internal/model"
@@ -627,4 +628,130 @@ func contains(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// TestLastSegment tests the LastSegment helper function
+func TestLastSegment(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"simple-key", "simple-key"},
+		{"a/b/c", "c"},
+		{"projects/web/auth", "auth"},
+		{"single", "single"},
+		{"a/b", "b"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		result := LastSegment(tt.input)
+		if result != tt.expected {
+			t.Errorf("LastSegment(%q) = %q, expected %q", tt.input, result, tt.expected)
+		}
+	}
+}
+
+// TestValidateKey tests the ValidateKey function
+func TestValidateKey(t *testing.T) {
+	defaultPattern := DefaultKeyPattern
+	pattern := compilePattern(defaultPattern)
+	maxLen := DefaultKeyMaxLen
+
+	tests := []struct {
+		key       string
+		expectErr bool
+		errMsg    string
+	}{
+		// Valid flat keys
+		{"simple-key", false, ""},
+		{"test", false, ""},
+		{"a-b-c", false, ""},
+
+		// Valid path-based keys
+		{"projects/web", false, ""},
+		{"a/b/c", false, ""},
+		{"projects/web/auth", false, ""},
+
+		// Invalid: empty
+		{"", true, "cannot be empty"},
+
+		// Invalid: leading slash
+		{"/a/b", true, "cannot start or end with /"},
+
+		// Invalid: trailing slash
+		{"a/b/", true, "cannot start or end with /"},
+
+		// Invalid: empty segment (consecutive slashes)
+		{"a//b", true, "empty segments"},
+
+		// Invalid: segment doesn't match pattern
+		{"A/b/c", true, "does not match pattern"},
+		{"projects/Web/auth", true, "does not match pattern"},
+
+		// Invalid: key too long
+		{createLongKey(100), true, "exceeds maximum length"},
+	}
+
+	for _, tt := range tests {
+		err := ValidateKey(tt.key, pattern, maxLen)
+		if tt.expectErr {
+			if err == nil {
+				t.Errorf("ValidateKey(%q) expected error containing %q, got nil", tt.key, tt.errMsg)
+			} else if !contains(err.Error(), tt.errMsg) {
+				t.Errorf("ValidateKey(%q) expected error containing %q, got %q", tt.key, tt.errMsg, err.Error())
+			}
+		} else {
+			if err != nil {
+				t.Errorf("ValidateKey(%q) expected no error, got %v", tt.key, err)
+			}
+		}
+	}
+}
+
+// TestValidateKey_AllSegmentsMustMatch tests that all segments must match the pattern
+func TestValidateKey_AllSegmentsMustMatch(t *testing.T) {
+	pattern := compilePattern(DefaultKeyPattern)
+
+	// All segments valid
+	err := ValidateKey("projects/web/auth", pattern, 100)
+	if err != nil {
+		t.Errorf("expected valid key, got error: %v", err)
+	}
+
+	// First segment invalid
+	err = ValidateKey("Projects/web/auth", pattern, 100)
+	if err == nil {
+		t.Error("expected error for invalid first segment")
+	}
+
+	// Middle segment invalid
+	err = ValidateKey("projects/Web/auth", pattern, 100)
+	if err == nil {
+		t.Error("expected error for invalid middle segment")
+	}
+
+	// Last segment invalid
+	err = ValidateKey("projects/web/Auth", pattern, 100)
+	if err == nil {
+		t.Error("expected error for invalid last segment")
+	}
+}
+
+// Helper to compile pattern
+func compilePattern(pattern string) *regexp.Regexp {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		panic(err)
+	}
+	return re
+}
+
+// Helper to create a long key
+func createLongKey(length int) string {
+	result := ""
+	for i := 0; i < length; i++ {
+		result += "a"
+	}
+	return result
 }
