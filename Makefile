@@ -1,4 +1,4 @@
-.PHONY: help build test test-race test-coverage lint fmt fmt-check deps deps-verify deps-tidy clean all install-tools docker-test docker-test-linux docker-test-linux-basic docker-test-linux-race docker-test-linux-coverage docker-test-macos docker-build-test docker-clean-test
+.PHONY: help build install test test-race test-coverage lint fmt fmt-check deps deps-verify deps-tidy clean all install-tools docker-test docker-test-linux docker-test-linux-basic docker-test-linux-race docker-test-linux-coverage docker-test-macos docker-build-test docker-clean-test
 
 # Variables
 BINARY_NAME=touchlog
@@ -8,8 +8,12 @@ COVERAGE_DIR=coverage
 GOLANGCI_LINT_VERSION=v2.6.2
 
 # Version detection
+# Try to get version from git, fallback to "dev" if git is not available
+# Users can override by setting VERSION and COMMIT manually:
+#   make build VERSION=1.0.0 COMMIT=abc123
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "")
+
 VERSION_PKG=github.com/sv4u/touchlog/v2/internal/version
 LDFLAGS=-X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Commit=$(COMMIT)
 
@@ -20,13 +24,40 @@ help: ## Show this help message
 
 # Build targets
 build: ## Build the binary
-	@echo "Building $(BINARY_NAME) (version: $(VERSION))..."
+	@if [ "$(VERSION)" = "dev" ] && [ -z "$(COMMIT)" ]; then \
+		if ! command -v git >/dev/null 2>&1; then \
+			echo "⚠ Warning: git is not installed. Version will be 'dev'."; \
+			echo "  Install git or set VERSION and COMMIT manually: make build VERSION=1.0.0 COMMIT=abc123"; \
+		elif ! git rev-parse --git-dir >/dev/null 2>&1; then \
+			echo "⚠ Warning: Not in a git repository. Version will be 'dev'."; \
+			echo "  Set VERSION and COMMIT manually: make build VERSION=1.0.0 COMMIT=abc123"; \
+		fi; \
+	fi
+	@echo "Building $(BINARY_NAME) (version: $(VERSION)$(if $(COMMIT),-$(COMMIT),))..."
 	@CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) $(MAIN_PATH)
+
+install: ## Install the binary with version information (from local source)
+	@if [ "$(VERSION)" = "dev" ] && [ -z "$(COMMIT)" ]; then \
+		if ! command -v git >/dev/null 2>&1; then \
+			echo "⚠ Warning: git is not installed. Version will be 'dev'."; \
+			echo "  Install git or set VERSION and COMMIT manually: make install VERSION=1.0.0 COMMIT=abc123"; \
+		elif ! git rev-parse --git-dir >/dev/null 2>&1; then \
+			echo "⚠ Warning: Not in a git repository. Version will be 'dev'."; \
+			echo "  Set VERSION and COMMIT manually: make install VERSION=1.0.0 COMMIT=abc123"; \
+		fi; \
+	fi
+	@echo "Installing $(BINARY_NAME) (version: $(VERSION)$(if $(COMMIT),-$(COMMIT),))..."
+	@go install -ldflags "$(LDFLAGS)" $(MAIN_PATH)
+	@if [ "$(VERSION)" = "dev" ] && [ -z "$(COMMIT)" ]; then \
+		echo "⚠ Installed $(BINARY_NAME) without version information (shows 'dev')"; \
+	else \
+		echo "✓ Installed $(BINARY_NAME) with version information"; \
+	fi
 
 # Test targets
 test: ## Run all tests
 	@echo "Running tests..."
-	@go test ./... -v
+	@go test ./... -v -timeout 10m
 
 test-race: ## Run tests with race detector
 	@echo "Running tests with race detector..."
@@ -70,7 +101,7 @@ test-coverage-xml: test-coverage ## Generate XML coverage report (requires gocov
 # Linting and code quality targets
 lint: ## Run all linters (golangci-lint, go vet, staticcheck)
 	@echo "Running golangci-lint..."
-	@golangci-lint run --version || (echo "golangci-lint not found. Install with: make install-tools" && exit 1)
+	@golangci-lint --version || (echo "golangci-lint not found. Install with: make install-tools" && exit 1)
 	@golangci-lint run
 	@echo "Running go vet..."
 	@go vet ./...

@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/store"
 	cli3 "github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
 )
@@ -47,6 +50,39 @@ func runNewWizard(vaultRoot string, cfg *config.Config) error {
 		return fmt.Errorf("no types configured in vault (run 'touchlog init' first)")
 	}
 
+	// Check if we're in an interactive terminal
+	if isInteractiveTerminal() {
+		return runInteractiveWizard(vaultRoot, cfg)
+	}
+
+	// Non-interactive mode (for tests)
+	return runNonInteractiveWizard(vaultRoot, cfg)
+}
+
+// runInteractiveWizard runs the bubbletea interactive wizard
+func runInteractiveWizard(vaultRoot string, cfg *config.Config) error {
+	model := initialModel(vaultRoot, cfg)
+	program := tea.NewProgram(model, tea.WithAltScreen())
+	finalModel, err := program.Run()
+	if err != nil {
+		return fmt.Errorf("running wizard: %w", err)
+	}
+
+	// Launch editor if note was created successfully
+	if wizardModel, ok := finalModel.(wizardModel); ok {
+		if wizardModel.notePath != "" {
+			if err := launchEditor(cfg, wizardModel.notePath); err != nil {
+				// Don't fail the command if editor launch fails, just warn
+				fmt.Fprintf(os.Stderr, "Warning: failed to launch editor: %v\n", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// runNonInteractiveWizard runs the wizard in non-interactive mode (for tests)
+func runNonInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 	// Step 1: Select type
 	typeName, err := selectType(cfg)
 	if err != nil {
@@ -76,11 +112,25 @@ func runNewWizard(vaultRoot string, cfg *config.Config) error {
 	// Step 5: Select state (default from type)
 	state := typeDef.DefaultState
 
-	// Step 6: Determine path
-	notePath := filepath.Join(vaultRoot, string(typeName), string(key)+".Rmd")
+	// Step 6: Input filename
+	filename, err := inputFilename(vaultRoot, typeName, key, title)
+	if err != nil {
+		return fmt.Errorf("inputting filename: %w", err)
+	}
+
+	// Step 7: Determine path with branching logic for backward compatibility
+	var notePath string
+	keyStr := string(key)
+	if strings.Contains(keyStr, "/") {
+		// Path-based key: file in subfolder
+		notePath = filepath.Join(vaultRoot, string(typeName), keyStr, filename+".Rmd")
+	} else {
+		// Flat key: file at type root (backward compatible)
+		notePath = filepath.Join(vaultRoot, string(typeName), filename+".Rmd")
+	}
 	typeDir := filepath.Dir(notePath)
 
-	// Step 7: Prompt for directory creation if missing
+	// Step 8: Prompt for directory creation if missing
 	if _, err := os.Stat(typeDir); os.IsNotExist(err) {
 		// For Phase 1, we'll create it automatically
 		// In a full implementation, we'd prompt: "Create directory? (y/N)"
@@ -89,13 +139,13 @@ func runNewWizard(vaultRoot string, cfg *config.Config) error {
 		}
 	}
 
-	// Step 8: Generate frontmatter and body
+	// Step 9: Generate frontmatter and body
 	now := time.Now().UTC()
 	noteID := generateNoteID()
 	frontmatter := generateFrontmatter(noteID, typeName, key, title, tags, state, now)
 	body := generateBody(title, cfg, typeName)
 
-	// Step 9: Write file atomically
+	// Step 10: Write file atomically
 	content := formatNote(frontmatter, body)
 	if err := AtomicWrite(notePath, content); err != nil {
 		return fmt.Errorf("writing note: %w", err)
@@ -104,9 +154,12 @@ func runNewWizard(vaultRoot string, cfg *config.Config) error {
 	fmt.Printf("✓ Created %s\n", notePath)
 	fmt.Printf("Note ID: %s\n", noteID)
 
-	// Step 10: Launch editor (skip for Phase 1, will be added later)
-	// For now, just inform the user
-	fmt.Println("\nNote created successfully. Edit it with your preferred editor.")
+	// Step 11: Launch editor
+	if err := launchEditor(cfg, notePath); err != nil {
+		// Don't fail the command if editor launch fails, just warn
+		fmt.Fprintf(os.Stderr, "Warning: failed to launch editor: %v\n", err)
+		fmt.Println("\nNote created successfully. Edit it with your preferred editor.")
+	}
 
 	return nil
 }
@@ -132,25 +185,36 @@ func inputKey(typeDef config.TypeDef, vaultRoot string, typeName model.TypeName)
 	// In a full implementation, we'd prompt and validate interactively
 	keyStr := "new-note"
 
-	// Validate pattern
-	if typeDef.KeyPattern != nil {
-		if !typeDef.KeyPattern.MatchString(keyStr) {
-			return "", fmt.Errorf("key %q does not match pattern %q", keyStr, typeDef.KeyPattern.String())
-		}
+	// Validate key using the new ValidateKey function that supports path-based keys
+	if err := config.ValidateKey(keyStr, typeDef.KeyPattern, typeDef.KeyMaxLen); err != nil {
+		return "", fmt.Errorf("invalid key: %w", err)
 	}
 
-	// Validate length
-	if len(keyStr) > typeDef.KeyMaxLen {
-		return "", fmt.Errorf("key %q exceeds maximum length of %d", keyStr, typeDef.KeyMaxLen)
-	}
-
-	// Check uniqueness within the type directory
-	notePath := filepath.Join(vaultRoot, string(typeName), keyStr+".Rmd")
-	if _, err := os.Stat(notePath); err == nil {
-		return "", fmt.Errorf("note with key %q already exists in type %q", keyStr, typeName)
+	// Check uniqueness using store if it exists (for indexed notes)
+	if err := checkKeyUniqueness(vaultRoot, typeName, keyStr); err != nil {
+		return "", err
 	}
 
 	return model.Key(keyStr), nil
+}
+
+// checkKeyUniqueness checks if a key already exists in the store
+func checkKeyUniqueness(vaultRoot string, typeName model.TypeName, keyStr string) error {
+	dbPath := filepath.Join(vaultRoot, ".touchlog", "index.db")
+	if _, err := os.Stat(dbPath); err == nil {
+		db, err := store.OpenOrCreateDB(vaultRoot)
+		if err == nil {
+			defer func() {
+				_ = db.Close()
+			}()
+			var exists int
+			err := db.QueryRow("SELECT 1 FROM nodes WHERE type = ? AND key = ?", typeName, keyStr).Scan(&exists)
+			if err == nil && exists == 1 {
+				return fmt.Errorf("note with key %q already exists in type %q", keyStr, typeName)
+			}
+		}
+	}
+	return nil
 }
 
 // inputTitle prompts for title (for Phase 1, uses default)
@@ -165,6 +229,39 @@ func inputTags() ([]string, error) {
 	// For Phase 1, use empty tags
 	// In a full implementation, we'd prompt and parse comma-separated values
 	return []string{}, nil
+}
+
+// inputFilename prompts for output filename
+func inputFilename(vaultRoot string, typeName model.TypeName, key model.Key, title string) (string, error) {
+	// For Phase 1, we'll use the title as default
+	// In a full implementation, we'd prompt interactively
+	// For non-interactive mode (tests), use sanitized title as default
+	filenameStr := sanitizeTitleForFilename(title)
+
+	// Remove .Rmd extension if provided (we'll add it automatically)
+	filenameStr = strings.TrimSuffix(filenameStr, ".Rmd")
+	filenameStr = strings.TrimSuffix(filenameStr, ".rmd")
+
+	// Validate filename (basic validation - no path separators)
+	if strings.Contains(filenameStr, string(filepath.Separator)) || strings.Contains(filenameStr, "/") || strings.Contains(filenameStr, "\\") {
+		return "", fmt.Errorf("filename cannot contain path separators")
+	}
+
+	// Check if file already exists using branching path logic
+	var notePath string
+	keyStr := string(key)
+	if strings.Contains(keyStr, "/") {
+		// Path-based key: file in subfolder
+		notePath = filepath.Join(vaultRoot, string(typeName), keyStr, filenameStr+".Rmd")
+	} else {
+		// Flat key: file at type root (backward compatible)
+		notePath = filepath.Join(vaultRoot, string(typeName), filenameStr+".Rmd")
+	}
+	if _, err := os.Stat(notePath); err == nil {
+		return "", fmt.Errorf("file %q already exists", filenameStr+".Rmd")
+	}
+
+	return filenameStr, nil
 }
 
 // generateNoteID generates a unique note ID
@@ -210,8 +307,80 @@ func formatNote(frontmatter map[string]any, body string) []byte {
 	buf.Write(fmYAML)
 	buf.WriteString("---\n")
 
-	// Write body
+	// Write body with newline between frontmatter and body
+	buf.WriteString("\n")
 	buf.WriteString(body)
 
 	return []byte(buf.String())
+}
+
+// sanitizeTitleForFilename converts a title to a filename-safe string
+func sanitizeTitleForFilename(title string) string {
+	// Convert to lowercase
+	filename := strings.ToLower(title)
+
+	// Replace spaces with hyphens
+	filename = strings.ReplaceAll(filename, " ", "-")
+
+	// Remove or replace invalid filename characters
+	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", ".", ",", "!", "@", "#", "$", "%", "^", "&", "(", ")", "+", "=", "[", "]", "{", "}", ";", "'"}
+	for _, char := range invalidChars {
+		filename = strings.ReplaceAll(filename, char, "")
+	}
+
+	// Replace multiple consecutive hyphens with a single hyphen
+	for strings.Contains(filename, "--") {
+		filename = strings.ReplaceAll(filename, "--", "-")
+	}
+
+	// Trim leading and trailing hyphens
+	filename = strings.Trim(filename, "-")
+
+	// If empty after sanitization, use a default
+	if filename == "" {
+		filename = "untitled"
+	}
+
+	return filename
+}
+
+// launchEditor launches the configured editor to open the specified file
+func launchEditor(cfg *config.Config, filePath string) error {
+	// If no editor is configured, skip
+	if cfg.Editor == "" {
+		return nil
+	}
+
+	// Skip editor launch in test environments to prevent tests from hanging
+	// Check for test flags in command line arguments
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "-test.") {
+			// Running in test mode, skip editor launch
+			return nil
+		}
+	}
+
+	// Parse editor command - split by spaces
+	// Note: This simple parsing doesn't handle quoted arguments with spaces.
+	// For complex cases, users should ensure editor paths don't contain spaces
+	// or use the full path without spaces.
+	editorCmd := strings.Fields(cfg.Editor)
+	if len(editorCmd) == 0 {
+		return fmt.Errorf("editor command is empty")
+	}
+
+	// Create command with file path as last argument
+	// #nosec G204 - filePath is constructed using filepath.Join from validated inputs
+	// and passed directly to exec.Command (not shell), so it's safe from command injection
+	cmd := exec.Command(editorCmd[0], append(editorCmd[1:], filePath)...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// Run the editor (this will block until editor exits)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("running editor %q: %w", cfg.Editor, err)
+	}
+
+	return nil
 }

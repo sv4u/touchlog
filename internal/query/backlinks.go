@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/graph"
 	"github.com/sv4u/touchlog/v2/internal/model"
 	"github.com/sv4u/touchlog/v2/internal/store"
@@ -130,6 +131,8 @@ func ExecuteBacklinks(vaultRoot string, q *BacklinksQuery) ([]BacklinksResult, e
 }
 
 // resolveNodeID resolves a node identifier (type:key or just key) to a NoteID
+// For unqualified identifiers, first tries exact match on full key, then falls back
+// to last-segment matching for path-based key support
 func resolveNodeID(vaultRoot string, identifier string) (model.NoteID, error) {
 	// Open database
 	db, err := store.OpenOrCreateDB(vaultRoot)
@@ -157,21 +160,18 @@ func resolveNodeID(vaultRoot string, identifier string) (model.NoteID, error) {
 		return "", fmt.Errorf("invalid node identifier format: %s (expected 'type:key' or 'key')", identifier)
 	}
 
-	// Query database
-	var query string
-	var args []interface{}
-
 	if nodeType != nil {
-		// Qualified lookup
-		query = "SELECT id FROM nodes WHERE type = ? AND key = ?"
-		args = []interface{}{*nodeType, key}
-	} else {
-		// Unqualified lookup - check for uniqueness
-		query = "SELECT id, type FROM nodes WHERE key = ?"
-		args = []interface{}{key}
+		// Qualified lookup - exact match on (type, key)
+		var id string
+		err := db.QueryRow("SELECT id FROM nodes WHERE type = ? AND key = ?", *nodeType, key).Scan(&id)
+		if err != nil {
+			return "", fmt.Errorf("node not found: %s:%s", *nodeType, key)
+		}
+		return model.NoteID(id), nil
 	}
 
-	rows, err := db.Query(query, args...)
+	// Unqualified lookup - first try exact match on full key, then fall back to last-segment matching
+	rows, err := db.Query("SELECT id, type, key FROM nodes")
 	if err != nil {
 		return "", fmt.Errorf("querying nodes: %w", err)
 	}
@@ -179,23 +179,30 @@ func resolveNodeID(vaultRoot string, identifier string) (model.NoteID, error) {
 		_ = rows.Close()
 	}()
 
-	var nodeIDs []model.NoteID
-	var types []string
+	var exactMatchIDs []model.NoteID
+	var exactMatchKeys []string
+	var lastSegMatchIDs []model.NoteID
+	var lastSegMatchKeys []string
+
+	searchLastSeg := config.LastSegment(key)
 
 	for rows.Next() {
-		var id string
-		if nodeType != nil {
-			if err := rows.Scan(&id); err != nil {
-				return "", err
-			}
-			nodeIDs = append(nodeIDs, model.NoteID(id))
-		} else {
-			var typ string
-			if err := rows.Scan(&id, &typ); err != nil {
-				return "", err
-			}
-			nodeIDs = append(nodeIDs, model.NoteID(id))
-			types = append(types, typ)
+		var id, typ, nodeKey string
+		if err := rows.Scan(&id, &typ, &nodeKey); err != nil {
+			return "", err
+		}
+
+		// Check for exact match on full key first
+		if nodeKey == key {
+			exactMatchIDs = append(exactMatchIDs, model.NoteID(id))
+			exactMatchKeys = append(exactMatchKeys, fmt.Sprintf("%s:%s", typ, nodeKey))
+		}
+
+		// Also collect last-segment matches for fallback
+		nodeLastSeg := config.LastSegment(nodeKey)
+		if nodeLastSeg == searchLastSeg {
+			lastSegMatchIDs = append(lastSegMatchIDs, model.NoteID(id))
+			lastSegMatchKeys = append(lastSegMatchKeys, fmt.Sprintf("%s:%s", typ, nodeKey))
 		}
 	}
 
@@ -203,14 +210,23 @@ func resolveNodeID(vaultRoot string, identifier string) (model.NoteID, error) {
 		return "", err
 	}
 
-	if len(nodeIDs) == 0 {
+	// Priority 1: Exact match on full key
+	if len(exactMatchIDs) == 1 {
+		return exactMatchIDs[0], nil
+	}
+	if len(exactMatchIDs) > 1 {
+		// Multiple exact matches (same key in different types)
+		return "", fmt.Errorf("ambiguous node identifier '%s': matches %d notes (%s). Use qualified identifier (type:key)", key, len(exactMatchIDs), strings.Join(exactMatchKeys, ", "))
+	}
+
+	// Priority 2: Fall back to last-segment matching
+	if len(lastSegMatchIDs) == 0 {
 		return "", fmt.Errorf("node not found: %s", identifier)
 	}
-
-	if len(nodeIDs) > 1 {
-		// Ambiguous
-		return "", fmt.Errorf("ambiguous node identifier %s: matches %d types (%s)", key, len(nodeIDs), strings.Join(types, ", "))
+	if len(lastSegMatchIDs) == 1 {
+		return lastSegMatchIDs[0], nil
 	}
 
-	return nodeIDs[0], nil
+	// Multiple last-segment matches
+	return "", fmt.Errorf("ambiguous node identifier '%s': matches %d notes (%s). Use qualified identifier (type:full/path/key)", key, len(lastSegMatchIDs), strings.Join(lastSegMatchKeys, ", "))
 }
