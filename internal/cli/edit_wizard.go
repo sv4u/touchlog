@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -56,6 +57,11 @@ type editWizardModel struct {
 	vaultRoot string
 	quitting  bool
 	err       error
+
+	// Quit sequence state
+	quitSequence   string
+	lastEscTime    time.Time
+	inQuitSequence bool
 }
 
 // initialEditModel creates the initial edit wizard model
@@ -79,8 +85,11 @@ func initialEditModel(notes []noteItem, vaultRoot string) editWizardModel {
 		MarginLeft(2)
 
 	return editWizardModel{
-		list:      l,
-		vaultRoot: vaultRoot,
+		list:           l,
+		vaultRoot:      vaultRoot,
+		quitSequence:   "",
+		lastEscTime:    time.Time{},
+		inQuitSequence: false,
 	}
 }
 
@@ -93,20 +102,70 @@ func (m editWizardModel) Init() tea.Cmd {
 func (m editWizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Don't handle keys when filtering
-		if m.list.FilterState() == list.Filtering {
-			break
+		// 1. Handle quit sequence FIRST (before filtering check)
+		if m.inQuitSequence {
+			keyStr := msg.String()
+			switch m.quitSequence {
+			case "waiting_for_colon":
+				if keyStr == ":" {
+					m.quitSequence = "waiting_for_q"
+					return m, nil
+				}
+				// Non-matching key: reset and process normally
+				m.inQuitSequence = false
+				m.quitSequence = ""
+				// Fall through to normal processing
+			case "waiting_for_q":
+				if keyStr == "q" {
+					m.quitting = true
+					return m, tea.Quit
+				}
+				// Non-matching key: reset and process normally
+				m.inQuitSequence = false
+				m.quitSequence = ""
+				// Fall through to normal processing
+			}
 		}
 
+		// 2. Handle Esc (with double-Esc detection)
+		if msg.String() == "esc" {
+			now := time.Now()
+			if m.inQuitSequence {
+				// Esc cancels quit sequence
+				m.inQuitSequence = false
+				m.quitSequence = ""
+				m.lastEscTime = time.Time{}
+				// Continue with normal processing
+			} else if !m.lastEscTime.IsZero() && now.Sub(m.lastEscTime) < escDoublePressWindow {
+				// Double Esc detected: enter quit sequence
+				m.inQuitSequence = true
+				m.quitSequence = "waiting_for_colon"
+				m.lastEscTime = time.Time{}
+				return m, nil
+			}
+			m.lastEscTime = now
+			// Esc doesn't have special behavior in edit wizard, let it pass through
+		}
+
+		// 3. Handle Ctrl+C and Enter
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
 		case "enter":
+			// Don't handle enter when filtering
+			if m.list.FilterState() == list.Filtering {
+				break
+			}
 			if item, ok := m.list.SelectedItem().(noteItem); ok {
 				m.selected = &item
 				return m, tea.Quit
 			}
+		}
+
+		// 4. Don't handle keys when filtering (existing check)
+		if m.list.FilterState() == list.Filtering {
+			break
 		}
 
 	case tea.WindowSizeMsg:
@@ -114,6 +173,7 @@ func (m editWizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 	}
 
+	// 5. Delegate to list
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
@@ -122,7 +182,7 @@ func (m editWizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View renders the UI
 func (m editWizardModel) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("Error: %v\n\nPress q to quit.", m.err)
+		return fmt.Sprintf("Error: %v\n\nPress Esc Esc then :q to quit.", m.err)
 	}
 
 	if m.quitting {

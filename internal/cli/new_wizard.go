@@ -28,6 +28,8 @@ const (
 	stateError
 )
 
+const escDoublePressWindow = 500 * time.Millisecond
+
 // wizardModel represents the bubbletea model for the new note wizard
 type wizardModel struct {
 	vaultRoot string
@@ -56,6 +58,11 @@ type wizardModel struct {
 	verifying     bool
 	notePath      string
 	noteID        model.NoteID
+
+	// Quit sequence state
+	quitSequence   string
+	lastEscTime    time.Time
+	inQuitSequence bool
 }
 
 // initialModel creates the initial wizard model
@@ -70,15 +77,18 @@ func initialModel(vaultRoot string, cfg *config.Config) wizardModel {
 	// We'll populate this when a type is selected
 
 	return wizardModel{
-		vaultRoot:     vaultRoot,
-		cfg:           cfg,
-		state:         stateSelectType,
-		typeChoices:   typeChoices,
-		keyInput:      "",
-		titleInput:    "",
-		tagsInput:     "",
-		stateInput:    "",
-		filenameInput: "",
+		vaultRoot:      vaultRoot,
+		cfg:            cfg,
+		state:          stateSelectType,
+		typeChoices:    typeChoices,
+		keyInput:       "",
+		titleInput:     "",
+		tagsInput:      "",
+		stateInput:     "",
+		filenameInput:  "",
+		quitSequence:   "",
+		lastEscTime:    time.Time{},
+		inQuitSequence: false,
 	}
 }
 
@@ -91,17 +101,59 @@ func (m wizardModel) Init() tea.Cmd {
 func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// 1. Handle quit sequence FIRST (before any other key handling)
+		if m.inQuitSequence {
+			keyStr := msg.String()
+			switch m.quitSequence {
+			case "waiting_for_colon":
+				if keyStr == ":" {
+					m.quitSequence = "waiting_for_q"
+					return m, nil
+				}
+				// Non-matching key: reset and process normally
+				m.inQuitSequence = false
+				m.quitSequence = ""
+				// Fall through to normal processing
+			case "waiting_for_q":
+				if keyStr == "q" {
+					return m, tea.Quit
+				}
+				// Non-matching key: reset and process normally
+				m.inQuitSequence = false
+				m.quitSequence = ""
+				// Fall through to normal processing
+			}
+		}
+
+		// 2. Handle Esc key (with double-Esc detection)
 		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
 		case "esc":
+			now := time.Now()
+			if m.inQuitSequence {
+				// Esc cancels quit sequence
+				m.inQuitSequence = false
+				m.quitSequence = ""
+				m.lastEscTime = time.Time{} // Reset
+				// Continue with normal Esc behavior below
+			} else if !m.lastEscTime.IsZero() && now.Sub(m.lastEscTime) < escDoublePressWindow {
+				// Double Esc detected: enter quit sequence
+				m.inQuitSequence = true
+				m.quitSequence = "waiting_for_colon"
+				m.lastEscTime = time.Time{} // Reset for next time
+				return m, nil
+			}
+			// Single Esc: preserve existing behavior
+			m.lastEscTime = now
 			if m.state != stateSelectType {
 				// Go back to previous state
 				return m.goBack(), nil
 			}
 			return m, tea.Quit
+		case "ctrl+c":
+			return m, tea.Quit
 		}
 
+		// 3. Delegate to state-specific handlers
 		switch m.state {
 		case stateSelectType:
 			return m.updateTypeSelection(msg)
@@ -126,7 +178,7 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View renders the UI
 func (m wizardModel) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("Error: %v\n\nPress q to quit.", m.err)
+		return fmt.Sprintf("Error: %v\n\nPress Esc Esc then :q to quit.", m.err)
 	}
 
 	switch m.state {
@@ -187,7 +239,7 @@ func (m wizardModel) viewTypeSelection() string {
 		s.WriteString(fmt.Sprintf("%s %s - %s\n", cursor, choice, typeDef.Description))
 	}
 
-	s.WriteString("\n(Use arrow keys to navigate, Enter to select, q to quit)")
+	s.WriteString("\n(Use arrow keys to navigate, Enter to select, Double Esc + :q to quit)")
 	return s.String()
 }
 
@@ -240,7 +292,7 @@ func (m wizardModel) viewKeyInput() string {
 	if m.keyError != "" {
 		s.WriteString(fmt.Sprintf("\n\nError: %s", m.keyError))
 	}
-	s.WriteString("\n\n(Enter to continue, Esc to go back, q to quit)")
+	s.WriteString("\n\n(Enter to continue, Esc to go back, Double Esc + :q to quit)")
 	return s.String()
 }
 
@@ -273,7 +325,7 @@ func (m wizardModel) viewTitleInput() string {
 	s := strings.Builder{}
 	s.WriteString("Enter title:\n\n")
 	s.WriteString(fmt.Sprintf("> %s", m.titleInput))
-	s.WriteString("\n\n(Enter to continue, Esc to go back, q to quit)")
+	s.WriteString("\n\n(Enter to continue, Esc to go back, Double Esc + :q to quit)")
 	return s.String()
 }
 
@@ -311,7 +363,7 @@ func (m wizardModel) viewTagsInput() string {
 	s := strings.Builder{}
 	s.WriteString("Enter tags (comma-separated, optional):\n\n")
 	s.WriteString(fmt.Sprintf("> %s", m.tagsInput))
-	s.WriteString("\n\n(Enter to continue, Esc to go back, q to quit)")
+	s.WriteString("\n\n(Enter to continue, Esc to go back, Double Esc + :q to quit)")
 	return s.String()
 }
 
@@ -343,7 +395,7 @@ func (m wizardModel) viewStateInput() string {
 	s := strings.Builder{}
 	s.WriteString(fmt.Sprintf("Enter state (optional, default: %s):\n\n", m.typeDef.DefaultState))
 	s.WriteString(fmt.Sprintf("> %s", m.stateInput))
-	s.WriteString("\n\n(Enter to continue with default or custom state, Esc to go back, q to quit)")
+	s.WriteString("\n\n(Enter to continue with default or custom state, Esc to go back, Double Esc + :q to quit)")
 	return s.String()
 }
 
@@ -412,7 +464,7 @@ func (m wizardModel) viewFilenameInput() string {
 	if m.filenameError != "" {
 		s.WriteString(fmt.Sprintf("\n\nError: %s", m.filenameError))
 	}
-	s.WriteString("\n\n(Enter to continue, Esc to go back, q to quit)")
+	s.WriteString("\n\n(Enter to continue, Esc to go back, Double Esc + :q to quit)")
 	return s.String()
 }
 
@@ -462,7 +514,7 @@ func (m wizardModel) viewVerification() string {
 	}
 	s.WriteString(fmt.Sprintf("State:    %s\n", m.stateVal))
 	s.WriteString(fmt.Sprintf("Filename: %s.Rmd\n", m.filenameInput))
-	s.WriteString("\n(Create note? [y/N], Esc to go back, q to quit)")
+	s.WriteString("\n(Create note? [y/N], Esc to go back, Double Esc + :q to quit)")
 	return s.String()
 }
 
