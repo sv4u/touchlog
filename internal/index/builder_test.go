@@ -177,6 +177,9 @@ func TestBuilder_ResolveLinks_Qualified(t *testing.T) {
 		{Type: "log", Key: "target-1"}:  "log-target-1",
 	}
 
+	// Build lastSegmentMap from typeKeyMap
+	lastSegmentMap := buildLastSegmentMap(typeKeyMap)
+
 	rawLinks := []model.RawLink{
 		{
 			Source: model.TypeKey{Type: "note", Key: "source-1"},
@@ -189,7 +192,7 @@ func TestBuilder_ResolveLinks_Qualified(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, "note")
+	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
 
 	if len(diags) != 0 {
 		t.Errorf("expected no diagnostics, got %d", len(diags))
@@ -213,6 +216,9 @@ func TestBuilder_ResolveLinks_Unqualified_Unique(t *testing.T) {
 		{Type: "note", Key: "target-1"}: "note-target-1",
 	}
 
+	// Build lastSegmentMap from typeKeyMap
+	lastSegmentMap := buildLastSegmentMap(typeKeyMap)
+
 	rawLinks := []model.RawLink{
 		{
 			Source: model.TypeKey{Type: "note", Key: "source-1"},
@@ -225,7 +231,7 @@ func TestBuilder_ResolveLinks_Unqualified_Unique(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, "note")
+	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
 
 	if len(diags) != 0 {
 		t.Errorf("expected no diagnostics, got %d", len(diags))
@@ -250,6 +256,9 @@ func TestBuilder_ResolveLinks_Unqualified_Ambiguous(t *testing.T) {
 		{Type: "log", Key: "target-1"}:  "log-target-1",
 	}
 
+	// Build lastSegmentMap from typeKeyMap
+	lastSegmentMap := buildLastSegmentMap(typeKeyMap)
+
 	rawLinks := []model.RawLink{
 		{
 			Source: model.TypeKey{Type: "note", Key: "source-1"},
@@ -262,7 +271,7 @@ func TestBuilder_ResolveLinks_Unqualified_Ambiguous(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, "note")
+	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
 
 	if len(diags) != 1 {
 		t.Fatalf("expected 1 diagnostic, got %d", len(diags))
@@ -290,6 +299,9 @@ func TestBuilder_ResolveLinks_Unresolved(t *testing.T) {
 
 	typeKeyMap := map[model.TypeKey]model.NoteID{}
 
+	// Build lastSegmentMap from typeKeyMap (empty in this case)
+	lastSegmentMap := buildLastSegmentMap(typeKeyMap)
+
 	rawLinks := []model.RawLink{
 		{
 			Source: model.TypeKey{Type: "note", Key: "source-1"},
@@ -302,7 +314,7 @@ func TestBuilder_ResolveLinks_Unresolved(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, "note")
+	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
 
 	if len(diags) != 1 {
 		t.Fatalf("expected 1 diagnostic, got %d", len(diags))
@@ -319,4 +331,14 @@ func TestBuilder_ResolveLinks_Unresolved(t *testing.T) {
 	if resolvedEdges[0].ResolvedToID != nil {
 		t.Error("expected unresolved to_id, got resolved")
 	}
+}
+
+// buildLastSegmentMap builds a last-segment map from a typeKeyMap for testing
+func buildLastSegmentMap(typeKeyMap map[model.TypeKey]model.NoteID) map[string][]model.NoteID {
+	lastSegmentMap := make(map[string][]model.NoteID)
+	for typeKey, noteID := range typeKeyMap {
+		lastSeg := config.LastSegment(string(typeKey.Key))
+		lastSegmentMap[lastSeg] = append(lastSegmentMap[lastSeg], noteID)
+	}
+	return lastSegmentMap
 }

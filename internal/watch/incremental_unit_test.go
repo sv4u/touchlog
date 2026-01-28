@@ -106,6 +106,9 @@ func TestIncrementalIndexer_ResolveLinks_QualifiedLink(t *testing.T) {
 		{Type: "note", Key: "target-note"}: "note-target",
 	}
 
+	// Build lastSegmentMap from typeKeyMap
+	lastSegmentMap := buildLastSegmentMapForTest(typeKeyMap)
+
 	// Test qualified link that resolves
 	noteType := model.TypeName("note")
 	rawLinks := []model.RawLink{
@@ -119,7 +122,7 @@ func TestIncrementalIndexer_ResolveLinks_QualifiedLink(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, noteType)
+	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
 
 	if len(resolvedEdges) != 1 {
 		t.Errorf("expected 1 resolved edge, got %d", len(resolvedEdges))
@@ -158,6 +161,9 @@ func TestIncrementalIndexer_ResolveLinks_UnresolvedQualifiedLink(t *testing.T) {
 	// Empty type-key map (no targets)
 	typeKeyMap := map[model.TypeKey]model.NoteID{}
 
+	// Build lastSegmentMap from typeKeyMap (empty)
+	lastSegmentMap := buildLastSegmentMapForTest(typeKeyMap)
+
 	// Test qualified link that doesn't resolve
 	noteType := model.TypeName("note")
 	rawLinks := []model.RawLink{
@@ -171,7 +177,7 @@ func TestIncrementalIndexer_ResolveLinks_UnresolvedQualifiedLink(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, noteType)
+	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
 
 	if len(resolvedEdges) != 1 {
 		t.Errorf("expected 1 resolved edge, got %d", len(resolvedEdges))
@@ -212,6 +218,9 @@ func TestIncrementalIndexer_ResolveLinks_UnqualifiedLink(t *testing.T) {
 		{Type: "note", Key: "target-note"}: "note-target",
 	}
 
+	// Build lastSegmentMap from typeKeyMap
+	lastSegmentMap := buildLastSegmentMapForTest(typeKeyMap)
+
 	// Test unqualified link that resolves
 	noteType := model.TypeName("note")
 	rawLinks := []model.RawLink{
@@ -225,7 +234,7 @@ func TestIncrementalIndexer_ResolveLinks_UnqualifiedLink(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, noteType)
+	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
 
 	if len(resolvedEdges) != 1 {
 		t.Errorf("expected 1 resolved edge, got %d", len(resolvedEdges))
@@ -265,6 +274,9 @@ func TestIncrementalIndexer_ResolveLinks_AmbiguousLink(t *testing.T) {
 		{Type: "decision", Key: "ambiguous"}: "decision-ambiguous",
 	}
 
+	// Build lastSegmentMap from typeKeyMap
+	lastSegmentMap := buildLastSegmentMapForTest(typeKeyMap)
+
 	// Test unqualified link that matches multiple types
 	noteType := model.TypeName("note")
 	rawLinks := []model.RawLink{
@@ -278,7 +290,7 @@ func TestIncrementalIndexer_ResolveLinks_AmbiguousLink(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, noteType)
+	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
 
 	if len(resolvedEdges) != 1 {
 		t.Errorf("expected 1 resolved edge, got %d", len(resolvedEdges))
@@ -293,4 +305,14 @@ func TestIncrementalIndexer_ResolveLinks_AmbiguousLink(t *testing.T) {
 	if diags[0].Code != "AMBIGUOUS_LINK" {
 		t.Errorf("expected diagnostic code 'AMBIGUOUS_LINK', got %q", diags[0].Code)
 	}
+}
+
+// buildLastSegmentMapForTest builds a last-segment map from a typeKeyMap for testing
+func buildLastSegmentMapForTest(typeKeyMap map[model.TypeKey]model.NoteID) map[string][]model.NoteID {
+	lastSegmentMap := make(map[string][]model.NoteID)
+	for typeKey, noteID := range typeKeyMap {
+		lastSeg := config.LastSegment(string(typeKey.Key))
+		lastSegmentMap[lastSeg] = append(lastSegmentMap[lastSeg], noteID)
+	}
+	return lastSegmentMap
 }

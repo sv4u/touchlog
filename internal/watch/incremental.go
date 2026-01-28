@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -119,9 +118,9 @@ func (ii *IncrementalIndexer) processFileUpdate(tx *sql.Tx, filePath string) err
 
 	if err == sql.ErrNoRows {
 		// New node - insert it
-		// First, we need to build the type/key -> id map for link resolution
-		// For incremental updates, we'll load it from the database
-		typeKeyMap, err := ii.loadTypeKeyMap(tx)
+		// First, we need to build the type/key -> id map and last-segment map for link resolution
+		// For incremental updates, we'll load them from the database
+		typeKeyMap, lastSegmentMap, err := ii.loadTypeKeyMap(tx)
 		if err != nil {
 			return fmt.Errorf("loading type/key map: %w", err)
 		}
@@ -137,7 +136,7 @@ func (ii *IncrementalIndexer) processFileUpdate(tx *sql.Tx, filePath string) err
 		}
 
 		// Resolve and replace edges
-		resolvedEdges, diags := ii.resolveLinks(parsedNote.RawLinks, typeKeyMap, parsedNote.FM.Type)
+		resolvedEdges, diags := ii.resolveLinks(parsedNote.RawLinks, typeKeyMap, lastSegmentMap, parsedNote.FM.Type)
 		if err := ii.replaceEdgesTx(tx, parsedNote.FM.ID, resolvedEdges); err != nil {
 			return err
 		}
@@ -159,7 +158,7 @@ func (ii *IncrementalIndexer) processFileUpdate(tx *sql.Tx, filePath string) err
 		}
 
 		// File changed - update it
-		typeKeyMap, err := ii.loadTypeKeyMap(tx)
+		typeKeyMap, lastSegmentMap, err := ii.loadTypeKeyMap(tx)
 		if err != nil {
 			return fmt.Errorf("loading type/key map: %w", err)
 		}
@@ -175,7 +174,7 @@ func (ii *IncrementalIndexer) processFileUpdate(tx *sql.Tx, filePath string) err
 		}
 
 		// Resolve and replace edges
-		resolvedEdges, diags := ii.resolveLinks(parsedNote.RawLinks, typeKeyMap, parsedNote.FM.Type)
+		resolvedEdges, diags := ii.resolveLinks(parsedNote.RawLinks, typeKeyMap, lastSegmentMap, parsedNote.FM.Type)
 		if err := ii.replaceEdgesTx(tx, parsedNote.FM.ID, resolvedEdges); err != nil {
 			return err
 		}
@@ -218,29 +217,35 @@ func (ii *IncrementalIndexer) processFileDeleteTx(tx *sql.Tx, filePath string) e
 	return nil
 }
 
-// loadTypeKeyMap loads the type/key -> id map from the database
-func (ii *IncrementalIndexer) loadTypeKeyMap(tx *sql.Tx) (map[model.TypeKey]model.NoteID, error) {
+// loadTypeKeyMap loads the type/key -> id map and last-segment map from the database
+func (ii *IncrementalIndexer) loadTypeKeyMap(tx *sql.Tx) (map[model.TypeKey]model.NoteID, map[string][]model.NoteID, error) {
 	rows, err := tx.Query("SELECT id, type, key FROM nodes")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() {
 		_ = rows.Close()
 	}()
 
 	typeKeyMap := make(map[model.TypeKey]model.NoteID)
+	lastSegmentMap := make(map[string][]model.NoteID)
 	for rows.Next() {
 		var id, typ, key string
 		if err := rows.Scan(&id, &typ, &key); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		noteID := model.NoteID(id)
 		typeKeyMap[model.TypeKey{
 			Type: model.TypeName(typ),
 			Key:  model.Key(key),
-		}] = model.NoteID(id)
+		}] = noteID
+
+		// Also index by last segment for unqualified link resolution
+		lastSeg := config.LastSegment(key)
+		lastSegmentMap[lastSeg] = append(lastSegmentMap[lastSeg], noteID)
 	}
 
-	return typeKeyMap, rows.Err()
+	return typeKeyMap, lastSegmentMap, rows.Err()
 }
 
 // Helper functions for transaction-based operations
@@ -337,7 +342,7 @@ func (ii *IncrementalIndexer) replaceDiagnosticsTx(tx *sql.Tx, nodeID model.Note
 }
 
 // resolveLinks resolves raw links to edges (same logic as builder)
-func (ii *IncrementalIndexer) resolveLinks(rawLinks []model.RawLink, typeKeyMap map[model.TypeKey]model.NoteID, sourceType model.TypeName) ([]model.RawLink, []model.Diagnostic) {
+func (ii *IncrementalIndexer) resolveLinks(rawLinks []model.RawLink, typeKeyMap map[model.TypeKey]model.NoteID, lastSegmentMap map[string][]model.NoteID, sourceType model.TypeName) ([]model.RawLink, []model.Diagnostic) {
 	// This is the same logic as in builder.go
 	// For Phase 3, we'll duplicate it here
 	// In a full implementation, we'd extract this to a shared package
@@ -349,7 +354,7 @@ func (ii *IncrementalIndexer) resolveLinks(rawLinks []model.RawLink, typeKeyMap 
 		var diagnostic *model.Diagnostic
 
 		if link.Target.Type != nil {
-			// Qualified link
+			// Qualified link: [[type:key]]
 			typeKey := model.TypeKey{
 				Type: *link.Target.Type,
 				Key:  link.Target.Key,
@@ -365,36 +370,56 @@ func (ii *IncrementalIndexer) resolveLinks(rawLinks []model.RawLink, typeKeyMap 
 				}
 			}
 		} else {
-			// Unqualified link
-			var matches []model.TypeKey
+			// Unqualified link: [[key]]
+			// First try exact match on full key, then fall back to last-segment matching
+			searchKey := string(link.Target.Key)
+
+			// Priority 1: Try exact match on full key (across all types)
+			var exactMatches []model.NoteID
 			for typeKey, id := range typeKeyMap {
-				if typeKey.Key == link.Target.Key {
-					matches = append(matches, typeKey)
-					if targetID == nil {
-						targetID = &id
-					}
+				if string(typeKey.Key) == searchKey {
+					exactMatches = append(exactMatches, id)
 				}
 			}
 
-			if len(matches) == 0 {
-				diagnostic = &model.Diagnostic{
-					Level:   model.DiagnosticLevelWarn,
-					Code:    "UNRESOLVED_LINK",
-					Message: fmt.Sprintf("Link target '%s' not found. The target note may not exist or may not have been indexed yet. Use a qualified link (type:key) or run 'touchlog index rebuild'.", link.Target.Key),
-					Span:    link.Span,
-				}
-			} else if len(matches) > 1 {
-				typeNames := make([]string, len(matches))
-				for i, match := range matches {
-					typeNames[i] = string(match.Type)
-				}
+			if len(exactMatches) == 1 {
+				// Unique exact match
+				targetID = &exactMatches[0]
+			} else if len(exactMatches) > 1 {
+				// Multiple exact matches (same key in different types)
 				diagnostic = &model.Diagnostic{
 					Level:   model.DiagnosticLevelError,
 					Code:    "AMBIGUOUS_LINK",
-					Message: fmt.Sprintf("Link target '%s' is ambiguous - matches %d types: %s. Use a qualified link (type:key) to specify the target type.", link.Target.Key, len(matches), strings.Join(typeNames, ", ")),
+					Message: fmt.Sprintf("Link target '%s' is ambiguous - matches %d notes with the same key. Use a qualified link (type:key) to specify the target.", searchKey, len(exactMatches)),
 					Span:    link.Span,
 				}
 				targetID = nil
+			} else {
+				// Priority 2: Fall back to last-segment matching
+				lastSeg := config.LastSegment(searchKey)
+				matchingIDs := lastSegmentMap[lastSeg]
+
+				if len(matchingIDs) == 0 {
+					// No match found
+					diagnostic = &model.Diagnostic{
+						Level:   model.DiagnosticLevelWarn,
+						Code:    "UNRESOLVED_LINK",
+						Message: fmt.Sprintf("Link target '%s' not found. The target note may not exist or may not have been indexed yet. Use a qualified link (type:key) or run 'touchlog index rebuild'.", searchKey),
+						Span:    link.Span,
+					}
+				} else if len(matchingIDs) == 1 {
+					// Unique last-segment match
+					targetID = &matchingIDs[0]
+				} else {
+					// Ambiguous: multiple notes have same last segment
+					diagnostic = &model.Diagnostic{
+						Level:   model.DiagnosticLevelError,
+						Code:    "AMBIGUOUS_LINK",
+						Message: fmt.Sprintf("Link target '%s' is ambiguous - matches %d notes with the same last segment. Use a qualified link (type:full/path/key) to specify the target.", searchKey, len(matchingIDs)),
+						Span:    link.Span,
+					}
+					targetID = nil
+				}
 			}
 		}
 
