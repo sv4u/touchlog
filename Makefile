@@ -57,7 +57,7 @@ install: ## Install the binary with version information (from local source)
 # Test targets
 test: ## Run all tests
 	@echo "Running tests..."
-	@go test ./... -v
+	@go test ./... -v -timeout 10m
 
 test-race: ## Run tests with race detector
 	@echo "Running tests with race detector..."

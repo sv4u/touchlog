@@ -27,6 +27,7 @@ func BuildRootCommand() *cli3.Command {
 			BuildEditCommand(),
 			BuildIndexCommand(),
 			BuildQueryCommand(),
+			BuildViewCommand(),
 			BuildGraphCommand(),
 			BuildDiagnosticsCommand(),
 			BuildDaemonCommand(),
