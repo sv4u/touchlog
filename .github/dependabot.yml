@@ -1,13 +1,14 @@
 version: 2
 updates:
   # Go module dependencies
+  # Version update PRs disabled; only Dependabot security updates will create PRs
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
     assignees:
       - "sv4u"
     commit-message:
@@ -16,22 +17,16 @@ updates:
     labels:
       - "dependencies"
       - "automated"
-    groups:
-      production-dependencies:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
 
   # GitHub Actions
+  # Version update PRs disabled; only Dependabot security updates will create PRs
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     commit-message:
       prefix: "ci"
       include: "scope"
@@ -39,11 +34,3 @@ updates:
       - "dependencies"
       - "automated"
       - "ci"
-    ignore:
-      # Ignore major version updates for critical actions to prevent breaking changes
-      - dependency-name: "actions/checkout"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "actions/setup-go"
-        update-types:
-          - "version-update:semver-major"
