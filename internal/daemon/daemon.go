@@ -1,6 +1,8 @@
 package daemon
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -27,14 +29,42 @@ type Daemon struct {
 	server    *Server
 }
 
+// SocketPathForVault derives a deterministic Unix domain socket path for the given vault.
+// Unix domain socket paths are limited to 104 bytes on macOS (108 on Linux).
+// To avoid exceeding this limit with long vault paths, we derive a short
+// hash-based path in /tmp that is always well under the limit.
+func SocketPathForVault(vaultRoot string) (string, error) {
+	absPath, err := filepath.Abs(vaultRoot)
+	if err != nil {
+		return "", fmt.Errorf("resolving vault path: %w", err)
+	}
+	// Resolve symlinks for consistency (e.g., /var -> /private/var on macOS)
+	if resolved, err := filepath.EvalSymlinks(absPath); err == nil {
+		absPath = resolved
+	}
+	hash := sha256.Sum256([]byte(absPath))
+	hexHash := hex.EncodeToString(hash[:6]) // 12 hex chars = sufficient uniqueness
+	return filepath.Join("/tmp", fmt.Sprintf("touchlog-%s.sock", hexHash)), nil
+}
+
 // NewDaemon creates a new daemon instance for a vault
 func NewDaemon(vaultRoot string) *Daemon {
 	touchlogDir := filepath.Join(vaultRoot, ".touchlog")
+	sockPath, err := SocketPathForVault(vaultRoot)
+	if err != nil {
+		// Fallback to vault-local path if hash computation fails
+		sockPath = filepath.Join(touchlogDir, "daemon.sock")
+	}
 	return &Daemon{
 		vaultRoot: vaultRoot,
 		pidPath:   filepath.Join(touchlogDir, "daemon.pid"),
-		sockPath:  filepath.Join(touchlogDir, "daemon.sock"),
+		sockPath:  sockPath,
 	}
+}
+
+// SocketPath returns the path to the daemon's Unix domain socket
+func (d *Daemon) SocketPath() string {
+	return d.sockPath
 }
 
 // IsDaemonChild returns true if the current process is the daemon child process
@@ -171,7 +201,7 @@ func (d *Daemon) startServer() error {
 	}
 
 	// Start IPC server
-	server, err := NewServer(d.vaultRoot, cfg)
+	server, err := NewServer(d.vaultRoot, d.sockPath, cfg)
 	if err != nil {
 		return fmt.Errorf("creating IPC server: %w", err)
 	}

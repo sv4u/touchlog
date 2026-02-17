@@ -8,8 +8,8 @@ import (
 	"github.com/sv4u/touchlog/v2/internal/config"
 )
 
-// TestNewServer_Behavior_CreatesSocketDirectory tests NewServer creates socket directory
-func TestNewServer_Behavior_CreatesSocketDirectory(t *testing.T) {
+// TestNewServer_Behavior_CreatesSocket tests NewServer creates the socket file
+func TestNewServer_Behavior_CreatesSocket(t *testing.T) {
 	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
@@ -23,13 +23,8 @@ func TestNewServer_Behavior_CreatesSocketDirectory(t *testing.T) {
 		t.Fatalf("getting absolute path: %v", err)
 	}
 
-	// Remove .touchlog directory to test creation
-	touchlogDir := filepath.Join(absVaultRoot, ".touchlog")
-	if err := os.RemoveAll(touchlogDir); err != nil {
-		t.Fatalf("removing .touchlog dir: %v", err)
-	}
-
-	server, err := NewServer(absVaultRoot, cfg)
+	sockPath := testSocketPath(t, absVaultRoot)
+	server, err := NewServer(absVaultRoot, sockPath, cfg)
 	if err != nil {
 		if contains(err.Error(), "bind: invalid argument") || contains(err.Error(), "AF_UNIX path too long") {
 			t.Skipf("Skipping test due to system limitation: %v", err)
@@ -40,9 +35,9 @@ func TestNewServer_Behavior_CreatesSocketDirectory(t *testing.T) {
 		_ = server.Stop()
 	}()
 
-	// Verify socket directory was created
-	if _, err := os.Stat(touchlogDir); os.IsNotExist(err) {
-		t.Error("expected .touchlog directory to be created")
+	// Verify socket file was created at the expected path
+	if _, err := os.Stat(sockPath); os.IsNotExist(err) {
+		t.Errorf("expected socket to be created at %s", sockPath)
 	}
 }
 
@@ -61,14 +56,14 @@ func TestNewServer_Behavior_RemovesExistingSocket(t *testing.T) {
 		t.Fatalf("getting absolute path: %v", err)
 	}
 
-	sockPath := filepath.Join(absVaultRoot, ".touchlog", "daemon.sock")
+	sockPath := testSocketPath(t, absVaultRoot)
 
-	// Create existing socket file
+	// Create existing socket file at the hashed path
 	if err := os.WriteFile(sockPath, []byte("test"), 0644); err != nil {
 		t.Fatalf("creating existing socket file: %v", err)
 	}
 
-	server, err := NewServer(absVaultRoot, cfg)
+	server, err := NewServer(absVaultRoot, sockPath, cfg)
 	if err != nil {
 		if contains(err.Error(), "bind: invalid argument") || contains(err.Error(), "AF_UNIX path too long") {
 			t.Skipf("Skipping test due to system limitation: %v", err)
@@ -100,7 +95,8 @@ func TestServer_Start_Behavior_InitializesWatcher(t *testing.T) {
 		t.Fatalf("getting absolute path: %v", err)
 	}
 
-	server, err := NewServer(absVaultRoot, cfg)
+	sockPath := testSocketPath(t, absVaultRoot)
+	server, err := NewServer(absVaultRoot, sockPath, cfg)
 	if err != nil {
 		if contains(err.Error(), "bind: invalid argument") || contains(err.Error(), "AF_UNIX path too long") {
 			t.Skipf("Skipping test due to system limitation: %v", err)
@@ -141,7 +137,8 @@ func TestServer_Stop_Behavior_ClosesListener(t *testing.T) {
 		t.Fatalf("getting absolute path: %v", err)
 	}
 
-	server, err := NewServer(absVaultRoot, cfg)
+	sockPath := testSocketPath(t, absVaultRoot)
+	server, err := NewServer(absVaultRoot, sockPath, cfg)
 	if err != nil {
 		if contains(err.Error(), "bind: invalid argument") || contains(err.Error(), "AF_UNIX path too long") {
 			t.Skipf("Skipping test due to system limitation: %v", err)
@@ -177,7 +174,8 @@ func TestServer_ProcessMessage_Behavior_HandlesAllMessageTypes(t *testing.T) {
 		t.Fatalf("getting absolute path: %v", err)
 	}
 
-	server, err := NewServer(absVaultRoot, cfg)
+	sockPath := testSocketPath(t, absVaultRoot)
+	server, err := NewServer(absVaultRoot, sockPath, cfg)
 	if err != nil {
 		if contains(err.Error(), "bind: invalid argument") || contains(err.Error(), "AF_UNIX path too long") {
 			t.Skipf("Skipping test due to system limitation: %v", err)

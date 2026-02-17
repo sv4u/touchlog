@@ -26,9 +26,12 @@ type Server struct {
 	once      sync.Once
 }
 
-// NewServer creates a new IPC server
-func NewServer(vaultRoot string, cfg *config.Config) (*Server, error) {
-	// Ensure vault root is absolute (required for Unix sockets on some systems)
+// NewServer creates a new IPC server.
+// sockPath is the Unix domain socket path for IPC communication.
+// Use SocketPathForVault to derive a safe socket path that respects
+// the macOS 104-byte limit for Unix domain socket paths.
+func NewServer(vaultRoot string, sockPath string, cfg *config.Config) (*Server, error) {
+	// Ensure vault root is absolute
 	absVaultRoot, err := filepath.Abs(vaultRoot)
 	if err != nil {
 		return nil, fmt.Errorf("resolving absolute vault path: %w", err)
@@ -40,9 +43,7 @@ func NewServer(vaultRoot string, cfg *config.Config) (*Server, error) {
 		absVaultRoot = resolvedVaultRoot
 	}
 
-	sockPath := filepath.Join(absVaultRoot, ".touchlog", "daemon.sock")
-
-	// Ensure directory exists
+	// Ensure socket directory exists
 	sockDir := filepath.Dir(sockPath)
 	if err := os.MkdirAll(sockDir, 0755); err != nil {
 		return nil, fmt.Errorf("creating socket directory: %w", err)
@@ -71,6 +72,14 @@ func NewServer(vaultRoot string, cfg *config.Config) (*Server, error) {
 		listener:  listener,
 		done:      make(chan struct{}),
 	}, nil
+}
+
+// SocketPath returns the path to the server's Unix domain socket
+func (s *Server) SocketPath() string {
+	if s.listener != nil {
+		return s.listener.Addr().String()
+	}
+	return ""
 }
 
 // Start starts the IPC server

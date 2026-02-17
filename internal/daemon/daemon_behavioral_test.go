@@ -35,6 +35,19 @@ func shortTempDir(t *testing.T) string {
 	return dir
 }
 
+// testSocketPath derives the socket path for a test vault and registers cleanup
+func testSocketPath(t *testing.T, vaultRoot string) string {
+	t.Helper()
+	sockPath, err := SocketPathForVault(vaultRoot)
+	if err != nil {
+		t.Fatalf("computing socket path: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Remove(sockPath)
+	})
+	return sockPath
+}
+
 // TestDaemon_Start_Behavior_CreatesPIDFile tests startServer creates PID file
 func TestDaemon_Start_Behavior_CreatesPIDFile(t *testing.T) {
 	tmpDir := shortTempDir(t)
@@ -178,14 +191,14 @@ func TestDaemon_Cleanup_Behavior_RemovesAllFiles(t *testing.T) {
 	}
 
 	pidPath := filepath.Join(tmpDir, ".touchlog", "daemon.pid")
-	sockPath := filepath.Join(tmpDir, ".touchlog", "daemon.sock")
+	sockPath := d.SocketPath()
 
 	// Verify files exist
 	if _, err := os.Stat(pidPath); err != nil {
 		t.Fatal("PID file should exist after startServer")
 	}
 	if _, err := os.Stat(sockPath); err != nil {
-		t.Fatal("socket file should exist after startServer")
+		t.Fatalf("socket file should exist after startServer at %s", sockPath)
 	}
 
 	// Cleanup

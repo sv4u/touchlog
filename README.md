@@ -116,7 +116,8 @@ A touchlog vault is a directory containing:
 vault/
 ├── .touchlog/
 │   ├── config.yaml          # Vault configuration
-│   └── index.db             # SQLite index (auto-generated)
+│   ├── index.db             # SQLite index (auto-generated)
+│   └── daemon.pid           # Daemon PID file (when running)
 ├── note/                    # Type-specific directories
 │   ├── my-note.Rmd          # Flat key: stored at type root
 │   ├── another-note.Rmd
@@ -478,6 +479,8 @@ If the editor launch fails, a warning is displayed but the command still succeed
 - `touchlog daemon stop` - Stop the daemon
 - `touchlog daemon status` - Check daemon status
 
+The daemon uses a Unix domain socket for IPC communication. The socket is placed in `/tmp` (as `/tmp/touchlog-<hash>.sock`) using a deterministic hash of the vault path. This avoids the 104-byte path length limit for Unix domain sockets on macOS, which can be exceeded with long vault paths. The PID file remains in the vault at `.touchlog/daemon.pid`.
+
 ## Architecture
 
 touchlog follows a **contracts-first** architecture with clear separation of concerns:
@@ -491,7 +494,7 @@ touchlog follows a **contracts-first** architecture with clear separation of con
 - **Index** (`internal/index/`): Full-scan indexing with atomic rebuilds
 - **Query** (`internal/query/`): Search and graph query execution
 - **Graph** (`internal/graph/`): Graph loading and export
-- **Daemon** (`internal/daemon/`): IPC server and lifecycle management
+- **Daemon** (`internal/daemon/`): IPC server (Unix domain socket), process lifecycle, and PID management
 - **Watch** (`internal/watch/`): Filesystem watching and incremental indexing
 
 ### Design Principles
@@ -606,6 +609,9 @@ dot -Tsvg graph.dot -o graph.svg
 # Start daemon for real-time indexing
 touchlog daemon start
 
+# Check daemon status
+touchlog daemon status
+
 # Create/edit notes - index updates automatically
 # Query works immediately
 touchlog query search --type note
@@ -613,6 +619,8 @@ touchlog query search --type note
 # Stop daemon
 touchlog daemon stop
 ```
+
+The daemon forks a background process that watches the vault for file changes and incrementally updates the index. It communicates via a Unix domain socket stored in `/tmp` (derived from a hash of the vault path to stay within macOS's 104-byte socket path limit). The PID file is stored in `.touchlog/daemon.pid` within the vault.
 
 ## Development
 
