@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/sv4u/touchlog/v2/internal/model"
 )
 
@@ -22,7 +22,7 @@ func OpenOrCreateDB(vaultRoot string) (*sql.DB, error) {
 		return nil, fmt.Errorf("creating db directory: %w", err)
 	}
 
-	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=1")
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
@@ -135,7 +135,9 @@ func createSchemaV1(db *sql.DB) error {
 	}
 
 	// Create edges table
-	// Note: to_id may be NULL for unresolved links (Phase 0 doesn't resolve links)
+	// Note: to_id may be NULL for unresolved links
+	// to_id is excluded from PRIMARY KEY because NULLs are unique in SQLite PKs,
+	// which would allow duplicate unresolved edges.
 	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS edges (
 			from_id TEXT NOT NULL,
@@ -143,7 +145,7 @@ func createSchemaV1(db *sql.DB) error {
 			edge_type TEXT NOT NULL,
 			raw_target TEXT NOT NULL,
 			span TEXT NOT NULL,
-			PRIMARY KEY(from_id, to_id, edge_type, raw_target, span),
+			PRIMARY KEY(from_id, edge_type, raw_target, span),
 			FOREIGN KEY(from_id) REFERENCES nodes(id) ON DELETE CASCADE,
 			FOREIGN KEY(to_id) REFERENCES nodes(id) ON DELETE CASCADE
 		)

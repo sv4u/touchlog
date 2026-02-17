@@ -208,12 +208,10 @@ func loadEdges(db *sql.DB, graph *Graph) error {
 
 		// Parse raw target and span from JSON
 		if err := json.Unmarshal([]byte(rawTargetJSON), &edge.RawTarget); err != nil {
-			// Skip edges with invalid JSON
-			continue
+			return fmt.Errorf("unmarshaling raw_target for edge from %s: %w", edge.FromID, err)
 		}
 		if err := json.Unmarshal([]byte(spanJSON), &edge.Span); err != nil {
-			// Skip edges with invalid JSON
-			continue
+			return fmt.Errorf("unmarshaling span for edge from %s: %w", edge.FromID, err)
 		}
 
 		// Add to outgoing edges
@@ -279,10 +277,10 @@ func loadEdgesForNodes(db *sql.DB, graph *Graph, nodeIDs []model.NoteID) error {
 
 		// Parse raw target and span from JSON
 		if err := json.Unmarshal([]byte(rawTargetJSON), &edge.RawTarget); err != nil {
-			continue
+			return fmt.Errorf("unmarshaling raw_target for edge from %s: %w", edge.FromID, err)
 		}
 		if err := json.Unmarshal([]byte(spanJSON), &edge.Span); err != nil {
-			continue
+			return fmt.Errorf("unmarshaling span for edge from %s: %w", edge.FromID, err)
 		}
 
 		// Add to outgoing edges

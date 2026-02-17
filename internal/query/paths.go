@@ -40,39 +40,29 @@ func ExecutePaths(vaultRoot string, q *PathsQuery) ([]PathResult, error) {
 		destIDs = append(destIDs, destID)
 	}
 
-	// Handle src == dst case (zero-hop path)
+	// Load graph once for all path computations
+	g, err := graph.LoadGraph(vaultRoot)
+	if err != nil {
+		return nil, fmt.Errorf("loading graph: %w", err)
+	}
+
 	results := make([]PathResult, 0)
-	for _, destID := range destIDs {
+
+	// Find paths to each destination
+	for i, destID := range destIDs {
+		// Handle src == dst (zero-hop path)
 		if sourceID == destID {
-			// Zero-hop path
-			g, err := graph.LoadGraph(vaultRoot)
-			if err != nil {
-				return nil, fmt.Errorf("loading graph: %w", err)
-			}
 			node := g.Nodes[sourceID]
 			if node != nil {
 				results = append(results, PathResult{
 					Source:      q.Source,
-					Destination: q.Destinations[0], // Use first destination string
+					Destination: q.Destinations[i],
 					HopCount:    0,
 					Nodes:       []graph.Node{*node},
 					Edges:       []graph.Edge{},
 				})
 			}
 			continue
-		}
-	}
-
-	// Load graph
-	g, err := graph.LoadGraph(vaultRoot)
-	if err != nil {
-		return nil, fmt.Errorf("loading graph: %w", err)
-	}
-
-	// Find paths to each destination
-	for i, destID := range destIDs {
-		if sourceID == destID {
-			continue // Already handled zero-hop case
 		}
 
 		paths := bfsShortestPaths(g, sourceID, destID, q.MaxDepth, q.MaxPaths, q.Direction, q.EdgeTypes)
@@ -115,11 +105,12 @@ func bfsShortestPaths(g *graph.Graph, sourceID, destID model.NoteID, maxDepth, m
 		edgeTypeSet[model.EdgeType(et)] = true
 	}
 
-	// Visited set for cycle detection (mandatory)
-	visited := make(map[model.NoteID]bool)
 	paths := make([]Path, 0)
 
-	// Initialize queue with source path
+	// Initialize queue with source path.
+	// Cycle detection is handled per-path (nodeInPath check below) rather
+	// than globally, so that alternative paths through the same node can
+	// still be discovered.
 	type queueItem struct {
 		nodeID model.NoteID
 		path   Path
@@ -134,7 +125,6 @@ func bfsShortestPaths(g *graph.Graph, sourceID, destID model.NoteID, maxDepth, m
 		},
 		depth: 0,
 	}}
-	visited[sourceID] = true
 
 	// BFS traversal
 	for len(queue) > 0 && len(paths) < maxPaths {

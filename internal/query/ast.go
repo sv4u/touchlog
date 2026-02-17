@@ -1,5 +1,85 @@
 package query
 
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+// ParseSearchQuery parses a query string into a SearchQuery.
+// Supported key:value pairs (space-separated):
+//
+//	type:note           - filter by type (comma-separated for multiple)
+//	state:published     - filter by state (comma-separated for multiple)
+//	tag:important       - filter by tag (comma-separated for multiple)
+//	match-any-tag:true  - match any tag instead of all
+//	limit:10            - limit number of results
+//	offset:5            - offset for pagination
+//	format:json         - output format (table or json)
+//
+// An empty query string returns a default SearchQuery (no filters).
+func ParseSearchQuery(queryStr string) (*SearchQuery, error) {
+	q := NewSearchQuery()
+	queryStr = strings.TrimSpace(queryStr)
+	if queryStr == "" {
+		return q, nil
+	}
+
+	tokens := strings.Fields(queryStr)
+	for _, token := range tokens {
+		parts := strings.SplitN(token, ":", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return nil, fmt.Errorf("invalid query token %q: expected key:value format", token)
+		}
+
+		key, value := parts[0], parts[1]
+		switch key {
+		case "type":
+			q.Types = splitCSV(value)
+		case "state":
+			q.States = splitCSV(value)
+		case "tag":
+			q.Tags = splitCSV(value)
+		case "match-any-tag":
+			q.MatchAnyTag = value == "true" || value == "1"
+		case "limit":
+			n, err := strconv.Atoi(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid limit %q: %w", value, err)
+			}
+			q.Limit = &n
+		case "offset":
+			n, err := strconv.Atoi(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid offset %q: %w", value, err)
+			}
+			q.Offset = n
+		case "format":
+			if value != "table" && value != "json" {
+				return nil, fmt.Errorf("invalid format %q: must be 'table' or 'json'", value)
+			}
+			q.Format = value
+		default:
+			return nil, fmt.Errorf("unknown query key %q", key)
+		}
+	}
+
+	return q, nil
+}
+
+// splitCSV splits a comma-separated string into trimmed, non-empty parts.
+func splitCSV(s string) []string {
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
 // SearchQuery represents a search query AST
 type SearchQuery struct {
 	Types       []string // Filter by types (CSV)

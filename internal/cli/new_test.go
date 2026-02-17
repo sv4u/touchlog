@@ -171,7 +171,10 @@ func TestFormatNote(t *testing.T) {
 	}
 	body := "# Test Title\n\n"
 
-	content := formatNote(frontmatter, body)
+	content, err := formatNote(frontmatter, body)
+	if err != nil {
+		t.Fatalf("formatNote returned unexpected error: %v", err)
+	}
 
 	// Verify it starts with ---
 	if !strings.HasPrefix(string(content), "---\n") {

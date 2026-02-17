@@ -81,8 +81,9 @@ func ExecuteBacklinks(vaultRoot string, q *BacklinksQuery) ([]BacklinksResult, e
 			targetIDInPath = *edge.ToID
 		}
 
-		// Create path key for deduplication
-		pathKey := fmt.Sprintf("%s->%s", sourceID, targetIDInPath)
+		// Create path key for deduplication (include edge type so that
+		// different relationship types between the same pair are kept).
+		pathKey := fmt.Sprintf("%s->%s[%s]", sourceID, targetIDInPath, edge.EdgeType)
 		if seenPaths[pathKey] {
 			continue
 		}

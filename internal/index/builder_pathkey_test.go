@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
 )
@@ -65,7 +65,7 @@ updated: 2024-01-01T00:00:00Z
 
 	// Verify index
 	indexPath := filepath.Join(touchlogDir, "index.db")
-	db, err := sql.Open("sqlite3", indexPath+"?_foreign_keys=1")
+	db, err := sql.Open("sqlite", indexPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("opening index: %v", err)
 	}
@@ -158,7 +158,7 @@ Link to [[auth]] using last segment.
 
 	// Verify the link was resolved
 	indexPath := filepath.Join(touchlogDir, "index.db")
-	db, err := sql.Open("sqlite3", indexPath+"?_foreign_keys=1")
+	db, err := sql.Open("sqlite", indexPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("opening index: %v", err)
 	}
@@ -279,7 +279,7 @@ Link to [[auth]] which is ambiguous (matches projects/auth and users/auth by las
 
 	// Verify the link was NOT resolved (ambiguous)
 	indexPath := filepath.Join(touchlogDir, "index.db")
-	db, err := sql.Open("sqlite3", indexPath+"?_foreign_keys=1")
+	db, err := sql.Open("sqlite", indexPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("opening index: %v", err)
 	}
@@ -381,7 +381,7 @@ Link to [[note:projects/web/auth]] using full qualified path.
 
 	// Verify the link was resolved
 	indexPath := filepath.Join(touchlogDir, "index.db")
-	db, err := sql.Open("sqlite3", indexPath+"?_foreign_keys=1")
+	db, err := sql.Open("sqlite", indexPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("opening index: %v", err)
 	}

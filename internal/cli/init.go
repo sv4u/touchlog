@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/sv4u/touchlog/v2/internal/config"
@@ -134,6 +135,9 @@ func runInitWizard(vaultRoot string) error {
 	bundleNames := make([]string, 0, len(typeBundles))
 	for name := range typeBundles {
 		bundleNames = append(bundleNames, name)
+	}
+	sort.Strings(bundleNames)
+	for _, name := range bundleNames {
 		fmt.Printf("  - %s: %s\n", name, typeBundles[name].Description)
 	}
 	fmt.Println()

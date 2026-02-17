@@ -146,7 +146,10 @@ func runNonInteractiveWizard(vaultRoot string, cfg *config.Config) error {
 	body := generateBody(title, cfg, typeName)
 
 	// Step 10: Write file atomically
-	content := formatNote(frontmatter, body)
+	content, err := formatNote(frontmatter, body)
+	if err != nil {
+		return fmt.Errorf("formatting note: %w", err)
+	}
 	if err := AtomicWrite(notePath, content); err != nil {
 		return fmt.Errorf("writing note: %w", err)
 	}
@@ -198,8 +201,23 @@ func inputKey(typeDef config.TypeDef, vaultRoot string, typeName model.TypeName)
 	return model.Key(keyStr), nil
 }
 
-// checkKeyUniqueness checks if a key already exists in the store
+// checkKeyUniqueness checks if a key already exists on disk or in the index.
+// Filesystem check runs first so that uniqueness is enforced even before the
+// index has been built.
 func checkKeyUniqueness(vaultRoot string, typeName model.TypeName, keyStr string) error {
+	// Filesystem check: reject if the .Rmd file already exists on disk.
+	// For path-based keys (containing "/"), the file lives in a subfolder.
+	var filePath string
+	if strings.Contains(keyStr, "/") {
+		filePath = filepath.Join(vaultRoot, string(typeName), keyStr+".Rmd")
+	} else {
+		filePath = filepath.Join(vaultRoot, string(typeName), keyStr+".Rmd")
+	}
+	if _, err := os.Stat(filePath); err == nil {
+		return fmt.Errorf("note with key %q already exists in type %q (file: %s)", keyStr, typeName, filePath)
+	}
+
+	// Database check: reject if the key is already indexed.
 	dbPath := filepath.Join(vaultRoot, ".touchlog", "index.db")
 	if _, err := os.Stat(dbPath); err == nil {
 		db, err := store.OpenOrCreateDB(vaultRoot)
@@ -294,15 +312,14 @@ func generateBody(title string, cfg *config.Config, typeName model.TypeName) str
 }
 
 // formatNote formats frontmatter and body into a complete .Rmd file
-func formatNote(frontmatter map[string]any, body string) []byte {
+func formatNote(frontmatter map[string]any, body string) ([]byte, error) {
 	var buf strings.Builder
 
 	// Write frontmatter
 	buf.WriteString("---\n")
 	fmYAML, err := yaml.Marshal(frontmatter)
 	if err != nil {
-		// Should not happen, but handle gracefully
-		panic(fmt.Sprintf("marshaling frontmatter: %v", err))
+		return nil, fmt.Errorf("marshaling frontmatter: %w", err)
 	}
 	buf.Write(fmYAML)
 	buf.WriteString("---\n")
@@ -311,7 +328,7 @@ func formatNote(frontmatter map[string]any, body string) []byte {
 	buf.WriteString("\n")
 	buf.WriteString(body)
 
-	return []byte(buf.String())
+	return []byte(buf.String()), nil
 }
 
 // sanitizeTitleForFilename converts a title to a filename-safe string

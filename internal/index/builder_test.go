@@ -6,9 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/note"
 )
 
 func TestBuilder_Rebuild_CreatesIndex(t *testing.T) {
@@ -75,7 +76,7 @@ This is a test note.
 
 	// Verify we can open and query the database
 	// Use sql.Open directly since we know the path
-	db, err := sql.Open("sqlite3", indexPath+"?_foreign_keys=1")
+	db, err := sql.Open("sqlite", indexPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("opening index: %v", err)
 	}
@@ -105,7 +106,7 @@ func TestBuilder_Rebuild_AtomicReplace(t *testing.T) {
 
 	// Create existing index (simulate previous index)
 	oldIndexPath := filepath.Join(touchlogDir, "index.db")
-	oldDB, err := sql.Open("sqlite3", oldIndexPath+"?_foreign_keys=1")
+	oldDB, err := sql.Open("sqlite", oldIndexPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("creating old index: %v", err)
 	}
@@ -170,8 +171,6 @@ updated: 2024-01-01T00:00:00Z
 }
 
 func TestBuilder_ResolveLinks_Qualified(t *testing.T) {
-	builder := &Builder{}
-
 	typeKeyMap := map[model.TypeKey]model.NoteID{
 		{Type: "note", Key: "target-1"}: "note-target-1",
 		{Type: "log", Key: "target-1"}:  "log-target-1",
@@ -192,7 +191,7 @@ func TestBuilder_ResolveLinks_Qualified(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
+	resolvedEdges, diags := note.ResolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
 
 	if len(diags) != 0 {
 		t.Errorf("expected no diagnostics, got %d", len(diags))
@@ -210,8 +209,6 @@ func TestBuilder_ResolveLinks_Qualified(t *testing.T) {
 }
 
 func TestBuilder_ResolveLinks_Unqualified_Unique(t *testing.T) {
-	builder := &Builder{}
-
 	typeKeyMap := map[model.TypeKey]model.NoteID{
 		{Type: "note", Key: "target-1"}: "note-target-1",
 	}
@@ -231,7 +228,7 @@ func TestBuilder_ResolveLinks_Unqualified_Unique(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
+	resolvedEdges, diags := note.ResolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
 
 	if len(diags) != 0 {
 		t.Errorf("expected no diagnostics, got %d", len(diags))
@@ -249,8 +246,6 @@ func TestBuilder_ResolveLinks_Unqualified_Unique(t *testing.T) {
 }
 
 func TestBuilder_ResolveLinks_Unqualified_Ambiguous(t *testing.T) {
-	builder := &Builder{}
-
 	typeKeyMap := map[model.TypeKey]model.NoteID{
 		{Type: "note", Key: "target-1"}: "note-target-1",
 		{Type: "log", Key: "target-1"}:  "log-target-1",
@@ -271,7 +266,7 @@ func TestBuilder_ResolveLinks_Unqualified_Ambiguous(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
+	resolvedEdges, diags := note.ResolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
 
 	if len(diags) != 1 {
 		t.Fatalf("expected 1 diagnostic, got %d", len(diags))
@@ -295,8 +290,6 @@ func TestBuilder_ResolveLinks_Unqualified_Ambiguous(t *testing.T) {
 }
 
 func TestBuilder_ResolveLinks_Unresolved(t *testing.T) {
-	builder := &Builder{}
-
 	typeKeyMap := map[model.TypeKey]model.NoteID{}
 
 	// Build lastSegmentMap from typeKeyMap (empty in this case)
@@ -314,7 +307,7 @@ func TestBuilder_ResolveLinks_Unresolved(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := builder.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
+	resolvedEdges, diags := note.ResolveLinks(rawLinks, typeKeyMap, lastSegmentMap, "note")
 
 	if len(diags) != 1 {
 		t.Fatalf("expected 1 diagnostic, got %d", len(diags))

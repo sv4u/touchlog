@@ -10,6 +10,12 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+// pendingEvent tracks the most recent event for a debounced path
+type pendingEvent struct {
+	Op        fsnotify.Op
+	Timestamp time.Time
+}
+
 // Watcher manages filesystem watching for a vault
 type Watcher struct {
 	vaultRoot string
@@ -19,7 +25,7 @@ type Watcher struct {
 	done      chan struct{}
 	mu        sync.Mutex
 	debounce  time.Duration
-	pending   map[string]time.Time
+	pending   map[string]pendingEvent
 }
 
 // Event represents a filesystem event
@@ -43,7 +49,7 @@ func NewWatcher(vaultRoot string) (*Watcher, error) {
 		errors:    make(chan error, 10),
 		done:      make(chan struct{}),
 		debounce:  200 * time.Millisecond,
-		pending:   make(map[string]time.Time),
+		pending:   make(map[string]pendingEvent),
 	}
 
 	return w, nil
@@ -114,11 +120,19 @@ func (w *Watcher) watchLoop() {
 				return
 			}
 
-			// Filter for .Rmd files only
+			// Filter for .Rmd files only, but also handle newly created
+			// directories so that .Rmd files inside them trigger events.
 			if filepath.Ext(event.Name) != ".Rmd" {
-				// Handle directory events (for recursive watching)
-				// New directories will be automatically added by addRecursive
-				// when they are created, so we can skip non-.Rmd files
+				// For Create events, check if the path is a directory
+				// regardless of its name (directories may contain dots,
+				// e.g. "notes.2024", "v1.0").
+				if event.Op&fsnotify.Create != 0 {
+					if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+						if filepath.Base(event.Name) != ".touchlog" {
+							_ = w.watcher.Add(event.Name)
+						}
+					}
+				}
 				continue
 			}
 
@@ -146,8 +160,11 @@ func (w *Watcher) debounceEvent(event fsnotify.Event) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Record this event
-	w.pending[event.Name] = time.Now()
+	// Record the most recent event for this path
+	w.pending[event.Name] = pendingEvent{
+		Op:        event.Op,
+		Timestamp: time.Now(),
+	}
 
 	// Schedule debounced emission
 	go func(path string) {
@@ -156,14 +173,14 @@ func (w *Watcher) debounceEvent(event fsnotify.Event) {
 		w.mu.Lock()
 		defer w.mu.Unlock()
 
-		// Check if this event is still the latest for this path
-		if timestamp, ok := w.pending[path]; ok {
-			// Emit the event
+		// Check if this event is still pending for this path
+		if pe, ok := w.pending[path]; ok {
+			// Emit with the most recent Op (not the one that spawned this goroutine)
 			select {
 			case w.events <- Event{
 				Path:      path,
-				Op:        event.Op,
-				Timestamp: timestamp,
+				Op:        pe.Op,
+				Timestamp: pe.Timestamp,
 			}:
 			default:
 				// Event channel full, skip

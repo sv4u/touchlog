@@ -1,7 +1,11 @@
 package cli
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"os"
+	"strings"
 	"testing"
 
 	cli3 "github.com/urfave/cli/v3"
@@ -153,37 +157,76 @@ func TestVersionCommand_Action(t *testing.T) {
 	}
 }
 
-// TestCompletionCommand_Actions tests that completion command actions execute without error
+// runCompletionCommand runs a completion subcommand through the full root command
+// tree so that cmd.Root() returns the real root with all subcommands populated.
+func runCompletionCommand(t *testing.T, shell string) string {
+	t.Helper()
+
+	rootCmd := BuildRootCommand()
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("creating pipe: %v", err)
+	}
+	os.Stdout = w
+
+	runErr := rootCmd.Run(context.Background(), []string{"touchlog", "completion", shell})
+
+	_ = w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+
+	if runErr != nil {
+		t.Fatalf("%s completion failed: %v", shell, runErr)
+	}
+
+	return buf.String()
+}
+
+// TestCompletionCommand_Actions tests that completion actions produce output
+// containing all registered root commands. The test runs through the full
+// command tree so that cmd.Root() returns the real root.
 func TestCompletionCommand_Actions(t *testing.T) {
-	completionCmd := buildCompletionCommand()
+	// Expected commands that must appear in completion output
+	expectedCommands := []string{"version", "init", "new", "index", "query", "graph", "diagnostics", "daemon"}
 
-	ctx := context.Background()
-	testCmd := &cli3.Command{}
+	t.Run("bash", func(t *testing.T) {
+		output := runCompletionCommand(t, "bash")
+		if !strings.Contains(output, "_touchlog_completion") {
+			t.Error("bash completion should contain function definition")
+		}
+		for _, cmd := range expectedCommands {
+			if !strings.Contains(output, cmd) {
+				t.Errorf("bash completion missing command %q", cmd)
+			}
+		}
+	})
 
-	// Test bash completion
-	bashCmd := completionCmd.Commands[0]
-	if bashCmd.Action == nil {
-		t.Fatal("bash completion command should have an action")
-	}
-	if err := bashCmd.Action(ctx, testCmd); err != nil {
-		t.Errorf("bash completion action failed: %v", err)
-	}
+	t.Run("zsh", func(t *testing.T) {
+		output := runCompletionCommand(t, "zsh")
+		if !strings.Contains(output, "compdef _touchlog") {
+			t.Error("zsh completion should contain compdef directive")
+		}
+		for _, cmd := range expectedCommands {
+			if !strings.Contains(output, cmd) {
+				t.Errorf("zsh completion missing command %q", cmd)
+			}
+		}
+	})
 
-	// Test zsh completion
-	zshCmd := completionCmd.Commands[1]
-	if zshCmd.Action == nil {
-		t.Fatal("zsh completion command should have an action")
-	}
-	if err := zshCmd.Action(ctx, testCmd); err != nil {
-		t.Errorf("zsh completion action failed: %v", err)
-	}
-
-	// Test fish completion
-	fishCmd := completionCmd.Commands[2]
-	if fishCmd.Action == nil {
-		t.Fatal("fish completion command should have an action")
-	}
-	if err := fishCmd.Action(ctx, testCmd); err != nil {
-		t.Errorf("fish completion action failed: %v", err)
-	}
+	t.Run("fish", func(t *testing.T) {
+		output := runCompletionCommand(t, "fish")
+		if !strings.Contains(output, "complete -c touchlog") {
+			t.Error("fish completion should contain complete directives")
+		}
+		for _, cmd := range expectedCommands {
+			if !strings.Contains(output, cmd) {
+				t.Errorf("fish completion missing command %q", cmd)
+			}
+		}
+	})
 }

@@ -65,7 +65,7 @@ func ExportDOT(vaultRoot string, outputPath string, opts ExportOptions) error {
 		}
 
 		// Escape node label for DOT
-		label := escapeDOTString(fmt.Sprintf("%s:%s\\n%s", node.Type, node.Key, node.Title))
+		label := escapeDOTString(fmt.Sprintf("%s:%s\n%s", node.Type, node.Key, node.Title))
 		dot.WriteString(fmt.Sprintf("  \"%s\" [label=\"%s\"];\n", id, label))
 	}
 
@@ -117,7 +117,9 @@ func ExportDOT(vaultRoot string, outputPath string, opts ExportOptions) error {
 	return nil
 }
 
-// determineIncludedNodes determines which nodes should be included in the export
+// determineIncludedNodes determines which nodes should be included in the export.
+// When roots are specified, BFS is performed from each root node and only nodes
+// reachable within opts.Depth hops that also pass filters are included.
 func determineIncludedNodes(g *Graph, opts ExportOptions) map[model.NoteID]bool {
 	included := make(map[model.NoteID]bool)
 
@@ -132,13 +134,57 @@ func determineIncludedNodes(g *Graph, opts ExportOptions) map[model.NoteID]bool 
 		stateSet[s] = true
 	}
 
-	// If roots specified, start from roots and traverse
 	if len(opts.Roots) > 0 {
-		// For Phase 4, we'll include all nodes that match filters
-		// In a full implementation, we'd do BFS from roots
-		for id, node := range g.Nodes {
+		// Resolve root strings ("type:key" or "key") to NoteIDs.
+		rootIDs := resolveRootIDs(g, opts.Roots)
+
+		// BFS from roots up to opts.Depth hops, including nodes that match filters.
+		maxDepth := opts.Depth
+		if maxDepth <= 0 {
+			maxDepth = 10
+		}
+		visited := make(map[model.NoteID]bool)
+		type bfsEntry struct {
+			id    model.NoteID
+			depth int
+		}
+		queue := make([]bfsEntry, 0, len(rootIDs))
+		for _, rid := range rootIDs {
+			if !visited[rid] {
+				visited[rid] = true
+				queue = append(queue, bfsEntry{id: rid, depth: 0})
+			}
+		}
+
+		for len(queue) > 0 {
+			entry := queue[0]
+			queue = queue[1:]
+
+			node := g.Nodes[entry.id]
+			if node == nil {
+				continue
+			}
 			if matchesFilters(node, typeSet, stateSet, opts.Tags) {
-				included[id] = true
+				included[entry.id] = true
+			}
+
+			if entry.depth >= maxDepth {
+				continue
+			}
+
+			// Traverse outgoing edges
+			for _, edge := range g.OutgoingEdges[entry.id] {
+				if edge.ToID != nil && !visited[*edge.ToID] {
+					visited[*edge.ToID] = true
+					queue = append(queue, bfsEntry{id: *edge.ToID, depth: entry.depth + 1})
+				}
+			}
+			// Traverse incoming edges
+			for _, edge := range g.IncomingEdges[entry.id] {
+				if !visited[edge.FromID] {
+					visited[edge.FromID] = true
+					queue = append(queue, bfsEntry{id: edge.FromID, depth: entry.depth + 1})
+				}
 			}
 		}
 	} else {
@@ -151,6 +197,22 @@ func determineIncludedNodes(g *Graph, opts ExportOptions) map[model.NoteID]bool 
 	}
 
 	return included
+}
+
+// resolveRootIDs resolves root specifiers ("type:key" or just "key") to NoteIDs.
+func resolveRootIDs(g *Graph, roots []string) []model.NoteID {
+	ids := make([]model.NoteID, 0, len(roots))
+	for _, root := range roots {
+		for _, node := range g.Nodes {
+			// Match "type:key" format
+			qualified := fmt.Sprintf("%s:%s", node.Type, node.Key)
+			if root == qualified || root == string(node.Key) {
+				ids = append(ids, node.ID)
+				break
+			}
+		}
+	}
+	return ids
 }
 
 // matchesFilters checks if a node matches the filters

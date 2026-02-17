@@ -149,23 +149,33 @@ func buildSearchQuery(q *SearchQuery) (string, []interface{}) {
 	// ORDER BY for deterministic output
 	query += " ORDER BY n.type, n.key"
 
-	// LIMIT and OFFSET
+	// LIMIT and OFFSET (SQLite requires LIMIT when using OFFSET)
 	if q.Limit != nil && *q.Limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", *q.Limit)
-	}
-	if q.Offset > 0 {
-		query += fmt.Sprintf(" OFFSET %d", q.Offset)
+		if q.Offset > 0 {
+			query += fmt.Sprintf(" OFFSET %d", q.Offset)
+		}
+	} else if q.Offset > 0 {
+		// SQLite requires a LIMIT clause when OFFSET is used; use -1 for unlimited
+		query += fmt.Sprintf(" LIMIT -1 OFFSET %d", q.Offset)
 	}
 
 	return query, args
 }
 
-// parseTagsFromJSON parses tags from a JSON array string
+// parseTagsFromJSON parses tags from a JSON array string.
+// Filters out empty strings that result from NULL values in json_group_array output.
 func parseTagsFromJSON(jsonStr string) []string {
-	var tags []string
-	if err := json.Unmarshal([]byte(jsonStr), &tags); err != nil {
+	var rawTags []string
+	if err := json.Unmarshal([]byte(jsonStr), &rawTags); err != nil {
 		// If parsing fails, return empty slice
 		return []string{}
+	}
+	tags := make([]string, 0, len(rawTags))
+	for _, tag := range rawTags {
+		if tag != "" {
+			tags = append(tags, tag)
+		}
 	}
 	return tags
 }

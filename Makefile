@@ -185,7 +185,7 @@ docker-test-linux: docker-build-test ## Run all tests in Linux Docker container
 		-v $$(pwd):/app \
 		-v $$(pwd)/$(COVERAGE_DIR):/app/$(COVERAGE_DIR) \
 		-v $$(pwd)/$(COVERAGE_OUT):/app/$(COVERAGE_OUT) \
-		-e CGO_ENABLED=1 \
+		-e CGO_ENABLED=0 \
 		touchlog-test:linux make test-full
 	@echo "✓ Tests completed. Coverage reports saved to $(COVERAGE_DIR)/"
 
@@ -194,7 +194,7 @@ docker-test-linux-basic: docker-build-test ## Run basic tests in Linux Docker co
 	@docker run --rm \
 		-v $$(pwd):/app \
 		-v $$(pwd)/$(COVERAGE_DIR):/app/$(COVERAGE_DIR) \
-		-e CGO_ENABLED=1 \
+		-e CGO_ENABLED=0 \
 		touchlog-test:linux make test
 
 docker-test-linux-race: docker-build-test ## Run race detector tests in Linux Docker container
@@ -212,7 +212,7 @@ docker-test-linux-coverage: docker-build-test ## Generate coverage reports in Li
 		-v $$(pwd):/app \
 		-v $$(pwd)/$(COVERAGE_DIR):/app/$(COVERAGE_DIR) \
 		-v $$(pwd)/$(COVERAGE_OUT):/app/$(COVERAGE_OUT) \
-		-e CGO_ENABLED=1 \
+		-e CGO_ENABLED=0 \
 		touchlog-test:linux make test-coverage-xml
 	@echo "✓ Coverage reports saved to $(COVERAGE_DIR)/"
 
@@ -228,7 +228,7 @@ docker-test-macos: ## Run tests natively on macOS (requires macOS host)
 
 docker-clean-test: ## Clean Docker test containers and images
 	@echo "Cleaning Docker test resources..."
-	@docker-compose -f docker-compose.test.yml down --rmi local 2>/dev/null || true
+	@docker-compose -f docker-compose.yml down --rmi local 2>/dev/null || true
 	@docker rmi touchlog-test:linux 2>/dev/null || true
 	@echo "✓ Docker test resources cleaned"
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
+	"github.com/sv4u/touchlog/v2/internal/note"
 	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
@@ -90,6 +91,7 @@ func TestIncrementalIndexer_ResolveLinks_QualifiedLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading config: %v", err)
 	}
+	_ = cfg
 
 	db, err := store.OpenOrCreateDB(tmpDir)
 	if err != nil {
@@ -98,8 +100,6 @@ func TestIncrementalIndexer_ResolveLinks_QualifiedLink(t *testing.T) {
 	defer func() {
 		_ = db.Close()
 	}()
-
-	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Create type-key map with a target
 	typeKeyMap := map[model.TypeKey]model.NoteID{
@@ -122,7 +122,7 @@ func TestIncrementalIndexer_ResolveLinks_QualifiedLink(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
+	resolvedEdges, diags := note.ResolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
 
 	if len(resolvedEdges) != 1 {
 		t.Errorf("expected 1 resolved edge, got %d", len(resolvedEdges))
@@ -147,6 +147,7 @@ func TestIncrementalIndexer_ResolveLinks_UnresolvedQualifiedLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading config: %v", err)
 	}
+	_ = cfg
 
 	db, err := store.OpenOrCreateDB(tmpDir)
 	if err != nil {
@@ -155,8 +156,6 @@ func TestIncrementalIndexer_ResolveLinks_UnresolvedQualifiedLink(t *testing.T) {
 	defer func() {
 		_ = db.Close()
 	}()
-
-	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Empty type-key map (no targets)
 	typeKeyMap := map[model.TypeKey]model.NoteID{}
@@ -177,7 +176,7 @@ func TestIncrementalIndexer_ResolveLinks_UnresolvedQualifiedLink(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
+	resolvedEdges, diags := note.ResolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
 
 	if len(resolvedEdges) != 1 {
 		t.Errorf("expected 1 resolved edge, got %d", len(resolvedEdges))
@@ -202,6 +201,7 @@ func TestIncrementalIndexer_ResolveLinks_UnqualifiedLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading config: %v", err)
 	}
+	_ = cfg
 
 	db, err := store.OpenOrCreateDB(tmpDir)
 	if err != nil {
@@ -210,8 +210,6 @@ func TestIncrementalIndexer_ResolveLinks_UnqualifiedLink(t *testing.T) {
 	defer func() {
 		_ = db.Close()
 	}()
-
-	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Create type-key map with a target
 	typeKeyMap := map[model.TypeKey]model.NoteID{
@@ -234,7 +232,7 @@ func TestIncrementalIndexer_ResolveLinks_UnqualifiedLink(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
+	resolvedEdges, diags := note.ResolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
 
 	if len(resolvedEdges) != 1 {
 		t.Errorf("expected 1 resolved edge, got %d", len(resolvedEdges))
@@ -256,6 +254,7 @@ func TestIncrementalIndexer_ResolveLinks_AmbiguousLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading config: %v", err)
 	}
+	_ = cfg
 
 	db, err := store.OpenOrCreateDB(tmpDir)
 	if err != nil {
@@ -264,8 +263,6 @@ func TestIncrementalIndexer_ResolveLinks_AmbiguousLink(t *testing.T) {
 	defer func() {
 		_ = db.Close()
 	}()
-
-	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Create type-key map with multiple targets with same key
 	typeKeyMap := map[model.TypeKey]model.NoteID{
@@ -290,7 +287,7 @@ func TestIncrementalIndexer_ResolveLinks_AmbiguousLink(t *testing.T) {
 		},
 	}
 
-	resolvedEdges, diags := indexer.resolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
+	resolvedEdges, diags := note.ResolveLinks(rawLinks, typeKeyMap, lastSegmentMap, noteType)
 
 	if len(resolvedEdges) != 1 {
 		t.Errorf("expected 1 resolved edge, got %d", len(resolvedEdges))

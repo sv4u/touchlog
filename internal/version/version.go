@@ -65,26 +65,39 @@ func getVersionFromBuildInfo() (string, string) {
 		}
 	}
 
-	// If no commit in settings, try to extract from pseudo-version format
-	// Format: "2.1.1-0.20240101120000-abc123def456" -> commit is "abc123def456"
-	if commit == "" {
-		parts := strings.Split(version, "-")
-		if len(parts) >= 3 {
-			// Last part might be the commit hash (12+ chars)
-			lastPart := parts[len(parts)-1]
-			if len(lastPart) >= 12 {
-				commit = lastPart[:12] // Use first 12 chars
-			} else if len(lastPart) >= 7 {
-				commit = lastPart // Use full short hash
+	// Handle pseudo-version format: "2.1.1-0.20240101120000-abc123def456"
+	// The last segment is an embedded commit hash that must be stripped to
+	// avoid duplication when vcs.revision is also present.
+	parts := strings.Split(version, "-")
+	if len(parts) >= 3 {
+		lastPart := parts[len(parts)-1]
+		if len(lastPart) >= 7 && isPseudoVersionCommit(lastPart) {
+			// Strip the embedded commit from the version
+			cleanVersion := strings.Join(parts[:len(parts)-1], "-")
+			if commit == "" {
+				// Use the embedded commit if we don't have one from vcs.revision
+				if len(lastPart) >= 12 {
+					commit = lastPart[:12]
+				} else {
+					commit = lastPart
+				}
 			}
-			// Reconstruct version without commit hash
-			if commit != "" {
-				version = strings.Join(parts[:len(parts)-1], "-")
-			}
+			version = cleanVersion
 		}
 	}
 
 	return version, commit
+}
+
+// isPseudoVersionCommit checks if a string looks like a hex commit hash
+// (as embedded in Go pseudo-versions).
+func isPseudoVersionCommit(s string) bool {
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			return false
+		}
+	}
+	return len(s) > 0
 }
 
 // GetVersion returns the version string.

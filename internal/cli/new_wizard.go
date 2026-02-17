@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -67,11 +68,14 @@ type wizardModel struct {
 
 // initialModel creates the initial wizard model
 func initialModel(vaultRoot string, cfg *config.Config) wizardModel {
-	// Build type choices
+	// Build type choices (sorted for deterministic UI ordering)
 	typeChoices := make([]model.TypeName, 0, len(cfg.Types))
 	for typeName := range cfg.Types {
 		typeChoices = append(typeChoices, typeName)
 	}
+	sort.Slice(typeChoices, func(i, j int) bool {
+		return typeChoices[i] < typeChoices[j]
+	})
 
 	// Build state choices (for now, just use default state from selected type)
 	// We'll populate this when a type is selected
@@ -546,7 +550,10 @@ func (m wizardModel) createNote() (string, model.NoteID, error) {
 	body := generateBody(m.title, m.cfg, m.typeName)
 
 	// Write file atomically
-	content := formatNote(frontmatter, body)
+	content, err := formatNote(frontmatter, body)
+	if err != nil {
+		return "", "", fmt.Errorf("formatting note: %w", err)
+	}
 	if err := AtomicWrite(notePath, content); err != nil {
 		return "", "", fmt.Errorf("writing note: %w", err)
 	}

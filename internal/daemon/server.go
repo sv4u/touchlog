@@ -225,11 +225,12 @@ func (s *Server) handleQueryExecute(msg *Message) *Response {
 		return NewResponse(false, nil, fmt.Errorf("parsing query request: %w", err))
 	}
 
-	// Parse query from request
-	// For Phase 3, we'll support basic search queries
-	// In a full implementation, we'd parse the query string into a SearchQuery AST
-	searchQuery := query.NewSearchQuery()
-	// TODO: Parse req.Query into searchQuery
+	// Parse query string into SearchQuery AST.
+	// Supports key:value pairs like "type:note state:published tag:important limit:10".
+	searchQuery, err := query.ParseSearchQuery(req.Query)
+	if err != nil {
+		return NewResponse(false, nil, fmt.Errorf("parsing query string: %w", err))
+	}
 
 	// Execute query
 	results, err := query.ExecuteSearch(s.vaultRoot, searchQuery)

@@ -56,16 +56,12 @@ func Parse(path string, content []byte) *model.Note {
 		})
 	}
 
-	// Extract body (everything after frontmatter)
+	// Extract body (everything after frontmatter closing ---)
+	// fmEnd already points past the closing "---", so just skip the trailing newline
 	bodyStart := fmEnd
 	if bodyStart < len(content) {
-		// Skip the closing --- and newline
-		if bodyStart+3 < len(content) && string(content[bodyStart:bodyStart+3]) == "---" {
-			bodyStart += 3
-			// Skip newline if present
-			if bodyStart < len(content) && content[bodyStart] == '\n' {
-				bodyStart++
-			}
+		if content[bodyStart] == '\n' {
+			bodyStart++
 		}
 		note.Body = string(content[bodyStart:])
 	}
