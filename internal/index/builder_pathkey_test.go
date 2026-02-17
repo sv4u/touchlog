@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "modernc.org/sqlite"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
+	_ "modernc.org/sqlite"
 )
 
 // TestBuilder_PathBasedKeys_IndexesSubfolders tests that notes in subfolders are indexed correctly

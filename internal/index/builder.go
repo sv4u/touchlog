@@ -6,11 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
 	"github.com/sv4u/touchlog/v2/internal/note"
 	"github.com/sv4u/touchlog/v2/internal/store"
+	_ "modernc.org/sqlite"
 )
 
 // Builder handles full scan indexing of a vault
@@ -225,4 +225,3 @@ func (b *Builder) discoverRmdFiles(dir string) ([]string, error) {
 
 	return rmdFiles, err
 }
-

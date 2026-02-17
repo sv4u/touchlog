@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "modernc.org/sqlite"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/model"
 	"github.com/sv4u/touchlog/v2/internal/note"
+	_ "modernc.org/sqlite"
 )
 
 func TestBuilder_Rebuild_CreatesIndex(t *testing.T) {

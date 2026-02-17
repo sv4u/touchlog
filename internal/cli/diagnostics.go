@@ -9,11 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	_ "modernc.org/sqlite"
 	"github.com/sv4u/touchlog/v2/internal/model"
 	"github.com/sv4u/touchlog/v2/internal/store"
 	"github.com/sv4u/touchlog/v2/internal/version"
 	cli3 "github.com/urfave/cli/v3"
+	_ "modernc.org/sqlite"
 )
 
 // BuildDiagnosticsCommand builds the diagnostics command

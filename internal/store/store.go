@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	_ "modernc.org/sqlite"
 	"github.com/sv4u/touchlog/v2/internal/model"
+	_ "modernc.org/sqlite"
 )
 
 // OpenOrCreateDB opens or creates the SQLite database at the vault root

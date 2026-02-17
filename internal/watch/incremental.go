@@ -348,4 +348,3 @@ func (ii *IncrementalIndexer) insertDiagnosticsTx(tx *sql.Tx, nodeID model.NoteI
 func (ii *IncrementalIndexer) replaceDiagnosticsTx(tx *sql.Tx, nodeID model.NoteID, diags []model.Diagnostic) error {
 	return ii.insertDiagnosticsTx(tx, nodeID, diags)
 }
-
