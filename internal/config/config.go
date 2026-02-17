@@ -105,7 +105,7 @@ func LoadConfig(vaultRoot string) (*Config, error) {
 
 	// Merge global config if it exists
 	globalPath := filepath.Join(os.Getenv("HOME"), ".config", "touchlog", "config.yaml")
-	if _, err := os.Stat(globalPath); err == nil {
+	if _, err := os.Stat(globalPath); err == nil { // #nosec G703 -- path is constructed from HOME env + hardcoded subpath, not user input
 		if err := mergeConfigFile(cfg, globalPath); err != nil {
 			return nil, fmt.Errorf("loading global config: %w", err)
 		}
@@ -141,7 +141,7 @@ func applyBuiltInDefaults(cfg *Config) error {
 
 // mergeConfigFile merges a YAML config file into the existing config
 func mergeConfigFile(cfg *Config, path string) error {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G703 -- path is constructed internally from known config locations
 	if err != nil {
 		return fmt.Errorf("reading config file: %w", err)
 	}

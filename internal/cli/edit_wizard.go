@@ -326,7 +326,7 @@ func loadNotesForEdit(vaultRoot string, typeFilter string, tagFilters []string) 
 	}
 
 	if len(whereParts) > 0 {
-		query += " WHERE " + strings.Join(whereParts, " AND ")
+		query += " WHERE " + strings.Join(whereParts, " AND ") // #nosec G202 -- whereParts contains only hardcoded SQL fragments; values use parameterized args
 	}
 
 	query += " GROUP BY n.id, n.type, n.key, n.title, n.path"

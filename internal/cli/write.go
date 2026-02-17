@@ -48,7 +48,7 @@ func AtomicWrite(path string, content []byte) error {
 	}
 
 	// Atomic rename
-	if err = os.Rename(tmpPath, path); err != nil {
+	if err = os.Rename(tmpPath, path); err != nil { // #nosec G703 -- both paths are derived from the caller's controlled file path
 		return fmt.Errorf("renaming temp file: %w", err)
 	}
 

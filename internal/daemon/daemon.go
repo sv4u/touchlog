@@ -73,7 +73,7 @@ func (d *Daemon) Start() error {
 	}
 
 	// Launch child process as a daemon with a new session (detached from terminal)
-	cmd := exec.Command(exe, "--vault", absVaultRoot, "daemon", "start")
+	cmd := exec.Command(exe, "--vault", absVaultRoot, "daemon", "start") // #nosec G204 -- exe is from os.Executable() (self re-exec), not user input
 	cmd.Env = append(os.Environ(), daemonChildEnv+"=1")
 	cmd.Stdin = nil
 	cmd.Stdout = nil
