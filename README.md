@@ -26,7 +26,7 @@ A knowledge graph note-taking system built with Go. touchlog provides a powerful
 
 ### Prerequisites
 
-- Go 1.22 or later
+- Go 1.25 or later
 
 ### Build from Source
 
@@ -348,6 +348,21 @@ touchlog --vault /path/to/vault query search --type note
   - After creating the note, automatically launches your configured editor (if available)
   - Editor is determined from `$EDITOR` environment variable or system default
 
+- `touchlog edit [options]` - Open an existing note for editing
+  - `--key <type:key|key>` - Directly open note by key (skips wizard)
+  - `--type <type>` - Pre-filter notes by type
+  - `--tag <tag>` - Pre-filter notes by tag (can be repeated)
+  - Without flags, launches an interactive fuzzy-search wizard to find and select a note
+  - Requires the index to be built first (`touchlog index rebuild`)
+
+- `touchlog view [options]` - Render and view an R Markdown note using `rmarkdown::run()`
+  - `--file <path>` - Direct file path to Rmd file (skips wizard)
+  - `--key <type:key|key>` - Directly view note by key (skips wizard)
+  - `--type <type>` - Pre-filter notes by type (for wizard)
+  - `--tag <tag>` - Pre-filter notes by tag (can be repeated, for wizard)
+  - Requires R and the `rmarkdown` package to be installed
+  - Without flags, launches an interactive wizard to select a note
+
 ### Index Management
 
 - `touchlog index rebuild` - Rebuild the entire index from scratch
@@ -402,7 +417,7 @@ The `touchlog new` command launches an interactive TUI (Terminal User Interface)
 - Use arrow keys (`↑`/`↓` or `j`/`k`) to navigate selections
 - Press `Enter` to confirm/continue
 - Press `Esc` to go back to the previous step
-- Press `q` or `Ctrl+C` to quit
+- Press `Esc` twice then type `:q` to quit
 
 **Automatic Mode Detection**: The wizard automatically detects if it's running in an interactive terminal. In non-interactive environments (tests, CI), it falls back to default values without starting the TUI.
 
@@ -471,7 +486,7 @@ touchlog follows a **contracts-first** architecture with clear separation of con
 
 - **Models** (`internal/model/`): Canonical data structures (Note, Frontmatter, RawLink, etc.)
 - **Config** (`internal/config/`): Configuration loading and validation
-- **Note Parser** (`internal/note/`): Frontmatter parsing and wiki-link extraction
+- **Note Parser** (`internal/note/`): Frontmatter parsing, wiki-link extraction, and link resolution
 - **Store** (`internal/store/`): SQLite persistence layer with migrations
 - **Index** (`internal/index/`): Full-scan indexing with atomic rebuilds
 - **Query** (`internal/query/`): Search and graph query execution
@@ -516,7 +531,7 @@ All graph queries (backlinks, neighbors, paths) execute in-memory after loading 
 - Simplifies BFS correctness and determinism
 - Aligns with future TUI graph viewer needs
 
-All traversals maintain visited sets for cycle detection and guarantee termination.
+All traversals include per-path cycle detection and guarantee termination.
 
 ## Examples
 
@@ -705,12 +720,12 @@ make docker-clean-test
 
 ```bash
 # Run all tests
-docker-compose -f docker-compose.test.yml run --rm test-linux
+docker-compose run --rm test-linux
 
 # Run specific variants
-docker-compose -f docker-compose.test.yml run --rm test-linux-basic
-docker-compose -f docker-compose.test.yml run --rm test-linux-race
-docker-compose -f docker-compose.test.yml run --rm test-linux-coverage
+docker-compose run --rm test-linux-basic
+docker-compose run --rm test-linux-race
+docker-compose run --rm test-linux-coverage
 ```
 
 **3. Using Docker Directly**:
@@ -724,7 +739,7 @@ docker run --rm \
   -v $(pwd):/app \
   -v $(pwd)/coverage:/app/coverage \
   -v $(pwd)/coverage.out:/app/coverage.out \
-  -e CGO_ENABLED=1 \
+  -e CGO_ENABLED=0 \
   touchlog-test:linux make test-full
 ```
 
@@ -755,7 +770,7 @@ All coverage reports are automatically saved to the host:
 
 #### Platform-Specific Notes
 
-**Linux**: The Linux Docker container uses Alpine Linux with Go 1.25. All dependencies (including SQLite) are pre-installed.
+**Linux**: The Linux Docker container uses Alpine Linux with Go 1.25. The project uses `modernc.org/sqlite` (a pure Go SQLite driver), so no CGO or C compiler is needed for standard builds. CGO is only enabled for the race detector target (`docker-test-linux-race`).
 
 **macOS**: macOS testing runs natively on the macOS host (not in a container). This is because Docker on macOS runs Linux containers, not macOS containers.
 
@@ -810,7 +825,7 @@ chmod 755 coverage
 ```text
 touchlog/
 ├── Dockerfile.test              # Docker image for testing
-├── docker-compose.test.yml     # Docker Compose configuration
+├── docker-compose.yml          # Docker Compose configuration
 ├── .dockerignore               # Files to exclude from Docker build
 ├── scripts/
 │   └── docker-test.sh          # Helper script for Docker testing
