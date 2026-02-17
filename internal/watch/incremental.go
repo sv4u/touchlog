@@ -14,19 +14,18 @@ import (
 	"github.com/sv4u/touchlog/v2/internal/store"
 )
 
-// IncrementalIndexer handles incremental indexing of changed files
+// IncrementalIndexer handles incremental indexing of changed files.
+// Each event opens a short-lived DB connection for transaction isolation.
 type IncrementalIndexer struct {
 	vaultRoot string
 	cfg       *config.Config
-	db        *sql.DB
 }
 
 // NewIncrementalIndexer creates a new incremental indexer
-func NewIncrementalIndexer(vaultRoot string, cfg *config.Config, db *sql.DB) *IncrementalIndexer {
+func NewIncrementalIndexer(vaultRoot string, cfg *config.Config) *IncrementalIndexer {
 	return &IncrementalIndexer{
 		vaultRoot: vaultRoot,
 		cfg:       cfg,
-		db:        db,
 	}
 }
 

@@ -3,14 +3,21 @@ package daemon
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/index"
 )
+
+// daemonChildEnv is the environment variable used to identify the daemon child process.
+// When set to "1", the current process is the forked daemon child.
+const daemonChildEnv = "_TOUCHLOG_DAEMON_CHILD"
 
 // Daemon manages the touchlog daemon lifecycle
 type Daemon struct {
@@ -30,9 +37,114 @@ func NewDaemon(vaultRoot string) *Daemon {
 	}
 }
 
-// Start starts the daemon
+// IsDaemonChild returns true if the current process is the daemon child process
+func IsDaemonChild() bool {
+	return os.Getenv(daemonChildEnv) == "1"
+}
+
+// Start launches the daemon as a background process.
+// It forks a child process that runs the daemon loop via Run().
+// The parent process returns after confirming the child started successfully.
 func (d *Daemon) Start() error {
-	// Validate vault (check for config.yaml)
+	// Validate vault exists
+	configPath := filepath.Join(d.vaultRoot, ".touchlog", "config.yaml")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return fmt.Errorf("vault not initialized (run 'touchlog init' first)")
+	}
+
+	// Check if daemon is already running
+	if d.IsRunning() {
+		return fmt.Errorf("daemon is already running (PID: %d)", d.GetPID())
+	}
+
+	// Clean up any stale files from previous crashed runs
+	d.cleanupFiles()
+
+	// Get the path to the current executable for re-exec
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("finding executable path: %w", err)
+	}
+
+	// Resolve absolute vault path so the child process doesn't depend on CWD
+	absVaultRoot, err := filepath.Abs(d.vaultRoot)
+	if err != nil {
+		return fmt.Errorf("resolving vault path: %w", err)
+	}
+
+	// Launch child process as a daemon with a new session (detached from terminal)
+	cmd := exec.Command(exe, "--vault", absVaultRoot, "daemon", "start")
+	cmd.Env = append(os.Environ(), daemonChildEnv+"=1")
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true,
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("starting daemon process: %w", err)
+	}
+
+	childPID := cmd.Process.Pid
+
+	// Release the child process so we don't wait for it
+	_ = cmd.Process.Release()
+
+	// Wait for the child to write its PID file, confirming it started successfully
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(100 * time.Millisecond)
+		pid := d.GetPID()
+		if pid == childPID {
+			if process, err := os.FindProcess(childPID); err == nil {
+				if err := process.Signal(syscall.Signal(0)); err == nil {
+					return nil
+				}
+			}
+		}
+	}
+
+	// Timeout: daemon child failed to start or write PID file
+	if process, err := os.FindProcess(childPID); err == nil {
+		_ = process.Kill()
+	}
+	d.cleanupFiles()
+	return fmt.Errorf("daemon failed to start (timed out waiting for PID file)")
+}
+
+// Run runs the daemon in the foreground (blocking).
+// This is called by the daemon child process after forking.
+// It blocks until the daemon receives a shutdown signal (SIGINT, SIGTERM)
+// or the IPC server is shut down via a Shutdown command.
+func (d *Daemon) Run() error {
+	if err := d.startServer(); err != nil {
+		return err
+	}
+
+	// Set up signal handling for graceful shutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	// Block until signal or server done
+	select {
+	case <-sigCh:
+		// Received shutdown signal from OS or 'daemon stop'
+	case <-d.server.Done():
+		// Server shut down via IPC Shutdown command
+	}
+
+	// Graceful cleanup: stop server, remove PID/socket files
+	d.cleanup()
+	return nil
+}
+
+// startServer starts the IPC server in the current process.
+// It validates the vault, loads config, rebuilds the index if needed,
+// creates and starts the IPC server, and writes the PID file.
+// This method returns immediately after setup; goroutines handle connections.
+func (d *Daemon) startServer() error {
+	// Validate vault
 	configPath := filepath.Join(d.vaultRoot, ".touchlog", "config.yaml")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return fmt.Errorf("vault not initialized (run 'touchlog init' first)")
@@ -49,19 +161,14 @@ func (d *Daemon) Start() error {
 		return fmt.Errorf("daemon is already running (PID: %d)", d.GetPID())
 	}
 
-	// Auto-rebuild index if missing or schema mismatch
-	// Check if index exists
+	// Auto-rebuild index if missing
 	indexPath := filepath.Join(d.vaultRoot, ".touchlog", "index.db")
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		// Index doesn't exist, rebuild it
 		builder := index.NewBuilder(d.vaultRoot, cfg)
 		if err := builder.Rebuild(); err != nil {
 			return fmt.Errorf("rebuilding index: %w", err)
 		}
 	}
-	// Index exists, check schema version
-	// For Phase 3, we'll assume schema is current
-	// In a full implementation, we'd check schema version and migrate if needed
 
 	// Start IPC server
 	server, err := NewServer(d.vaultRoot, cfg)
@@ -69,93 +176,76 @@ func (d *Daemon) Start() error {
 		return fmt.Errorf("creating IPC server: %w", err)
 	}
 
-	// Ensure cleanup on error
 	if err := server.Start(); err != nil {
-		// Clean up server resources on start failure
 		_ = server.Stop()
 		return fmt.Errorf("starting IPC server: %w", err)
 	}
 
-	// Store server reference for cleanup
 	d.server = server
 
 	// Write PID file
 	pid := os.Getpid()
 	if err := d.WritePID(pid); err != nil {
-		// Clean up server if PID file write fails
-		_ = server.Stop()
-		d.server = nil
+		d.cleanup()
 		return fmt.Errorf("writing PID file: %w", err)
 	}
-
-	// For Phase 3, the server runs in the foreground
-	// In a full implementation, we'd fork and run in background
-	// For now, we'll keep the server reference and let it run
-	// The actual daemon process management would be handled by the OS or a process manager
 
 	return nil
 }
 
 // Stop stops the daemon
 func (d *Daemon) Stop() error {
-	// Always try to stop the server first, even if IsRunning() returns false
-	// This ensures cleanup happens in all scenarios
+	// If we have an in-process server reference (e.g. test scenario), stop it directly
 	if d.server != nil {
-		if err := d.server.Stop(); err != nil {
-			// Log error but continue with cleanup
-			_ = err
-		}
-		d.server = nil
+		d.cleanup()
+		return nil
 	}
 
-	// Check if daemon is running before attempting to signal
 	if !d.IsRunning() {
-		// Still clean up files even if not running
-		_ = os.Remove(d.pidPath)
-		_ = os.Remove(d.sockPath)
+		d.cleanupFiles()
 		return fmt.Errorf("daemon is not running")
 	}
 
 	pid := d.GetPID()
 	if pid == 0 {
-		// Clean up files even if PID is invalid
-		_ = os.Remove(d.pidPath)
-		_ = os.Remove(d.sockPath)
+		d.cleanupFiles()
 		return fmt.Errorf("could not determine daemon PID")
 	}
 
-	// Send SIGTERM to the daemon process
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		// Clean up files even if process lookup fails
-		_ = os.Remove(d.pidPath)
-		_ = os.Remove(d.sockPath)
-		return fmt.Errorf("finding daemon process: %w", err)
-	}
-
-	// In test scenarios, the PID might be the test process itself
-	// Check if we're trying to signal ourselves (which would be a no-op)
-	currentPID := os.Getpid()
-	if pid == currentPID {
-		// This is likely a test scenario - just clean up files
-		_ = os.Remove(d.pidPath)
-		_ = os.Remove(d.sockPath)
+	// Self-PID check: if the PID file points to this process, just clean up
+	// (can happen in test scenarios where daemon was started in-process)
+	if pid == os.Getpid() {
+		d.cleanupFiles()
 		return nil
 	}
 
-	if err := process.Signal(os.Interrupt); err != nil {
-		// Clean up files even if signal fails
-		_ = os.Remove(d.pidPath)
-		_ = os.Remove(d.sockPath)
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		d.cleanupFiles()
+		return fmt.Errorf("finding daemon process: %w", err)
+	}
+
+	// Send SIGTERM for graceful shutdown
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		d.cleanupFiles()
 		return fmt.Errorf("sending signal to daemon: %w", err)
 	}
 
-	// Wait a bit for graceful shutdown
-	// In a full implementation, we'd wait for the process to exit
-	// For Phase 3, we'll just remove the PID file
-	_ = os.Remove(d.pidPath)
-	_ = os.Remove(d.sockPath)
+	// Wait for the daemon to exit gracefully (up to 5 seconds)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(100 * time.Millisecond)
+		if err := process.Signal(syscall.Signal(0)); err != nil {
+			// Process has exited - the daemon cleans up its own files on signal,
+			// but remove any leftovers just in case
+			d.cleanupFiles()
+			return nil
+		}
+	}
 
+	// Timeout: force kill and clean up
+	_ = process.Kill()
+	d.cleanupFiles()
 	return nil
 }
 
@@ -178,8 +268,8 @@ func (d *Daemon) Status() (bool, int, error) {
 
 	// Check if process is alive by sending signal 0
 	if err := process.Signal(syscall.Signal(0)); err != nil {
-		// Process doesn't exist, clean up PID file
-		_ = os.Remove(d.pidPath)
+		// Process doesn't exist, clean up stale files
+		d.cleanupFiles()
 		return false, 0, nil
 	}
 
@@ -205,8 +295,8 @@ func (d *Daemon) IsRunning() bool {
 
 	// Check if process is alive by sending signal 0
 	if err := process.Signal(syscall.Signal(0)); err != nil {
-		// Process doesn't exist, clean up
-		_ = os.Remove(d.pidPath)
+		// Process doesn't exist, clean up stale files
+		d.cleanupFiles()
 		return false
 	}
 
@@ -237,4 +327,19 @@ func (d *Daemon) WritePID(pid int) error {
 	}
 
 	return os.WriteFile(d.pidPath, []byte(fmt.Sprintf("%d\n", pid)), 0644)
+}
+
+// cleanup stops the in-process server and removes PID/socket files
+func (d *Daemon) cleanup() {
+	if d.server != nil {
+		_ = d.server.Stop()
+		d.server = nil
+	}
+	d.cleanupFiles()
+}
+
+// cleanupFiles removes stale PID and socket files
+func (d *Daemon) cleanupFiles() {
+	_ = os.Remove(d.pidPath)
+	_ = os.Remove(d.sockPath)
 }

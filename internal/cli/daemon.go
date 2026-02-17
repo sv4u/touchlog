@@ -24,6 +24,13 @@ func BuildDaemonCommand() *cli3.Command {
 					}
 
 					d := daemon.NewDaemon(vaultRoot)
+
+					// If we are the forked daemon child, run the blocking daemon loop
+					if daemon.IsDaemonChild() {
+						return d.Run()
+					}
+
+					// Otherwise, fork a background daemon process
 					if err := d.Start(); err != nil {
 						return fmt.Errorf("starting daemon: %w", err)
 					}

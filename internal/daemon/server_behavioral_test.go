@@ -10,7 +10,7 @@ import (
 
 // TestNewServer_Behavior_CreatesSocketDirectory tests NewServer creates socket directory
 func TestNewServer_Behavior_CreatesSocketDirectory(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -48,7 +48,7 @@ func TestNewServer_Behavior_CreatesSocketDirectory(t *testing.T) {
 
 // TestNewServer_Behavior_RemovesExistingSocket tests NewServer removes existing socket
 func TestNewServer_Behavior_RemovesExistingSocket(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -87,7 +87,7 @@ func TestNewServer_Behavior_RemovesExistingSocket(t *testing.T) {
 
 // TestServer_Start_Behavior_InitializesWatcher tests Start initializes watcher
 func TestServer_Start_Behavior_InitializesWatcher(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -128,7 +128,7 @@ func TestServer_Start_Behavior_InitializesWatcher(t *testing.T) {
 
 // TestServer_Stop_Behavior_ClosesListener tests Stop closes listener
 func TestServer_Stop_Behavior_ClosesListener(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -164,7 +164,7 @@ func TestServer_Stop_Behavior_ClosesListener(t *testing.T) {
 
 // TestServer_ProcessMessage_Behavior_HandlesAllMessageTypes tests processMessage handles all message types
 func TestServer_ProcessMessage_Behavior_HandlesAllMessageTypes(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)

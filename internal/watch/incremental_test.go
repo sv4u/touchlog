@@ -34,7 +34,7 @@ func TestIncrementalIndexer_ProcessFileUpdate(t *testing.T) {
 	}
 
 	// Create incremental indexer
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Create a new note file
 	notePath := filepath.Join(tmpDir, "note", "new-note.Rmd")
@@ -133,7 +133,7 @@ updated: 2024-01-01T00:00:00Z
 	}
 
 	// Create incremental indexer
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Delete the file
 	if err := os.Remove(notePath); err != nil {
@@ -213,7 +213,7 @@ updated: 2024-01-01T00:00:00Z
 	}()
 
 	// Create incremental indexer
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Process initial event (should index)
 	event1 := Event{

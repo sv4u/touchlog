@@ -33,7 +33,7 @@ func TestIncrementalIndexing_TransactionSafety(t *testing.T) {
 	}()
 
 	// Create incremental indexer
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Create a note file
 	notePath := filepath.Join(tmpDir, "note", "test-note.Rmd")
@@ -93,7 +93,7 @@ func TestIncrementalIndexing_ShortLivedConnections(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opening database: %v", err)
 	}
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 	_ = db.Close() // Close immediately - ProcessEvent should open its own connection
 
 	// Create a note file

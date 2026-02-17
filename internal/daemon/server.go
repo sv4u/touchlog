@@ -12,7 +12,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/sv4u/touchlog/v2/internal/config"
 	"github.com/sv4u/touchlog/v2/internal/query"
-	"github.com/sv4u/touchlog/v2/internal/store"
 	"github.com/sv4u/touchlog/v2/internal/watch"
 )
 
@@ -67,7 +66,7 @@ func NewServer(vaultRoot string, cfg *config.Config) (*Server, error) {
 	}
 
 	return &Server{
-		vaultRoot: vaultRoot,
+		vaultRoot: absVaultRoot,
 		cfg:       cfg,
 		listener:  listener,
 		done:      make(chan struct{}),
@@ -87,13 +86,8 @@ func (s *Server) Start() error {
 		return fmt.Errorf("starting watcher: %w", err)
 	}
 
-	// Create incremental indexer (will use short-lived connections)
-	db, err := store.OpenOrCreateDB(s.vaultRoot)
-	if err != nil {
-		return fmt.Errorf("opening database: %w", err)
-	}
-	s.indexer = watch.NewIncrementalIndexer(s.vaultRoot, s.cfg, db)
-	_ = db.Close()
+	// Create incremental indexer (uses short-lived DB connections per event)
+	s.indexer = watch.NewIncrementalIndexer(s.vaultRoot, s.cfg)
 
 	// Start event processing goroutine
 	go s.processWatchEvents()
@@ -102,6 +96,12 @@ func (s *Server) Start() error {
 	go s.acceptConnections()
 
 	return nil
+}
+
+// Done returns a channel that's closed when the server is shut down.
+// This allows callers to block until the server exits (e.g., via IPC Shutdown).
+func (s *Server) Done() <-chan struct{} {
+	return s.done
 }
 
 // Stop stops the IPC server

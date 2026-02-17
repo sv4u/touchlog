@@ -20,7 +20,7 @@ func contains(s, substr string) bool {
 }
 
 func TestServer_UnixSocket(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 
 	// Setup vault
 	setupTestVault(t, tmpDir)
@@ -149,7 +149,7 @@ func TestProtocol_Response(t *testing.T) {
 
 // TestServer_ProcessMessage_Status tests status message handling
 func TestServer_ProcessMessage_Status(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -187,7 +187,7 @@ func TestServer_ProcessMessage_Status(t *testing.T) {
 
 // TestServer_ProcessMessage_UnknownType tests unknown message type handling
 func TestServer_ProcessMessage_UnknownType(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -225,7 +225,7 @@ func TestServer_ProcessMessage_UnknownType(t *testing.T) {
 
 // TestServer_HandleStatus tests status handler behavior
 func TestServer_HandleStatus(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -264,7 +264,7 @@ func TestServer_HandleStatus(t *testing.T) {
 
 // TestServer_HandleQueryExecute tests query execution handler
 func TestServer_HandleQueryExecute(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -306,7 +306,7 @@ func TestServer_HandleQueryExecute(t *testing.T) {
 
 // TestServer_HandleReindexPaths tests reindex paths handler
 func TestServer_HandleReindexPaths(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -356,7 +356,7 @@ func TestServer_HandleReindexPaths(t *testing.T) {
 
 // TestServer_HandleShutdown tests shutdown handler
 func TestServer_HandleShutdown(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -390,7 +390,7 @@ func TestServer_HandleShutdown(t *testing.T) {
 
 // TestServer_StartStop tests server lifecycle
 func TestServer_StartStop(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -427,7 +427,7 @@ func TestServer_StartStop(t *testing.T) {
 
 // TestServer_HandleConnection_MultipleMessages tests handling multiple messages in one connection
 func TestServer_HandleConnection_MultipleMessages(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -508,7 +508,7 @@ func TestServer_HandleConnection_MultipleMessages(t *testing.T) {
 
 // TestServer_HandleConnection_InvalidMessage tests handling invalid messages
 func TestServer_HandleConnection_InvalidMessage(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)
@@ -565,7 +565,7 @@ func TestServer_HandleConnection_InvalidMessage(t *testing.T) {
 
 // TestServer_ProcessWatchEvents_Integration tests watch event processing
 func TestServer_ProcessWatchEvents_Integration(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := shortTempDir(t)
 	setupTestVault(t, tmpDir)
 
 	cfg, err := config.LoadConfig(tmpDir)

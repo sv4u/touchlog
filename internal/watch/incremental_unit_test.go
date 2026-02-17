@@ -27,7 +27,7 @@ func TestIncrementalIndexer_ReplaceDiagnosticsTx(t *testing.T) {
 		t.Fatalf("loading config: %v", err)
 	}
 
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Start transaction
 	tx, err := db.Begin()
@@ -99,7 +99,7 @@ func TestIncrementalIndexer_ResolveLinks_QualifiedLink(t *testing.T) {
 		_ = db.Close()
 	}()
 
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Create type-key map with a target
 	typeKeyMap := map[model.TypeKey]model.NoteID{
@@ -156,7 +156,7 @@ func TestIncrementalIndexer_ResolveLinks_UnresolvedQualifiedLink(t *testing.T) {
 		_ = db.Close()
 	}()
 
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Empty type-key map (no targets)
 	typeKeyMap := map[model.TypeKey]model.NoteID{}
@@ -211,7 +211,7 @@ func TestIncrementalIndexer_ResolveLinks_UnqualifiedLink(t *testing.T) {
 		_ = db.Close()
 	}()
 
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Create type-key map with a target
 	typeKeyMap := map[model.TypeKey]model.NoteID{
@@ -265,7 +265,7 @@ func TestIncrementalIndexer_ResolveLinks_AmbiguousLink(t *testing.T) {
 		_ = db.Close()
 	}()
 
-	indexer := NewIncrementalIndexer(tmpDir, cfg, db)
+	indexer := NewIncrementalIndexer(tmpDir, cfg)
 
 	// Create type-key map with multiple targets with same key
 	typeKeyMap := map[model.TypeKey]model.NoteID{
